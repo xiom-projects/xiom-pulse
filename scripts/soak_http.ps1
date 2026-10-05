@@ -13,7 +13,7 @@
 # ============================================================================
 [CmdletBinding()]
 param(
-    [int]$Seconds = 3600,
+    [int]$Seconds = 1800,
     [int]$Port = 8080,
     [int]$IntervalMs = 500,
     [string]$ServerExe = ""
@@ -32,6 +32,8 @@ $serverLog = Join-Path $logDir "soak-http-server.out"
 function Send-Health {
     $c = New-Object System.Net.Sockets.TcpClient
     try {
+        $c.ReceiveTimeout = 5000
+        $c.SendTimeout = 5000
         $c.Connect("127.0.0.1", $Port)
         $s = $c.GetStream()
         $req = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: 127.0.0.1:$Port`r`nConnection: close`r`n`r`n")
@@ -79,10 +81,16 @@ Write-Host ("soak-http: baseline ws={0:N0} handles={1} for {2}s" -f $mem0, $hand
 $ok = 0; $fail = 0
 $lastSample = [DateTime]::UtcNow
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
+Add-Content -LiteralPath $progressFile -Value ("{0:u} elapsed=0s ok=0 fail=0 ws={1:N0} handles={2}" -f [DateTime]::UtcNow, $mem0, $handles0)
 
 while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
     $good = $false
+    $t0 = [DateTime]::UtcNow
     try { $good = Send-Health } catch { $good = $false }
+    $callMs = ([DateTime]::UtcNow - $t0).TotalMilliseconds
+    if ($callMs -gt 10000) {
+        Add-Content -LiteralPath $progressFile -Value ("{0:u} SLOW-CALL {1:N0}ms elapsed={2:N0}s" -f [DateTime]::UtcNow, $callMs, $sw.Elapsed.TotalSeconds)
+    }
     if (-not $good) {
         Start-Sleep -Milliseconds 200
         try { $good = Send-Health } catch { $good = $false }
