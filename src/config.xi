@@ -53,6 +53,18 @@ pub fn cfg_rate_burst() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_RATE_BURST", "0"), 0);
 }
 
+/// cfg_cors_origin returns the allowed CORS origin ("" = CORS off).
+/// Complexity: O(1). Pure.
+pub fn cfg_cors_origin() -> Str {
+  return env.var_or("PULSE_CORS_ORIGIN", "");
+}
+
+/// cfg_csrf_enabled is false when PULSE_CSRF=0 (enabled by default).
+/// Complexity: O(1). Pure.
+pub fn cfg_csrf_enabled() -> Bool {
+  return env.var_or("PULSE_CSRF", "1") != "0";
+}
+
 /// cfg_port returns the listen port (PULSE_PORT, default 8080).
 /// Complexity: O(1). Pure.
 pub fn cfg_port() -> Int {

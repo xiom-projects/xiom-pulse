@@ -15,29 +15,29 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~43% of production grade**
+## 1. Overall score: **~44% of production grade**
 
-_Delta 2026-10-05 (evening wave): 41% -> 43% -- `xiom.rate` 0.2.0 adopted
-(global token bucket, `429` + `Retry-After`, `rate_smoke` green), latency
-histogram + `dur_ms` access-log field, `docs/DEPLOYMENT.md` published
-(proxy-first TLS). Evidence: suites x2 (`test_app` 75 checks), smoke 44/44,
-rate smoke GREEN, probe `probe_module_pkg_init` (C-PULSE-07 filed)._
+_Delta 2026-10-05 (evening wave 3): 43% -> 44% -- CSRF double-submit
+protection (session requests), opt-in CORS with preflight (`204`), `HEAD`
+support, field length validation, `204` reason phrase. Evidence: suites x2
+(`test_app` 85 checks), smoke **52/52** (CSRF 403/200, preflight, HEAD),
+`out\pulse_app_v7.exe`._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
-| 1 | HTTP core (parse/build/limits) | 12% | 72% | 8.6 | query strings + header caps landed; keep-alive/chunked/HEAD missing |
+| 1 | HTTP core (parse/build/limits) | 12% | 74% | 8.9 | query strings, header caps, HEAD; keep-alive/chunked/Expect missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 10% | 0.8 | logging/audit inline only |
 | 4 | Configuration | 5% | 60% | 3.0 | env-based; no file/validation |
 | 5 | Observability (log/metrics/audit) | 8% | 68% | 5.4 | JSON log + `dur_ms` + counters + histogram + audit; flush no-op |
-| 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256; no credentials, RBAC, rotation |
+| 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF; no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 35% | 3.5 | JSONL store + crash-safe append; no query/update/compaction |
-| 8 | Security hardening | 12% | 30% | 3.6 | rate limit + security headers + head caps; no CORS/CSRF/schema validation; TLS via proxy (guide published) |
+| 8 | Security hardening | 12% | 38% | 4.6 | rate limit + CSRF + opt-in CORS + security headers + caps; no schema lib/TLS E2E |
 | 9 | Static / assets | 4% | 20% | 0.8 | favicon + landing only |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 60% | 3.0 | suites+smoke+rate-smoke+soak+WSL locally; no CI, no packaging |
-| | **Total** | **100%** | | **43.0** | |
+| | **Total** | **100%** | | **44.2** | |
 
 Two lenses to keep separate:
 
@@ -100,11 +100,11 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 
 ## 3. What is missing, area by area (the honest list)
 
-**HTTP core (72%)**
+**HTTP core (74%)**
 - No `keep-alive` (always `Connection: close`) -- the biggest perf item.
 - No chunked transfer-encoding (request or response).
-- No `HEAD` handling, no `Expect: 100-continue`, path not percent-decoded
-  (query values are decoded).
+- `HEAD` supported (GET semantics, body omitted); no `Expect: 100-continue`,
+  path not percent-decoded (query values are decoded).
 - Head caps landed (16 KiB head, 100 headers, 1 MiB body); no per-route or
   per-connection byte-rate limits.
 - Status is far from 100% even if all of the above land: response
@@ -143,14 +143,16 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
   backup/restore, no indexes (fine at small scale).
 - `xiom.kv` is the proposed packages-lane replacement.
 
-**Security hardening (30%)**
+**Security hardening (38%)**
 - TLS: front-proxy by design (Caddy/nginx); `docs/DEPLOYMENT.md` published
   with configs, supervision and a through-proxy verification checklist;
   the actual proxy E2E run is pending a proxy install.
 - Global rate limiting landed (`xiom.rate` 0.2.0, `PULSE_RATE_LIMIT`,
   429 + Retry-After, `scripts/rate_smoke.ps1` green); per-client keys wait
   on `socket_peer_addr` (stdlib stub).
-- No CORS/CSRF/schema validation; HSTS/CSP belong at the proxy.
+- CSRF double-submit on session-authenticated mutations (403 without the
+  token; smoke-verified); opt-in CORS with preflight (204).
+- Field length validation for `user`/`token`; no general schema library.
 - Header size/count caps landed (16 KiB / 100); no recv timeouts yet
   (stdlib queued) -- a half-open request can still hold the loop.
 
@@ -204,7 +206,7 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M1 -- Thin slice** | plaintext HTTP/1.1, routes, JSON, 404/405, curl + 64 concurrent + soak | **DONE** (2026-10-05) |
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
-| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~40% (queries, caps, security headers, rate limit, histogram landed) |
+| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~50% (queries, caps, headers, rate limit, histogram, CSRF, CORS, HEAD landed) |
 | **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~5% |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 
@@ -221,8 +223,9 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 - [x] 1h load soak with flat memory/handles
 - [x] Request/header caps + query-string parsing
 - [x] Rate limiting (global token bucket; per-client blocked on `socket_peer_addr`)
-- [ ] Keep-alive + chunked + HEAD
-- [ ] CORS + CSRF (HSTS/CSP at the proxy)
+- [x] CSRF double-submit + opt-in CORS
+- [ ] Keep-alive + chunked + Expect: 100-continue
+- [ ] Schema validation library (field length caps landed)
 - [ ] Real timeouts (recv deadline) and slow-client shedding
 - [ ] Rate limiting + CORS + CSRF + security headers
 - [ ] Schema validation for all inputs

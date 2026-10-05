@@ -256,6 +256,8 @@ pub fn content_length_of(raw: &Vec[UInt8], hdr_end: Int) -> Int {
 /// status_text returns the HTTP/1.1 reason phrase. Complexity: O(1).
 pub fn status_text(code: Int) -> Str {
   if code == 200 { return "OK"; }
+  if code == 201 { return "Created"; }
+  if code == 204 { return "No Content"; }
   if code == 400 { return "Bad Request"; }
   if code == 401 { return "Unauthorized"; }
   if code == 403 { return "Forbidden"; }

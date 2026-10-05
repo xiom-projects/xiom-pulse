@@ -28,6 +28,7 @@ $logDir = Join-Path $repoRoot "probe-logs"
 if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 
 $env:PULSE_PORT = "$Port"
+$env:PULSE_CORS_ORIGIN = "*"
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = $ServerExe
 $psi.WorkingDirectory = $repoRoot
@@ -57,13 +58,13 @@ function Check {
 }
 
 function Invoke-CurlPost {
-    param([string]$Path, [string]$Body, [string]$CookieJar = "")
+    param([string]$Path, [string]$Body, [string]$CookieJar = "", [string[]]$ExtraHeaders = @())
     $f = Join-Path $env:TEMP ("pulse-body-" + [guid]::NewGuid().ToString("N") + ".json")
     Set-Content -LiteralPath $f -Value $Body -NoNewline
     try {
         $extra = @()
-        if ($CookieJar) { $extra += @("-c", $CookieJar) }
-        $all = @("-s", "-i", "-X", "POST", "-H", "Content-Type: application/json", "--data-binary", "@$f") + $extra + @("$base$Path")
+        if ($CookieJar) { $extra += @("-b", $CookieJar, "-c", $CookieJar) }
+        $all = @("-s", "-i", "-X", "POST", "-H", "Content-Type: application/json", "--data-binary", "@$f") + $extra + $ExtraHeaders + @("$base$Path")
         return (curl.exe @all 2>&1 | Out-String)
     } finally {
         Remove-Item -LiteralPath $f -ErrorAction SilentlyContinue
@@ -125,14 +126,20 @@ $cookieJar = Join-Path $env:TEMP ("pulse-cookies-" + [guid]::NewGuid().ToString(
 $r = Invoke-CurlPost "/api/session/login" '{"user":"carol"}' -CookieJar $cookieJar
 Check "login 200" $r "200 OK"
 Check "login set-cookie" $r "Set-Cookie: sid="
+Check "login csrf cookie" $r "Set-Cookie: csrf="
 Check "login user" $r '"user":"carol"'
+$csrfMatch = [regex]::Match($r, '"csrf":"([^"]+)"')
+if ($csrfMatch.Success) { Check "login csrf body" "yes" "yes" } else { Check "login csrf body" "no" "yes" }
+$csrfToken = $csrfMatch.Groups[1].Value
 $r = Invoke-CurlGet "/api/me" -CookieJar $cookieJar
 Check "me 200 with cookie" $r "200 OK"
 Check "me user" $r '"user":"carol"'
 $r = Invoke-CurlGet "/api/me"
 Check "me 401 without cookie" $r "401 Unauthorized"
 $r = Invoke-CurlPost "/api/session/logout" "" -CookieJar $cookieJar
-Check "logout 200" $r "200 OK"
+Check "logout 403 without csrf" $r "403 Forbidden"
+$r = Invoke-CurlPost "/api/session/logout" "" -CookieJar $cookieJar -ExtraHeaders @("-H", "X-CSRF-Token: $csrfToken")
+Check "logout 200 with csrf" $r "200 OK"
 Check "logout clears cookie" $r "Max-Age=0"
 $r = Invoke-CurlGet "/api/me" -CookieJar $cookieJar
 Check "me 401 after logout" $r "401 Unauthorized"
@@ -174,6 +181,16 @@ $r = Invoke-CurlGet "/"
 Check "landing 200" $r "200 OK"
 Check "landing title" $r "XIOM PULSE"
 Check "landing html" $r "text/html"
+
+# 12b. HEAD + CORS
+$r = curl.exe -s -I "$base/health" 2>&1 | Out-String
+Check "head 200" $r "200 OK"
+Check "head content-length" $r "Content-Length: 15"
+$r = curl.exe -s -i -H "Origin: http://example.test" "$base/health" 2>&1 | Out-String
+Check "cors allow origin" $r "Access-Control-Allow-Origin: *"
+$r = curl.exe -s -i -X OPTIONS -H "Origin: http://example.test" -H "Access-Control-Request-Method: POST" "$base/api/events" 2>&1 | Out-String
+Check "cors preflight 204" $r "204 No Content"
+Check "cors preflight methods" $r "Access-Control-Allow-Methods:"
 
 # 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1

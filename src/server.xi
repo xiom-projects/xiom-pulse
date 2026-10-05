@@ -29,6 +29,8 @@ use xiom.jwt;
 use xiom.string.slice;
 use xiom.pulse.store;
 use xiom.pulse.ratelimit;
+use xiom.pulse.cors;
+use xiom.pulse.validate;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -78,19 +80,6 @@ fn out_html(status: Int, body: Str) -> HandlerOut {
   return HandlerOut{ status: status; content_type: "text/html; charset=utf-8"; headers: Vec[(Str, Str)].new(); body: body; body_bytes: Vec[UInt8].new(); };
 }
 
-fn json_body_str(body: Str, key: Str) -> Str {
-  let pv = json.json_parse(body);
-  if pv.is_err { return ""; }
-  let opt = json.json_get(pv.value, key);
-  if opt.is_none { return ""; }
-  let v = opt.value;
-  if json.json_type(v) != "string" { return ""; }
-  match v {
-    JsonValue.String(s) => { return s; },
-    _ => { return ""; },
-  }
-}
-
 fn json_ok_field(key: Str, value: Str) -> Str {
   let v = json.json_set(json.json_object_new(), key, json.json_string(value));
   return json.json_stringify(v);
@@ -125,16 +114,19 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, json.json_stringify(v));
   }
   if m.route_id == 4 {
-    let user = json_body_str(body, "user");
+    let user = validate.field_str(body, "user", 64);
     if user.len() == 0 {
-      return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"}"));
+      return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"} (<=64 chars)"));
     }
     let ttl = config.cfg_session_ttl_secs();
     let sid = session.session_create(user, ttl);
+    let csrf = session.csrf_new_token();
     var v = json.json_set(json.json_object_new(), "user", json.json_string(user));
     v = json.json_set(v, "sid", json.json_string(sid));
+    v = json.json_set(v, "csrf", json.json_string(csrf));
     var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
     hs.push(("Set-Cookie", session.session_cookie_header(sid, ttl)));
+    hs.push(("Set-Cookie", session.csrf_cookie_header(csrf)));
     return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: json.json_stringify(v); body_bytes: Vec[UInt8].new(); };
   }
   if m.route_id == 5 {
@@ -158,7 +150,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: envelope.ok_bool(true); body_bytes: Vec[UInt8].new(); };
   }
   if m.route_id == 7 {
-    let user = json_body_str(body, "user");
+    let user = validate.field_str(body, "user", 64);
     if user.len() == 0 {
       return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"}"));
     }
@@ -175,7 +167,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, json_ok_field("token", token));
   }
   if m.route_id == 8 {
-    let token = json_body_str(body, "token");
+    let token = validate.field_str(body, "token", 4096);
     if token.len() == 0 {
       return out_json(400, envelope.error_body("invalid_request", "body must be {\"token\":\"...\"}"));
     }
@@ -199,8 +191,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, json_ok_field("item", m.param_values[0]));
   }
   if m.route_id == 11 {
-    let pv = json.json_parse(body);
-    if pv.is_err || json.json_type(pv.value) != "object" {
+    if !validate.is_json_object(body) {
       return out_json(400, envelope.error_body("invalid_json", "body must be a JSON object"));
     }
     let path = config.cfg_store_path();
@@ -315,6 +306,51 @@ fn audit_event(rid: Str, method: Str, target: Str, status: Int) {
   }
 }
 
+fn is_mutating(method: Str) -> Bool {
+  return method == "POST" || method == "PUT" || method == "DELETE" || method == "PATCH";
+}
+
+/// with_cors injects CORS headers into a built response when the request
+/// origin is allowed. Complexity: O(n).
+fn with_cors(resp: Vec[UInt8], req: &PulseRequest) -> Vec[UInt8] {
+  let block = cors.cors_header_block(http.header_get(req, "origin"));
+  if block.len() == 0 { return resp; }
+  let he = find_header_end(&resp);
+  if he < 0 { return resp; }
+  var out: Vec[UInt8] = Vec[UInt8].new();
+  var i: Int = 0;
+  while i < he {
+    out.push(resp[i]);
+    i = i + 1;
+  }
+  // close the last existing header, add the CORS block, then the original
+  // blank-line terminator (skip the 4-byte CRLFCRLF and re-add one CRLF).
+  let sep = http.str_to_bytes("\r\n");
+  var s: Int = 0;
+  while s < sep.len() {
+    out.push(sep[s]);
+    s = s + 1;
+  }
+  let eb = http.str_to_bytes(block);
+  var j: Int = 0;
+  while j < eb.len() {
+    out.push(eb[j]);
+    j = j + 1;
+  }
+  // blank-line terminator between headers and body
+  var t: Int = 0;
+  while t < sep.len() {
+    out.push(sep[t]);
+    t = t + 1;
+  }
+  var k: Int = he + 4;
+  while k < resp.len() {
+    out.push(resp[k]);
+    k = k + 1;
+  }
+  return out;
+}
+
 pub fn main() -> Int {
   let sr = socket.socket_tcp();
   if sr.is_err {
@@ -357,6 +393,11 @@ pub fn main() -> Int {
     io.println("pulse: rate limit " + limiter.per_sec.to_str() + " req/s (global)");
     io.flush_stdout();
   }
+  let csrf_on = config.cfg_csrf_enabled();
+  if csrf_on {
+    io.println("pulse: csrf protection on (session requests)");
+    io.flush_stdout();
+  }
 
   var served: Int = 0;
   var running: Bool = true;
@@ -376,9 +417,11 @@ pub fn main() -> Int {
     } else {
       let rid = next_rid();
       let req = http.parse_request(&raw);
+      let cookie_header = http.header_get(&req, "cookie");
       if !req.ok {
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-        let resp = http.build_response_full(400, CONTENT_JSON, &no_headers, envelope.error_body("bad_request", "bad request"));
+        var resp = http.build_response_full(400, CONTENT_JSON, &no_headers, envelope.error_body("bad_request", "bad request"));
+        resp = with_cors(resp, &req);
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (400)"); io.flush_stdout(); }
         socket.socket_close(client);
@@ -389,6 +432,29 @@ pub fn main() -> Int {
       } else if http.header_get(&req, "x-pulse-quit") == "1" {
         socket.socket_close(client);
         running = false;
+      } else if req.method == "OPTIONS" && cors.cors_enabled() {
+        var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+        var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "");
+        resp = with_cors(resp, &req);
+        let w_ok = send_all(client, &resp);
+        if !w_ok { io.println("pulse: send failed (204)"); io.flush_stdout(); }
+        socket.socket_close(client);
+        let dur = time.monotonic_ms() - t0_ms;
+        metrics.metrics_record(204, 0);
+        metrics.metrics_record_duration(dur);
+        access_log(rid, req.method, req.target, 204, 0, dur);
+      } else if csrf_on && is_mutating(req.method) && session.session_id_from_cookie(cookie_header).len() > 0 && !session.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
+        var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+        let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
+        var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody);
+        resp = with_cors(resp, &req);
+        let w_ok = send_all(client, &resp);
+        if !w_ok { io.println("pulse: send failed (403)"); io.flush_stdout(); }
+        socket.socket_close(client);
+        let dur = time.monotonic_ms() - t0_ms;
+        metrics.metrics_record(403, rbody.len());
+        metrics.metrics_record_duration(dur);
+        access_log(rid, req.method, req.target, 403, rbody.len(), dur);
       } else if !ratelimit.limiter_allow(&mut limiter, time.monotonic_ms()) {
         let now_ms = time.monotonic_ms();
         let retry_ms = ratelimit.limiter_retry_after_ms(&limiter, now_ms);
@@ -397,7 +463,8 @@ pub fn main() -> Int {
         var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         hs.push(("Retry-After", secs.to_str()));
         let rbody = envelope.error_body("rate_limited", "too many requests");
-        let resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody);
+        var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody);
+        resp = with_cors(resp, &req);
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (429)"); io.flush_stdout(); }
         socket.socket_close(client);
@@ -407,7 +474,9 @@ pub fn main() -> Int {
         access_log(rid, req.method, req.target, 429, rbody.len(), dur);
       } else {
         let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
-        let m = router.route_match(req.method, req.target);
+        var eff_method: Str = req.method;
+        if req.method == "HEAD" { eff_method = "GET"; }
+        let m = router.route_match(eff_method, req.target);
         let out = handle_route(m, &req, body_str);
         var resp: Vec[UInt8] = Vec[UInt8].new();
         var payload_len: Int = out.body.len();
@@ -417,6 +486,19 @@ pub fn main() -> Int {
         } else {
           resp = http.build_response_full(out.status, out.content_type, &out.headers, out.body);
         }
+        if req.method == "HEAD" {
+          let he = find_header_end(&resp);
+          if he >= 0 {
+            var trimmed: Vec[UInt8] = Vec[UInt8].new();
+            var ti: Int = 0;
+            while ti < he + 4 {
+              trimmed.push(resp[ti]);
+              ti = ti + 1;
+            }
+            resp = trimmed;
+          }
+        }
+        resp = with_cors(resp, &req);
         let w_ok = send_all(client, &resp);
         if !w_ok {
           io.println("pulse: send failed");

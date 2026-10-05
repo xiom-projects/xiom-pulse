@@ -21,6 +21,7 @@ use xiom.pulse.metrics;
 use xiom.pulse.session;
 use xiom.pulse.store;
 use xiom.pulse.ratelimit;
+use xiom.pulse.validate;
 use xiom.pulse.server;
 
 fn check(name: Str, ok: Bool) -> Int {
@@ -127,7 +128,19 @@ pub fn main() -> Int {
   f = f + check("session cookie absent", session.session_id_from_cookie("a=1") == "");
   session.session_drop(sid);
   f = f + check("session dropped", session.session_get(sid) == "");
+  let ctok = session.csrf_new_token();
+  f = f + check("csrf token len", ctok.len() == 32);
+  f = f + check("csrf match", session.csrf_matches("sid=x; csrf=" + ctok + "; a=1", ctok));
+  f = f + check("csrf mismatch", !session.csrf_matches("csrf=" + ctok, "wrong"));
+  f = f + check("csrf absent", !session.csrf_matches("sid=x", ctok));
   session.session_reset();
+
+  // --- validation -----------------------------------------------------------
+  f = f + check("validate field", validate.field_str("{\"user\":\"bob\"}", "user", 64) == "bob");
+  f = f + check("validate too long", validate.field_str("{\"user\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}", "user", 64) == "");
+  f = f + check("validate wrong type", validate.field_str("{\"user\":5}", "user", 64) == "");
+  f = f + check("validate object", validate.is_json_object("{\"a\":1}"));
+  f = f + check("validate not object", !validate.is_json_object("notjson"));
 
   // --- jwt hs256 (registry xiom.jwt 0.2.0) --------------------------------
   let now = time.unix_timestamp();
@@ -161,8 +174,11 @@ pub fn main() -> Int {
   let itemq = route_req("GET", "/api/items/7?x=1", "");
   f = f + check("dispatch item with query", itemq.status == 200 && string.str_contains(itemq.body, "\"item\":\"7\""));
   let login = route_req("POST", "/api/session/login", "{\"user\":\"carol\"}");
-  f = f + check("dispatch login 200", login.status == 200 && login.headers.len() == 1);
+  f = f + check("dispatch login 200", login.status == 200 && login.headers.len() == 2);
   f = f + check("dispatch login body", string.str_contains(login.body, "\"user\":\"carol\""));
+  f = f + check("dispatch login csrf", string.str_contains(login.body, "\"csrf\":\""));
+  let long_login = route_req("POST", "/api/session/login", "{\"user\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}");
+  f = f + check("dispatch login long user 400", long_login.status == 400);
   let badlogin = route_req("POST", "/api/session/login", "notjson");
   f = f + check("dispatch login 400", badlogin.status == 400);
   let me = route_req("GET", "/api/me", "");

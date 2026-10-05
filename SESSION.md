@@ -30,14 +30,13 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **M4 hardening wave 2** on v0.64.0: `xiom.rate`
-  0.2.0 adopted (global token bucket; `PULSE_RATE_LIMIT`/`PULSE_RATE_BURST`;
-  429 + `Retry-After`; `scripts\rate_smoke.ps1` green: burst 200=2, 429=6,
-  refill 200); latency histogram (`pulse_http_request_duration_ms_*`) +
-  `dur_ms` in the access log; `docs/DEPLOYMENT.md` (proxy-first TLS);
-  C-PULSE-07 filed (module-scope package ctor -> undefined call/crash;
-  limiter refactored to a caller-owned value). Suites x2, smoke 44/44,
-  rate smoke green on `out\pulse_app_v6.exe`.
+- **Last green slice:** **M4 hardening wave 3** on v0.64.0: CSRF
+  double-submit on session-authenticated mutations (403 without token),
+  opt-in CORS (`PULSE_CORS_ORIGIN`, preflight `204`), `HEAD` support,
+  field length validation (`user` <= 64, `token` <= 4096), `204` reason
+  phrase; CORS header injection bug found by the smoke and fixed.
+  Suites x2 (`test_app` 85 checks), smoke **52/52** on
+  `out\pulse_app_v7.exe`.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const

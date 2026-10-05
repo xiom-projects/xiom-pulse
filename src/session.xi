@@ -95,3 +95,35 @@ pub fn session_id_from_cookie(cookie_header: Str) -> Str {
   let v = opt.value;
   return v;
 }
+
+/// csrf_new_token returns a fresh CSRF token (crypto random hex).
+/// Complexity: O(1).
+pub fn csrf_new_token() -> Str {
+  return rng_crypto.crypto_random_string(32, "0123456789abcdef");
+}
+
+/// csrf_cookie_header returns the Set-Cookie VALUE for the CSRF token.
+/// Complexity: O(1). Pure.
+pub fn csrf_cookie_header(token: Str) -> Str {
+  return "csrf=" + token + "; Path=/; SameSite=Lax; Max-Age=3600";
+}
+
+/// csrf_matches compares the `csrf` cookie with the request header token
+/// in constant time. Complexity: O(n).
+pub fn csrf_matches(cookie_header: Str, header_token: Str) -> Bool {
+  if cookie_header.len() == 0 || header_token.len() == 0 { return false; }
+  let jar = cookie.cookie_parse_request(cookie_header);
+  let opt = cookie.cookie_get(&jar, "csrf");
+  if opt.is_none { return false; }
+  let tok = opt.value;
+  if tok.len() != header_token.len() { return false; }
+  var diff: Int = 0;
+  var i: Int = 0;
+  while i < tok.len() {
+    var d: Int = (tok.byte_at(i) as Int) - (header_token.byte_at(i) as Int);
+    if d < 0 { d = 0 - d; }
+    diff = diff + d;
+    i = i + 1;
+  }
+  return diff == 0;
+}
