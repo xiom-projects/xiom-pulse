@@ -32,17 +32,17 @@
   `GET /api/events`, `GET /api/events/count`; smoke 37/37; crash/reopen
   6/6 at 20 and 200 events; suite 57/57 x2. New finding **C-PULSE-05**
   filed (W005 const-receiver `.to_str()` stub wrote invalid JSON;
-  workaround `convert.int_to_string`). Soaks (PS + WSL) running on the
-  Step 1 binary against :18080.
+  workaround `convert.int_to_string`). 30m dual soak verdict recorded
+  (3538/3538 + 3105/1-transient, server 7248/7248 200s).
 - **Open blockers:** C-PULSE-01 (read method) worked around via raw
   socket_recv; C-PULSE-02 (dep->root mapping) worked around via xiom.toml
   source-roots; C-PULSE-04 (&mut Int bare read) documented; C-PULSE-05
   (const `.to_str()` W005 stub) worked around; `xiom.http` v0.1.0 parser
   broken (package defect filed).
-- **Next action:** soak verdicts (wakeup scheduled 16:21Z: PS 30m soak +
-  WSL 30m client cross-check). Then Step 3 wrap: a store soak (many events,
-  reopen size check) and the Storage section handoff; then Step 4 (TLS via
-  proxy only if needed).
+- **Next action:** true 1h soak re-run on `out\pulse_app.exe` (PS + WSL,
+  started 16:2xZ, wakeup scheduled ~17:25Z) -> record verdict; then
+  Step 4 (TLS only if the product needs it; keep the proxy fallback
+  documented) and the Step 3 handoff wrap.
 
 ### Step 3 progress (storage)
 
@@ -91,7 +91,7 @@ the driver was fixed before the green run.
 | JSON responses via stdlib `xiom.serialize.json` | DONE | smoke: `{"status":"ok"}`, `{"echo":{"a":1}}` |
 | curl verification | DONE 13/13 | `scripts/http_smoke.ps1` (note: bodies via `--data-binary @file`; PS 5.1 strips embedded quotes in native args) |
 | 64 concurrent on :8080 | DONE (green) | `scripts\concurrent.ps1 -Clients 64 -Port 8080 -Path /health -ServerExe out\pulse_server.exe` -> connected=64/64, ok=64, served=64, server_exit=0, handles 77->78 |
-| 1h soak (memory/fd stability) | RUNNING (started 2026-10-05 ~15:2xZ) | persistent bg process `bgp_10c9c56c40017FshZrk76eKzkH` on :18080 (session persistent); progress `probe-logs\soak-http-progress.txt` (60s samples), summary `probe-logs\soak-http.summary.txt` |
+| 1h soak (memory/fd stability) | DONE with caveat; 1h re-run in progress | 30m dual soak (2026-10-05 15:49-16:19Z): PS driver **3538/3538 ok, server_exit=0**; WSL client **3105 ok / 1 fail** (client transient, no server-side evidence); server log **7248/7248 HTTP 200**, 0 error lines, clean `shutdown served=7248`, ws 8,491,008 -> 8,544,256 (+53 KB), handles 113 -> 113. The +605 extra served requests were the orphaned old driver before `taskkill /T`. True **1h re-run on `out\pulse_app.exe`** started 16:2xZ (PS + WSL, wakeup scheduled) |
 | Registry package consumption | DONE (xiom.http with workaround; cookie/jwt green) | `xiom pkg install xiom.http@0.1.0` (sha256 f8b59d9e...), `xiom.cookie@0.1.1` (sha256 6259e3b3...), `xiom.jwt@0.1.1` (sha256 408643ce...), all signature-checked; `probe_pkg_step2.xi` 8/8 x2 (cookie jar parse/get/serialize-set; jwt shape/alg/sub/exp); `probe_pkg_http.xi` exposes the xiom.http parser defect |
 | WSL cross-boundary client check | DONE (green) | Ubuntu WSL: `curl http://172.26.112.1:18080/health` -> `{"status":"ok"}`; note: WSL `localhost:8080` hits the Docker Desktop container on this machine, not PULSE |
 
@@ -103,8 +103,14 @@ alongside it, but for clean evidence PULSE gained a `PULSE_PORT` env
 override (`src/server.xi` `server_port()`, default 8080) and the soak runs
 on 18080.
 
-**Soak sample (60s, healthy):** `ok=119 fail=0 ws=8,167,424 handles=110`
-(baseline ws=8,208,384 handles=110).
+**Soak verdict (30m dual, 2026-10-05 15:49-16:19Z):** PS 3538/3538 ok
+(fail=0, clean exit); WSL 3105 ok / 1 transient fail (no server-side
+evidence -- the server served 7248/7248 with zero error lines and shut
+down cleanly); ws +53 KB, handles flat 113/113. The earlier 36-min driver
+stall was a PowerShell-harness issue (orphaned child survived a
+wrapper-only kill; drivers now use `taskkill /T` semantics, socket
+timeouts, heartbeats and file redirects). WSL failure lines now log the
+curl exit code/HTTP code for future transients.
 
 ### Step 0 progress
 

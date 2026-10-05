@@ -13,7 +13,13 @@ ok=0; fail=0; last=$start
 echo "$(date -u +%FT%TZ) wsl-soak start host=$host:$port seconds=$seconds" >> "$out"
 while [ "$(date +%s)" -lt "$end" ]; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://$host:$port/health" 2>/dev/null)
-  if [ "$code" = "200" ]; then ok=$((ok + 1)); else fail=$((fail + 1)); fi
+  rc=$?
+  if [ "$code" = "200" ]; then
+    ok=$((ok + 1))
+  else
+    fail=$((fail + 1))
+    echo "$(date -u +%FT%TZ) FAIL code=[$code] curl_rc=$rc elapsed=$(( $(date +%s) - start ))s" >> "$out"
+  fi
   now=$(date +%s)
   if [ $((now - last)) -ge 60 ]; then
     echo "$(date -u +%FT%TZ) elapsed=$((now - start))s ok=$ok fail=$fail" >> "$out"

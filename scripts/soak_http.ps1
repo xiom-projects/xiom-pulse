@@ -119,6 +119,10 @@ if (-not $srv.WaitForExit(15000)) {
 }
 $srvExit = $srv.ExitCode
 $srvLog = if (Test-Path -LiteralPath $serverLog) { Get-Content -LiteralPath $serverLog -Raw } else { "" }
+$tail = ""
+if ($srvLog.Length -gt 0) {
+    $tail = ($srvLog.TrimEnd() -split "`r?`n" | Select-Object -Last 5) -join "`n"
+}
 
 $summary = @(
     "soak-http summary (UTC $([DateTime]::UtcNow.ToString('u')))",
@@ -129,7 +133,7 @@ $summary = @(
     "handles:  $handles0 -> $handles1 (delta $($handles1 - $handles0))",
     "server_exit: $srvExit",
     "--- server log tail ---",
-    ($srvLog.TrimEnd() -split "`r?`n" | Select-Object -Last 5) -join "`n"
+    $tail
 )
 $summary | Set-Content -LiteralPath $summaryFile
 $summary | ForEach-Object { Write-Host $_ }
