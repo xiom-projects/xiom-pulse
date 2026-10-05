@@ -31,6 +31,8 @@ use xiom.pulse.store;
 use xiom.pulse.ratelimit;
 use xiom.pulse.cors;
 use xiom.pulse.validate;
+use xiom.pulse.reqctx;
+use xiom.convert.parse;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -208,11 +210,35 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, out_body);
   }
   if m.route_id == 13 {
+    var limit: Int = 10;
+    var qi: Int = 0;
+    while qi < m.query_names.len() {
+      let qn = m.query_names[qi];
+      if qn == "limit" {
+        let qv = m.query_values[qi];
+        if qv.len() > 0 {
+          let pr = parse_int(qv);
+          if pr.is_ok {
+            limit = pr.value;
+          }
+        }
+      }
+      qi = qi + 1;
+    }
+    if limit < 1 { limit = 1; }
+    if limit > 100 { limit = 100; }
     let path = config.cfg_store_path();
-    let recs = store.store_last(path, 10);
+    let recs = store.store_last(path, limit);
     let arr = store.store_join_array(&recs);
     let out_body = "{\"count\":" + store.store_count(path).to_str() + ",\"events\":" + arr + "}";
     return out_json(200, out_body);
+  }
+  if m.route_id == 16 {
+    let path = config.cfg_store_path();
+    if !store.store_compact(path) {
+      return out_json(500, envelope.error_body("store_error", "compact failed"));
+    }
+    return out_json(200, envelope.ok_bool(true));
   }
   if m.route_id == 14 {
     if !icon_loaded {
@@ -416,6 +442,7 @@ pub fn main() -> Int {
       socket.socket_close(client);
     } else {
       let rid = next_rid();
+      reqctx.set_rid(rid);
       let req = http.parse_request(&raw);
       let cookie_header = http.header_get(&req, "cookie");
       if !req.ok {

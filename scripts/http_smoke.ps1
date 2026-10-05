@@ -103,6 +103,7 @@ Check "echo invalid json" $r '"code":"invalid_json"'
 # 5. 404
 $r = curl.exe -s -i "$base/nope" 2>&1 | Out-String
 Check "unknown 404" $r "404 Not Found"
+Check "404 has rid" $r '"rid":"r-'
 
 # 6. 405
 $r = curl.exe -s -i -X DELETE "$base/health" 2>&1 | Out-String
@@ -171,6 +172,11 @@ Check "events count body" $r '"count":'
 $r = Invoke-CurlGet "/api/events"
 Check "events list 200" $r "200 OK"
 Check "events list body" $r '"events":'
+$r = Invoke-CurlGet "/api/events?limit=1"
+Check "events limit 200" $r "200 OK"
+$r = Invoke-CurlPost "/api/events/compact" ""
+Check "events compact 200" $r "200 OK"
+Check "events compact ok" $r '"ok":true'
 
 # 12. App icon + landing page
 $r = Invoke-CurlGet "/favicon.ico"

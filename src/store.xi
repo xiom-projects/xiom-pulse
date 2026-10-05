@@ -100,6 +100,30 @@ pub fn store_append_event(path: Str, body_json: Str) -> Bool {
   return store_append(path, rec);
 }
 
+/// store_compact rewrites the file with only valid records (drops torn or
+/// corrupt lines) via a temp file + atomic replace (Windows
+/// MoveFileEx REPLACE_EXISTING). Complexity: O(n).
+pub fn store_compact(path: Str) -> Bool {
+  if !io.file_exists(path) { return true; }
+  var content: Str = schema_line() + "\n";
+  let recs = store_valid_records(path);
+  var i: Int = 0;
+  while i < recs.len() {
+    let r = recs[i];
+    content = content + r + "\n";
+    i = i + 1;
+  }
+  let tmp = path + ".tmp";
+  let w = io.write_file(tmp, content);
+  if w.is_err { return false; }
+  let mv = io.rename(tmp, path);
+  if mv.is_err {
+    let _rm = io.remove_file(tmp);
+    return false;
+  }
+  return true;
+}
+
 /// store_join_array renders records as a JSON array text.
 /// Complexity: O(n). Pure.
 pub fn store_join_array(records: &Vec[Str]) -> Str {

@@ -22,6 +22,7 @@ use xiom.pulse.session;
 use xiom.pulse.store;
 use xiom.pulse.ratelimit;
 use xiom.pulse.validate;
+use xiom.pulse.reqctx;
 use xiom.pulse.server;
 
 fn check(name: Str, ok: Bool) -> Int {
@@ -169,6 +170,12 @@ pub fn main() -> Int {
   f = f + check("dispatch 405 allow", h405.status == 405 && h405.headers.len() == 1);
   let nf = route_req("GET", "/nope", "");
   f = f + check("dispatch 404 envelope", nf.status == 404 && string.str_contains(nf.body, "\"code\":\"not_found\""));
+  reqctx.set_rid("r-test");
+  let nf2 = route_req("GET", "/nope", "");
+  f = f + check("error carries rid", string.str_contains(nf2.body, "\"rid\":\"r-test\""));
+  reqctx.set_rid("");
+  let nf3 = route_req("GET", "/nope", "");
+  f = f + check("error rid omitted when unset", !string.str_contains(nf3.body, "\"rid\":"));
   let item = route_req("GET", "/api/items/xyz", "");
   f = f + check("dispatch item", item.status == 200 && string.str_contains(item.body, "\"item\":\"xyz\""));
   let itemq = route_req("GET", "/api/items/7?x=1", "");
@@ -210,6 +217,20 @@ pub fn main() -> Int {
   f = f + check("dispatch events count", ec.status == 200 && string.str_contains(ec.body, "\"count\":2"));
   let el = route_req("GET", "/api/events", "");
   f = f + check("dispatch events list", el.status == 200 && string.str_contains(el.body, "click"));
+  let el1 = route_req("GET", "/api/events?limit=1", "");
+  f = f + check("dispatch events limit", el1.status == 200 && string.str_contains(el1.body, "click") && !string.str_contains(el1.body, "\"a\":1"));
+  let ecmp = route_req("POST", "/api/events/compact", "");
+  f = f + check("dispatch compact 200", ecmp.status == 200);
+  f = f + check("compact keeps records", store.store_count(sp) == 2);
+  let raw_after = io.read_file(sp);
+  if raw_after.is_ok {
+    let ra = raw_after.value;
+    f = f + check("compact drops torn", !string.str_contains(ra, "torn"));
+  } else {
+    f = f + check("compact drops torn", false);
+  }
+  let m16 = router.route_match("POST", "/api/events/compact");
+  f = f + check("route compact matched", m16.kind == 1 && m16.route_id == 16);
   let e405 = route_req("PUT", "/api/events", "");
   f = f + check("dispatch events 405 allow", e405.status == 405 && e405.headers.len() == 1);
   let evbad = route_req("POST", "/api/events", "notjson");

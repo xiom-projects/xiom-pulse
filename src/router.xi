@@ -11,7 +11,7 @@
 // 4 POST /api/session/login, 5 GET /api/me, 6 POST /api/session/logout,
 // 7 POST /api/token, 8 POST /api/token/verify, 9 GET /metrics,
 // 10 GET /api/items/:id, 11 POST /api/events, 12 GET /api/events/count,
-// 13 GET /api/events, 14 GET /favicon.ico, 15 GET /.
+// 13 GET /api/events, 14 GET /favicon.ico, 15 GET /, 16 POST /api/events/compact.
 module xiom.pulse.router
 
 use xiom.string;
@@ -151,6 +151,7 @@ pub fn route_match(method: Str, target: Str) -> PulseRoute {
   let _r13 = router.router_add(&mut t, "GET", "/api/events");       ids.push(13);
   let _r14 = router.router_add(&mut t, "GET", "/favicon.ico");      ids.push(14);
   let _r15 = router.router_add(&mut t, "GET", "/");                 ids.push(15);
+  let _r16 = router.router_add(&mut t, "POST", "/api/events/compact"); ids.push(16);
 
   let rm = router.router_match(&t, method, path);
   if rm.code == 404 {

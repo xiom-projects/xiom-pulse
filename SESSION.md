@@ -30,13 +30,13 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **M4 hardening wave 3** on v0.64.0: CSRF
-  double-submit on session-authenticated mutations (403 without token),
-  opt-in CORS (`PULSE_CORS_ORIGIN`, preflight `204`), `HEAD` support,
-  field length validation (`user` <= 64, `token` <= 4096), `204` reason
-  phrase; CORS header injection bug found by the smoke and fixed.
-  Suites x2 (`test_app` 85 checks), smoke **52/52** on
-  `out\pulse_app_v7.exe`.
+- **Last green slice:** **M4 hardening wave 4** on v0.64.0: store
+  compaction (temp file + `MoveFileEx` replace; drops torn lines), events
+  `?limit=` query, request ids in every error envelope, `io.rename`
+  semantics verified (`MOVEFILE_REPLACE_EXISTING`). Suites x2 (`test_app`
+  90 checks), smoke **56/56** on `out\pulse_app_v8.exe`. New stdlib
+  wishlist row: no `fsync`/`FlushFileBuffers` anywhere in the runtime ->
+  "durable" appends are write-back only.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const

@@ -6,12 +6,18 @@
 module xiom.pulse.envelope
 
 use xiom.serialize.json;
+use xiom.pulse.reqctx;
 
-/// error_body builds the uniform error envelope.
-/// Complexity: O(1). Pure.
+/// error_body builds the uniform error envelope
+/// `{"error":{"code":"...","message":"...","rid":"..."}}`; `rid` is included
+/// when the server has set a request id. Complexity: O(1). Pure.
 pub fn error_body(code: Str, message: Str) -> Str {
   var inner = json.json_set(json.json_object_new(), "code", json.json_string(code));
   inner = json.json_set(inner, "message", json.json_string(message));
+  let rid = reqctx.get_rid();
+  if rid.len() > 0 {
+    inner = json.json_set(inner, "rid", json.json_string(rid));
+  }
   let outer = json.json_set(json.json_object_new(), "error", inner);
   return json.json_stringify(outer);
 }

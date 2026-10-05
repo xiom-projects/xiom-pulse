@@ -15,13 +15,15 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~44% of production grade**
+## 1. Overall score: **~45% of production grade**
 
-_Delta 2026-10-05 (evening wave 3): 43% -> 44% -- CSRF double-submit
-protection (session requests), opt-in CORS with preflight (`204`), `HEAD`
-support, field length validation, `204` reason phrase. Evidence: suites x2
-(`test_app` 85 checks), smoke **52/52** (CSRF 403/200, preflight, HEAD),
-`out\pulse_app_v7.exe`._
+_Delta 2026-10-05 (evening wave 4): 44% -> 45% -- store compaction
+(temp-file + `MoveFileEx` replace, drops torn lines), events `?limit=`
+query, request ids embedded in every error envelope (log/error
+correlation). Evidence: suites x2 (`test_app` 90 checks), smoke **56/56**
+(`404 has rid`, `events limit`, `events compact`), `out\pulse_app_v8.exe`.
+New stdlib wishlist row: `fsync` durability wrapper (none exists in the
+runtime)._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
@@ -29,15 +31,15 @@ support, field length validation, `204` reason phrase. Evidence: suites x2
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 10% | 0.8 | logging/audit inline only |
 | 4 | Configuration | 5% | 60% | 3.0 | env-based; no file/validation |
-| 5 | Observability (log/metrics/audit) | 8% | 68% | 5.4 | JSON log + `dur_ms` + counters + histogram + audit; flush no-op |
+| 5 | Observability (log/metrics/audit) | 8% | 70% | 5.6 | JSON log + `dur_ms` + counters + histogram + audit + rid correlation; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF; no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 35% | 3.5 | JSONL store + crash-safe append; no query/update/compaction |
+| 7 | Storage | 10% | 45% | 4.5 | JSONL store, crash-safe append, `?limit`, compaction; no update/delete/index, no fsync |
 | 8 | Security hardening | 12% | 38% | 4.6 | rate limit + CSRF + opt-in CORS + security headers + caps; no schema lib/TLS E2E |
 | 9 | Static / assets | 4% | 20% | 0.8 | favicon + landing only |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 60% | 3.0 | suites+smoke+rate-smoke+soak+WSL locally; no CI, no packaging |
-| | **Total** | **100%** | | **44.2** | |
+| | **Total** | **100%** | | **45.4** | |
 
 Two lenses to keep separate:
 
@@ -124,9 +126,10 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 - Env only; no config file, no schema validation, no startup warnings for
   missing production values (e.g. dev JWT secret).
 
-**Observability (68%)**
+**Observability (70%)**
 - JSON access log with `rid`/status/bytes/`dur_ms`; counters + request
-  duration histogram + `/metrics`; audit trail.
+  duration histogram + `/metrics`; audit trail; request ids embedded in
+  error envelopes for correlation.
 - `io.flush_stdout()` is an empty body in the current stdlib -> logs can
   lag until process exit (stdlib wave queued).
 
@@ -137,10 +140,12 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
   no scopes/roles, no refresh tokens.
 - No RBAC/authorization layer at all.
 
-**Storage (35%)**
-- Append + read last N + count. No update/delete/query/filtering.
-- No migrations framework (only a schema marker), no compaction, no
-  backup/restore, no indexes (fine at small scale).
+**Storage (45%)**
+- Append + read last N (`?limit=1..100`) + count + compaction (temp file +
+  atomic replace; drops torn lines). No update/delete/query-by-field,
+  migrations framework, or indexes (fine at small scale).
+- No `fsync` in the runtime: durability today = torn-tail healing, not
+  power-loss safety (stdlib wishlist row added).
 - `xiom.kv` is the proposed packages-lane replacement.
 
 **Security hardening (38%)**
