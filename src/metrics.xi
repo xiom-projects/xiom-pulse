@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 module xiom.pulse.metrics
 
+use xiom.time;
+
 var m_requests: Int = 0;
 var m_2xx: Int = 0;
 var m_4xx: Int = 0;
@@ -11,6 +13,15 @@ var m_bytes: Int = 0;
 var m_dur_buckets: Vec[Int] = Vec[Int].new();
 var m_dur_sum_ms: Int = 0;
 var m_dur_count: Int = 0;
+var m_start_ms: Int = 0;
+
+/// metrics_mark_start records the process start (first call wins).
+/// Complexity: O(1).
+pub fn metrics_mark_start(now_ms: Int) {
+  if m_start_ms == 0 {
+    m_start_ms = now_ms;
+  }
+}
 
 fn bucket_index(ms: Int) -> Int {
   if ms <= 1 { return 0; }
@@ -99,6 +110,13 @@ pub fn metrics_render() -> Str {
   }
   out = out + "pulse_http_request_duration_ms_sum " + m_dur_sum_ms.to_str() + "\n";
   out = out + "pulse_http_request_duration_ms_count " + m_dur_count.to_str() + "\n";
+  var up_s: Int = 0;
+  if m_start_ms > 0 {
+    up_s = (time.monotonic_ms() - m_start_ms) / 1000;
+  }
+  out = out + "# HELP pulse_uptime_seconds Seconds since start.\n";
+  out = out + "# TYPE pulse_uptime_seconds gauge\n";
+  out = out + "pulse_uptime_seconds " + up_s.to_str() + "\n";
   return out;
 }
 

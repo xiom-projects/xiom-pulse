@@ -184,7 +184,10 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, out_body);
   }
   if m.route_id == 9 {
-    return out_text(200, metrics.metrics_render());
+    let base = metrics.metrics_render();
+    let sc = store.store_count(config.cfg_store_path());
+    let extra = "# HELP pulse_store_records Valid event records.\n# TYPE pulse_store_records gauge\npulse_store_records " + sc.to_str() + "\n# HELP pulse_app_info Build info.\n# TYPE pulse_app_info gauge\npulse_app_info{version=\"0.1.0\"} 1\n";
+    return out_text(200, base + extra);
   }
   if m.route_id == 10 {
     if m.param_values.len() == 0 {
@@ -401,6 +404,7 @@ pub fn main() -> Int {
   }
   io.println("pulse: listening on 127.0.0.1:" + port.to_str());
   io.flush_stdout();
+  metrics.metrics_mark_start(time.monotonic_ms());
 
   let store_ok = store.store_init(config.cfg_store_path());
   if !store_ok {

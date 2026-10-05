@@ -33,10 +33,13 @@
 - **Last green slice:** **M4 hardening wave 4** on v0.64.0: store
   compaction (temp file + `MoveFileEx` replace; drops torn lines), events
   `?limit=` query, request ids in every error envelope, `io.rename`
-  semantics verified (`MOVEFILE_REPLACE_EXISTING`). Suites x2 (`test_app`
-  90 checks), smoke **56/56** on `out\pulse_app_v8.exe`. New stdlib
-  wishlist row: no `fsync`/`FlushFileBuffers` anywhere in the runtime ->
-  "durable" appends are write-back only.
+  semantics verified (`MOVEFILE_REPLACE_EXISTING`); service gauges
+  (`pulse_app_info`, `pulse_store_records`, `pulse_uptime_seconds`).
+  Suites x2 (`test_app` 91 checks), smoke **59/59** on
+  `out\pulse_app_v8.exe`; storage soak driver added (20s validation GREEN:
+  84 writes -> compact 84 -> hard kill -> reopen 84; 10m run in progress,
+  wakeup 18:58Z). New stdlib wishlist row: no `fsync`/`FlushFileBuffers`
+  anywhere in the runtime -> "durable" appends are write-back only.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const

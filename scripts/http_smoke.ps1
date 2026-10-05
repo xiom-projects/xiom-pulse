@@ -121,6 +121,9 @@ Check "item body" $r '{"item":"42"}'
 $r = Invoke-CurlGet "/metrics"
 Check "metrics 200" $r "200 OK"
 Check "metrics text" $r "pulse_http_requests_total"
+Check "metrics store gauge" $r "pulse_store_records"
+Check "metrics app info" $r "pulse_app_info"
+Check "metrics uptime" $r "pulse_uptime_seconds"
 
 # 9. Step 2: cookie sessions
 $cookieJar = Join-Path $env:TEMP ("pulse-cookies-" + [guid]::NewGuid().ToString("N") + ".txt")

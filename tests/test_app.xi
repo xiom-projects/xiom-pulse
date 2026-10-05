@@ -100,6 +100,7 @@ pub fn main() -> Int {
   f = f + check("hist +Inf", string.str_contains(mr2, "pulse_http_request_duration_ms_bucket{le=\"+Inf\"} 4"));
   f = f + check("hist le5 cumulative", string.str_contains(mr2, "pulse_http_request_duration_ms_bucket{le=\"5\"} 2"));
   f = f + check("hist sum", string.str_contains(mr2, "pulse_http_request_duration_ms_sum 9056"));
+  f = f + check("metrics uptime", string.str_contains(mr2, "pulse_uptime_seconds"));
 
   // --- rate limiting (registry xiom.rate 0.2.0) ----------------------------
   env.set_var("PULSE_RATE_LIMIT", "2");
