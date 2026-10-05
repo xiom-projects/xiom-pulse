@@ -24,15 +24,18 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\tcp_srv2.exe" }
 if (-not $ClientExe) { $ClientExe = Join-Path $repoRoot "out\tcp_cli2.exe" }
 
-# Start the server (System.Diagnostics.Process: reliable ExitCode under
-# redirected output in PS 5.1).
+# Start the server with output redirected to a FILE (cmd), never a
+# PowerShell pipe: a chatty server (per-request access log) fills an
+# undrained 4 KiB pipe and blocks mid-test.
 $env:PULSE_PORT = "$Port"
+$srvLog = Join-Path (Split-Path -Parent $PSScriptRoot) "probe-logs\concurrent-server.out"
+$logDir = Split-Path -Parent $srvLog
+if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 $psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = $ServerExe
+$psi.FileName = "cmd.exe"
+$psi.Arguments = "/c `"`"$ServerExe`" > `"$srvLog`" 2>&1`""
 $psi.WorkingDirectory = $repoRoot
 $psi.UseShellExecute = $false
-$psi.RedirectStandardOutput = $true
-$psi.RedirectStandardError = $true
 $psi.CreateNoWindow = $true
 $srv = New-Object System.Diagnostics.Process
 $srv.StartInfo = $psi
@@ -104,15 +107,15 @@ if (-not $srv.WaitForExit(15000)) {
     $srv.WaitForExit(5000) | Out-Null
 }
 $srvExit = $srv.ExitCode
-$srvLog = $srv.StandardOutput.ReadToEnd() + $srv.StandardError.ReadToEnd()
+$srvOut = if (Test-Path -LiteralPath $srvLog) { Get-Content -LiteralPath $srvLog -Raw } else { "" }
 
 Write-Host "--- server output ---"
-Write-Host $srvLog.TrimEnd()
+Write-Host $srvOut.TrimEnd()
 $mem2 = (Get-Process -Id $srv.Id -ErrorAction SilentlyContinue)
 Write-Host ("concurrent: ws {0:N0} -> {1:N0}; handles {2} -> {3}" -f $mem0, $mem1, $handles0, $handles1)
 Write-Host ("concurrent: server_exit={0}" -f $srvExit)
 
-$servedMatch = [regex]::Match($srvLog, "served=(\d+)")
+$servedMatch = [regex]::Match($srvOut, "served=(\d+)")
 $served = if ($servedMatch.Success) { [int]$servedMatch.Groups[1].Value } else { -1 }
 Write-Host ("concurrent: served={0} expected={1}" -f $served, $Clients)
 

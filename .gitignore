@@ -24,6 +24,7 @@ a.out
 *.log
 /probe-logs/
 /soak/
+/pulse-audit.log
 
 # Kilo / Agent Manager workspace state (never commit)
 .kilo/

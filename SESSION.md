@@ -26,18 +26,45 @@
   - stdlib   `15cb889` 2026-10-05T14:03:35+03:00
   - compiler `586426e9` 2026-10-05T15:32:11+03:00
   - packages `3f21385c` 2026-10-05T15:47:13+03:00
-- **Last green slice:** Step 1 live and green: HTTP/1.1 server on :8080
-  (`tests/test_http.xi` 31/31 x2; curl smoke 13/13; 64/64 concurrent;
-  WSL -> Windows host curl `{"status":"ok"}`); 1h soak running on :18080
-  (persistent bg process, 60s progress samples).
+- **Last green slice:** **Step 2 app skeleton live** on `out\pulse_app.exe`:
+  router (params + 405/Allow), uniform error envelope, config
+  (`PULSE_PORT`/`PULSE_LOG`/`PULSE_AUDIT_PATH`/`PULSE_JWT_SECRET`/
+  `PULSE_SESSION_TTL`), structured JSON access log, `/metrics` (Prometheus
+  text), audit trail (`pulse-audit.log`), cookie sessions
+  (login/me/logout), JWT HS256 issue/verify/tamper (stdlib crypto).
+  Suite 41/41 x2 (`tests/test_app.xi`), smoke 31/31
+  (`scripts\http_smoke.ps1 -Port 18081 -ServerExe out\pulse_app.exe`),
+  64/64 concurrent on :18083, handles flat. Soak (Step 1 binary) healthy at
+  2168s / 4263 requests / 0 fail.
 - **Open blockers:** C-PULSE-01 (read method) worked around via raw
   socket_recv; C-PULSE-02 (dep->root mapping) worked around via xiom.toml
   source-roots; C-PULSE-04 (&mut Int bare read) documented (PULSE code uses
   value locals); `xiom.http` v0.1.0 parser broken (package defect filed).
-- **Next action:** read `probe-logs\soak-http.summary.txt` (and progress
-  file) for the 1h soak verdict; if GREEN, Step 2 (app skeleton: error
-  envelope, config, log, metrics, audit, cookie/session; JWT now unblocked
-  by the crypto result).
+- **Next action:** read `probe-logs\soak-http.summary.txt` for the 1h soak
+  verdict (wakeup scheduled 16:12Z), then Step 3 storage (most-tested
+  option first; schema/migrations; crash/reopen; soak). Optional Step 2
+  leftover: request-id correlation in the error envelope, rate-limit stub.
+
+### Step 2 progress
+
+| Item | Result | Evidence |
+|---|---|---|
+| Router (exact + `/api/items/:id`, 405 + Allow) | DONE | `src/router.xi`; `tests/test_app.xi` |
+| Error envelope `{"error":{"code","message"}}` | DONE | `src/envelope.xi`; smoke 400/401/404/405 |
+| Config (env-overridable) | DONE | `src/config.xi`; suite port override/fallback |
+| Structured access log (JSON, rid) | DONE | `src/server.xi access_log`; smoke server log |
+| Metrics + `/metrics` Prometheus text | DONE | `src/metrics.xi`; suite + smoke |
+| Audit trail (mutating requests) | DONE | `src/server.xi audit_event`; `pulse-audit.log` (gitignored) |
+| Cookie sessions (login/me/logout) | DONE | `src/session.xi` (registry `xiom.cookie` for parsing); smoke cookie-jar flow |
+| JWT HS256 (sign/verify/exp/tamper) | DONE | `src/jwt_hs.xi`; suite + smoke |
+| 64 concurrent on Step 2 binary | DONE (green) | `scripts\concurrent.ps1 -Port 18083 -ServerExe out\pulse_app.exe` |
+| Storage | pending (Step 3) | -- |
+
+**Test-infra learning:** chatty servers must never be started with undrained
+PowerShell pipes (4 KiB buffer) — `concurrent.ps1` and `soak_http.ps1` both
+redirect the server to a file via `cmd /c` now. The first Step 2 concurrent
+run deadlocked on exactly this (64 JSON log lines > 4 KiB), which is why
+the driver was fixed before the green run.
 
 ### Step 1 progress
 
@@ -166,11 +193,12 @@ watchdog and watchdog-gated exit code) and confirm the soak verdict. A
 non-zero failure count or handle growth is a finding: file it in SESSION.md
 with the progress file as evidence.
 
-Then Step 2 (app skeleton): error envelope, config, log, metrics, audit,
-cookie + session; JWT is unblocked (stdlib sha256/HMAC KAT-verified under
-XIOM_RUNTIME_DIR). Keep the workarounds: no one-arg `read` methods (raw
-socket_recv), no bare &mut Int reads (*p), probes staged in-repo, suite x2.
-Keep the three relay documents updated at every wrap:
+Step 2 is DONE (suite tests\test_app.xi 41/41 x2; smoke 31/31; 64/64
+concurrent). Then Step 3 (storage): pick the most-tested option first,
+schema/migrations, crash/reopen test, soak. Keep the workarounds: no
+one-arg `read` methods (raw socket_recv), no bare &mut Int reads (*p),
+probes staged in-repo, suite x2, server output redirected to files (never
+undrained pipes). Keep the three relay documents updated at every wrap:
 docs\COMPILER-FINDINGS-PULSE.md, docs\STDLIB-WISHLIST-PULSE.md,
 docs\PACKAGE-WISHLIST-PULSE.md. Batch findings rows in SESSION.md at the
 wrap and commit.

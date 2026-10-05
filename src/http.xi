@@ -239,28 +239,44 @@ pub fn content_length_of(raw: &Vec[UInt8], hdr_end: Int) -> Int {
 pub fn status_text(code: Int) -> Str {
   if code == 200 { return "OK"; }
   if code == 400 { return "Bad Request"; }
+  if code == 401 { return "Unauthorized"; }
+  if code == 403 { return "Forbidden"; }
   if code == 404 { return "Not Found"; }
   if code == 405 { return "Method Not Allowed"; }
   if code == 413 { return "Payload Too Large"; }
+  if code == 429 { return "Too Many Requests"; }
   if code == 500 { return "Internal Server Error"; }
   return "Unknown";
 }
 
-/// build_response builds a full JSON response with Connection: close.
-/// Complexity: O(n). Pure.
-pub fn build_response(status: Int, body: Str) -> Vec[UInt8] {
-  let head: Str = "HTTP/1.1 " + status.to_str() + " " + status_text(status) + "\r\n"
-    + "Content-Type: application/json; charset=utf-8\r\n"
-    + "Content-Length: " + body.len().to_str() + "\r\n"
-    + "Connection: close\r\n"
-    + "Server: xiom-pulse/0.1.0\r\n"
-    + "\r\n";
-  var out: Vec[UInt8] = str_to_bytes(head);
-  var body_bytes: Vec[UInt8] = str_to_bytes(body);
+/// build_response_full builds a response with a custom content type and
+/// extra headers (Set-Cookie, Allow, ...). Complexity: O(n). Pure.
+pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: Str) -> Vec[UInt8] {
+  var head: Str = "HTTP/1.1 " + status.to_str() + " " + status_text(status) + "\r\n";
+  head = head + "Content-Type: " + content_type + "\r\n";
   var i: Int = 0;
-  while i < body_bytes.len() {
-    out.push(body_bytes[i]);
+  while i < extra_headers.len() {
+    let h = extra_headers[i];
+    head = head + h.0 + ": " + h.1 + "\r\n";
     i = i + 1;
   }
+  head = head + "Content-Length: " + body.len().to_str() + "\r\n";
+  head = head + "Connection: close\r\n";
+  head = head + "Server: xiom-pulse/0.1.0\r\n";
+  head = head + "\r\n";
+  var out: Vec[UInt8] = str_to_bytes(head);
+  var body_bytes: Vec[UInt8] = str_to_bytes(body);
+  var j: Int = 0;
+  while j < body_bytes.len() {
+    out.push(body_bytes[j]);
+    j = j + 1;
+  }
   return out;
+}
+
+/// build_response builds a JSON response with Connection: close.
+/// Complexity: O(n). Pure.
+pub fn build_response(status: Int, body: Str) -> Vec[UInt8] {
+  var none: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  return build_response_full(status, "application/json; charset=utf-8", &none, body);
 }

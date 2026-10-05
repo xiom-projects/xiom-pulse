@@ -1,11 +1,13 @@
-// XIOM PULSE -- HTTP/1.1 server loop and routing.
+// XIOM PULSE -- HTTP/1.1 server loop, routing and app-skeleton wiring.
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Single-threaded sequential-accept server on 127.0.0.1:8080 (the pinned
-// runtime exposes no select/threads/timeouts). Reads go through the raw fd
-// socket API because C-PULSE-01 disables one-arg `.read(...)` methods.
-// TLS is terminated by the front proxy; this process speaks plaintext HTTP.
+// Single-threaded sequential-accept server (pin: no select/threads/timeouts).
+// Reads go through the raw fd socket API because C-PULSE-01 disables one-arg
+// `.read(...)` methods. TLS is terminated by the front proxy.
+//
+// Step 2 features: router, uniform error envelope, config, structured access
+// log, metrics endpoint, audit trail, cookie sessions, JWT HS256.
 //
 // Build: .\scripts\build.ps1 src\server.xi -Name pulse_server
 // Quit:  send any request with header `X-Pulse-Quit: 1`
@@ -13,73 +15,161 @@ module xiom.pulse.server
 
 use xiom.net.socket;
 use xiom.io;
-use xiom.env;
+use xiom.time;
+use xiom.string;
+use xiom.convert;
 use xiom.serialize.json;
 use xiom.pulse.http;
+use xiom.pulse.router;
+use xiom.pulse.envelope;
+use xiom.pulse.config;
+use xiom.pulse.metrics;
+use xiom.pulse.session;
+use xiom.pulse.jwt_hs;
 
 const MAX_BODY: Int = 1048576;
+const CONTENT_JSON: Str = "application/json; charset=utf-8";
+const CONTENT_TEXT: Str = "text/plain; charset=utf-8";
 
-/// port_from_str parses a decimal port, falling back to 8080.
-/// Complexity: O(n). Pure.
-fn port_from_str(s: Str) -> Int {
-  if s.len() == 0 { return 8080; }
-  var v: Int = 0;
-  var i: Int = 0;
-  while i < s.len() {
-    let b = s.byte_at(i);
-    if b < 48u8 || b > 57u8 { return 8080; }
-    v = v * 10 + ((b as Int) - 48);
-    i = i + 1;
+var req_counter: Int = 0;
+
+fn next_rid() -> Str {
+  req_counter = req_counter + 1;
+  return "r-" + req_counter.to_str();
+}
+
+/// HandlerOut - one dispatched response.
+pub type HandlerOut = {
+  status: Int;
+  content_type: Str;
+  headers: Vec[(Str, Str)];
+  body: Str;
+}
+
+fn out_json(status: Int, body: Str) -> HandlerOut {
+  return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: Vec[(Str, Str)].new(); body: body; };
+}
+
+fn out_text(status: Int, body: Str) -> HandlerOut {
+  return HandlerOut{ status: status; content_type: CONTENT_TEXT; headers: Vec[(Str, Str)].new(); body: body; };
+}
+
+fn json_body_str(body: Str, key: Str) -> Str {
+  let pv = json.json_parse(body);
+  if pv.is_err { return ""; }
+  let opt = json.json_get(pv.value, key);
+  if opt.is_none { return ""; }
+  let v = opt.value;
+  if json.json_type(v) != "string" { return ""; }
+  match v {
+    JsonValue.String(s) => { return s; },
+    _ => { return ""; },
   }
-  if v <= 0 || v > 65535 { return 8080; }
-  return v;
 }
 
-/// server_port returns the listen port from PULSE_PORT, else 8080.
-/// Complexity: O(1). Pure.
-fn server_port() -> Int {
-  return port_from_str(env.var_or("PULSE_PORT", "8080"));
-}
-
-fn error_json(msg: Str) -> Str {
-  let v = json.json_set(json.json_object_new(), "error", json.json_string(msg));
+fn json_ok_field(key: Str, value: Str) -> Str {
+  let v = json.json_set(json.json_object_new(), key, json.json_string(value));
   return json.json_stringify(v);
 }
 
-/// handle_route dispatches one parsed request to a status + JSON body.
-/// Complexity: O(1) plus body parse. Pure.
-pub fn handle_route(method: Str, target: Str, body: Str) -> RouteResult {
-  if target == "/health" {
-    if method != "GET" {
-      return RouteResult{ status: 405; body: error_json("method not allowed"); };
-    }
-    let v = json.json_set(json.json_object_new(), "status", json.json_string("ok"));
-    return RouteResult{ status: 200; body: json.json_stringify(v); };
+/// handle_route dispatches a matched route to a HandlerOut.
+/// Complexity: O(body).
+pub fn handle_route(m: RouteMatch, req: &PulseRequest, body: Str) -> HandlerOut {
+  if m.kind == 0 {
+    return out_json(404, envelope.error_body("not_found", "not found"));
   }
-  if target == "/api/version" {
-    if method != "GET" {
-      return RouteResult{ status: 405; body: error_json("method not allowed"); };
-    }
+  if m.kind == 2 {
+    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    hs.push(("Allow", m.allow));
+    return HandlerOut{ status: 405; content_type: CONTENT_JSON; headers: hs; body: envelope.error_body("method_not_allowed", "method not allowed"); };
+  }
+
+  if m.route_id == 1 {
+    return out_json(200, json_ok_field("status", "ok"));
+  }
+  if m.route_id == 2 {
     var v = json.json_set(json.json_object_new(), "name", json.json_string("xiom-pulse"));
     v = json.json_set(v, "version", json.json_string("0.1.0"));
-    return RouteResult{ status: 200; body: json.json_stringify(v); };
+    return out_json(200, json.json_stringify(v));
   }
-  if target == "/api/echo" {
-    if method != "POST" {
-      return RouteResult{ status: 405; body: error_json("method not allowed"); };
-    }
+  if m.route_id == 3 {
     let parsed = json.json_parse(body);
     if parsed.is_err {
-      return RouteResult{ status: 400; body: error_json("invalid json"); };
+      return out_json(400, envelope.error_body("invalid_json", "invalid json"));
     }
     let v = json.json_set(json.json_object_new(), "echo", parsed.value);
-    return RouteResult{ status: 200; body: json.json_stringify(v); };
+    return out_json(200, json.json_stringify(v));
   }
-  return RouteResult{ status: 404; body: error_json("not found"); };
+  if m.route_id == 4 {
+    let user = json_body_str(body, "user");
+    if user.len() == 0 {
+      return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"}"));
+    }
+    let ttl = config.cfg_session_ttl_secs();
+    let sid = session.session_create(user, ttl);
+    var v = json.json_set(json.json_object_new(), "user", json.json_string(user));
+    v = json.json_set(v, "sid", json.json_string(sid));
+    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    hs.push(("Set-Cookie", session.session_cookie_header(sid, ttl)));
+    return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: json.json_stringify(v); };
+  }
+  if m.route_id == 5 {
+    let cookie_header = http.header_get(req, "cookie");
+    let sid = session.session_id_from_cookie(cookie_header);
+    if sid.len() == 0 {
+      return out_json(401, envelope.error_body("unauthorized", "no session"));
+    }
+    let user = session.session_get(sid);
+    if user.len() == 0 {
+      return out_json(401, envelope.error_body("unauthorized", "invalid or expired session"));
+    }
+    return out_json(200, json_ok_field("user", user));
+  }
+  if m.route_id == 6 {
+    let cookie_header = http.header_get(req, "cookie");
+    let sid = session.session_id_from_cookie(cookie_header);
+    if sid.len() > 0 { session.session_drop(sid); }
+    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    hs.push(("Set-Cookie", session.session_expired_cookie_header()));
+    return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: envelope.ok_bool(true); };
+  }
+  if m.route_id == 7 {
+    let user = json_body_str(body, "user");
+    if user.len() == 0 {
+      return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"}"));
+    }
+    let now = time.unix_timestamp();
+    var pv = json.json_set(json.json_object_new(), "sub", json.json_string(user));
+    pv = json.json_set(pv, "iat", json.json_number(convert.int_to_float(now)));
+    pv = json.json_set(pv, "exp", json.json_number(convert.int_to_float(now + 3600)));
+    let token = jwt_hs.hs256_sign(json.json_stringify(pv), config.cfg_jwt_secret());
+    return out_json(200, json_ok_field("token", token));
+  }
+  if m.route_id == 8 {
+    let token = json_body_str(body, "token");
+    if token.len() == 0 {
+      return out_json(400, envelope.error_body("invalid_request", "body must be {\"token\":\"...\"}"));
+    }
+    let now = time.unix_timestamp();
+    if !jwt_hs.hs256_verify_now(token, config.cfg_jwt_secret(), now) {
+      return out_json(401, envelope.error_body("invalid_token", "signature or expiry check failed"));
+    }
+    return out_json(200, envelope.ok_bool(true));
+  }
+  if m.route_id == 9 {
+    return out_text(200, metrics.metrics_render());
+  }
+  if m.route_id == 10 {
+    if m.param_values.len() == 0 {
+      return out_json(404, envelope.error_body("not_found", "missing item id"));
+    }
+    return out_json(200, json_ok_field("item", m.param_values[0]));
+  }
+  return out_json(404, envelope.error_body("not_found", "not found"));
 }
 
-/// read_request buffers one request per connection until its headers and
-/// (Content-Length) body are complete. Complexity: O(n) syscalls.
+/// read_request buffers one request per connection until headers and the
+/// Content-Length body are complete. Complexity: O(n) syscalls.
 fn read_request(client: Int) -> Vec[UInt8] {
   var raw: Vec[UInt8] = Vec[UInt8].new();
   var done: Bool = false;
@@ -102,18 +192,30 @@ fn read_request(client: Int) -> Vec[UInt8] {
         if he >= 0 {
           var want: Int = he + 4 + content_length_of(&raw, he);
           let cap: Int = he + 4 + MAX_BODY;
-          if want > cap {
-            want = cap;
-          }
-          if raw.len() >= want {
-            done = true;
-          }
+          if want > cap { want = cap; }
+          if raw.len() >= want { done = true; }
         }
       }
     }
     rounds = rounds + 1;
   }
   return raw;
+}
+
+fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int) {
+  if !config.cfg_log_enabled() { return; }
+  let line = "{\"ts\":" + time.unix_timestamp().to_str() + ",\"rid\":\"" + rid + "\",\"method\":\"" + method + "\",\"target\":\"" + target + "\",\"status\":" + status.to_str() + ",\"bytes\":" + bytes.to_str() + "}";
+  io.println(line);
+  io.flush_stdout();
+}
+
+fn audit_event(rid: Str, method: Str, target: Str, status: Int) {
+  let line = time.unix_timestamp().to_str() + " " + rid + " " + method + " " + target + " " + status.to_str();
+  let r = io.append_line(config.cfg_audit_path(), line);
+  if r.is_err {
+    io.println("pulse: audit append failed");
+    io.flush_stdout();
+  }
 }
 
 pub fn main() -> Int {
@@ -124,7 +226,7 @@ pub fn main() -> Int {
     return 1;
   }
   let fd = sr.value;
-  let port = server_port();
+  let port = config.cfg_port();
 
   let br = socket.socket_bind(fd, "127.0.0.1", port);
   if br.is_err {
@@ -156,22 +258,24 @@ pub fn main() -> Int {
     if raw.len() == 0 {
       socket.socket_close(client);
     } else {
+      let rid = next_rid();
       let req = http.parse_request(&raw);
       if !req.ok {
-        let resp = http.build_response(400, error_json("bad request"));
+        var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+        let resp = http.build_response_full(400, CONTENT_JSON, &no_headers, envelope.error_body("bad_request", "bad request"));
         let w = socket.socket_send(client, &resp);
-        if w.is_err {
-          io.println("pulse: send failed (400)");
-          io.flush_stdout();
-        }
+        if w.is_err { io.println("pulse: send failed (400)"); io.flush_stdout(); }
         socket.socket_close(client);
+        metrics.metrics_record(400, resp.len());
+        access_log(rid, "?", "-", 400, resp.len());
       } else if http.header_get(&req, "x-pulse-quit") == "1" {
         socket.socket_close(client);
         running = false;
       } else {
         let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
-        let result = handle_route(req.method, req.target, body_str);
-        let resp = http.build_response(result.status, result.body);
+        let m = router.route_match(req.method, req.target);
+        let out = handle_route(m, &req, body_str);
+        let resp = http.build_response_full(out.status, out.content_type, &out.headers, out.body);
         let w = socket.socket_send(client, &resp);
         if w.is_err {
           io.println("pulse: send failed");
@@ -179,8 +283,11 @@ pub fn main() -> Int {
         }
         socket.socket_close(client);
         served = served + 1;
-        io.println("pulse: " + req.method + " " + req.target + " -> " + result.status.to_str() + " blen=" + req.body.len().to_str());
-        io.flush_stdout();
+        metrics.metrics_record(out.status, out.body.len());
+        access_log(rid, req.method, req.target, out.status, out.body.len());
+        if req.method != "GET" {
+          audit_event(rid, req.method, req.target, out.status);
+        }
       }
     }
   }

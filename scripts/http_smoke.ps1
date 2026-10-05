@@ -57,14 +57,25 @@ function Check {
 }
 
 function Invoke-CurlPost {
-    param([string]$Path, [string]$Body)
+    param([string]$Path, [string]$Body, [string]$CookieJar = "")
     $f = Join-Path $env:TEMP ("pulse-body-" + [guid]::NewGuid().ToString("N") + ".json")
     Set-Content -LiteralPath $f -Value $Body -NoNewline
     try {
-        return (curl.exe -s -i -X POST -H "Content-Type: application/json" --data-binary "@$f" "$base$Path" 2>&1 | Out-String)
+        $extra = @()
+        if ($CookieJar) { $extra += @("-c", $CookieJar) }
+        $all = @("-s", "-i", "-X", "POST", "-H", "Content-Type: application/json", "--data-binary", "@$f") + $extra + @("$base$Path")
+        return (curl.exe @all 2>&1 | Out-String)
     } finally {
         Remove-Item -LiteralPath $f -ErrorAction SilentlyContinue
     }
+}
+
+function Invoke-CurlGet {
+    param([string]$Path, [string]$CookieJar = "")
+    $extra = @()
+    if ($CookieJar) { $extra += @("-b", $CookieJar) }
+    $all = @("-s", "-i") + $extra + @("$base$Path")
+    return (curl.exe @all 2>&1 | Out-String)
 }
 
 # 1. GET /health
@@ -86,7 +97,7 @@ Check "echo body" $r '{"echo":{"a":1}}'
 # 4. POST /api/echo invalid
 $r = Invoke-CurlPost "/api/echo" 'notjson'
 Check "echo invalid 400" $r "400 Bad Request"
-Check "echo invalid json" $r '"error":"invalid json"'
+Check "echo invalid json" $r '"code":"invalid_json"'
 
 # 5. 404
 $r = curl.exe -s -i "$base/nope" 2>&1 | Out-String
@@ -101,7 +112,48 @@ $r = Invoke-CurlPost "/api/echo" '{"longer":"payload","n":42}'
 Check "echo longer 200" $r "200 OK"
 Check "echo longer body" $r '{"longer":"payload","n":42}'
 
-# 8. QUIT
+# 8. Step 2: router param route + metrics
+$r = Invoke-CurlGet "/api/items/42"
+Check "item 200" $r "200 OK"
+Check "item body" $r '{"item":"42"}'
+$r = Invoke-CurlGet "/metrics"
+Check "metrics 200" $r "200 OK"
+Check "metrics text" $r "pulse_http_requests_total"
+
+# 9. Step 2: cookie sessions
+$cookieJar = Join-Path $env:TEMP ("pulse-cookies-" + [guid]::NewGuid().ToString("N") + ".txt")
+$r = Invoke-CurlPost "/api/session/login" '{"user":"carol"}' -CookieJar $cookieJar
+Check "login 200" $r "200 OK"
+Check "login set-cookie" $r "Set-Cookie: sid="
+Check "login user" $r '"user":"carol"'
+$r = Invoke-CurlGet "/api/me" -CookieJar $cookieJar
+Check "me 200 with cookie" $r "200 OK"
+Check "me user" $r '"user":"carol"'
+$r = Invoke-CurlGet "/api/me"
+Check "me 401 without cookie" $r "401 Unauthorized"
+$r = Invoke-CurlPost "/api/session/logout" "" -CookieJar $cookieJar
+Check "logout 200" $r "200 OK"
+Check "logout clears cookie" $r "Max-Age=0"
+$r = Invoke-CurlGet "/api/me" -CookieJar $cookieJar
+Check "me 401 after logout" $r "401 Unauthorized"
+Remove-Item -LiteralPath $cookieJar -ErrorAction SilentlyContinue
+
+# 10. Step 2: JWT HS256 issue + verify + tamper
+$r = Invoke-CurlPost "/api/token" '{"user":"carol"}'
+Check "token 200" $r "200 OK"
+$tokMatch = [regex]::Match($r, '"token":"([^"]+)"')
+if ($tokMatch.Success) { Check "token issued" "yes" "yes" } else { Check "token issued" "no" "yes" }
+if ($tokMatch.Success) {
+    $tok = $tokMatch.Groups[1].Value
+    $r = Invoke-CurlPost "/api/token/verify" "{`"token`":`"$tok`"}"
+    Check "token verify 200" $r "200 OK"
+    Check "token verify body" $r '{"ok":true}'
+    $tampered = $tok.Substring(0, $tok.Length - 1) + "x"
+    $r = Invoke-CurlPost "/api/token/verify" "{`"token`":`"$tampered`"}"
+    Check "token tamper 401" $r "401 Unauthorized"
+}
+
+# 11. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1
 if (-not $srv.WaitForExit(10000)) {
     Write-Host "smoke: server did not exit after QUIT; killing"
