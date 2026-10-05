@@ -41,9 +41,19 @@
   source-roots; C-PULSE-04 (&mut Int bare read) documented (PULSE code uses
   value locals); `xiom.http` v0.1.0 parser broken (package defect filed).
 - **Next action:** read `probe-logs\soak-http.summary.txt` for the 1h soak
-  verdict (wakeup scheduled 16:12Z), then Step 3 storage (most-tested
-  option first; schema/migrations; crash/reopen; soak). Optional Step 2
-  leftover: request-id correlation in the error envelope, rate-limit stub.
+  verdict (wakeup scheduled 16:12Z), then Step 3 storage.
+
+### Step 3 decision (2026-10-05)
+
+`xiom.sql` is not in the registry; `xiom.bolt` v0.1.2 is pure-XIOM but a
+read-only bbolt page parser; no writable embedded store is published.
+Step 3 therefore starts with a **zero-dependency append-only JSONL event
+store** (uses the proven `io.append_line`/`read_file` path, crash/reopen
+testable) and proposes **`xiom.kv`** to the packages lane
+(`docs/PACKAGE-WISHLIST-PULSE.md`) as the reusable embedded store.
+Schema/migrations = a `schema_version` record + per-record `type`/`ts`
+fields; crash/reopen test = kill the server mid-write, reopen, assert the
+prefix is intact and parsing stops at the first torn line.
 
 ### Step 2 progress
 

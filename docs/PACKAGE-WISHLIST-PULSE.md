@@ -37,6 +37,7 @@ manual until that lands.
 | `xiom.ratelimit` | Keyed rate limiting (per-IP/route/user): token bucket + fixed window, explicit clock injection, 429 envelope, deterministic tests | middleware/policy, not core | xiom.std | S9 lists rate; PULSE Step 2+ hardening; no-registry equivalent today |
 | `xiom.metrics` | Service metrics: counters/gauges/histograms with labels + Prometheus text exposition + scrape endpoint helper | infra/ops concern | xiom.std | S9 metrics; PULSE Step 2 metrics + Step 3 soak observability |
 | `xiom.static` | Static file serving: MIME mapping, ETag/Last-Modified, Range, path-traversal guard, `Cache-Control` policy | app-level policy; filesystem + HTTP semantics | xiom.std (stdlib has `xiom.net.mime` to reuse) | S9 static; PULSE later slices |
+| `xiom.kv` | Embedded, pure-XIOM log-structured KV store: append-only segment write, crash-safe reopen, tombstones, compaction, optional snapshot. PULSE Step 3 storage needs a durable local store; `xiom.bolt` v0.1.2 is a read-only bbolt page parser, and `xiom.sql` is not in the registry (checked 2026-10-05) | storage engine = package domain; must not drag FFI into stdlib | xiom.std | PULSE Step 3 ("most-tested option first"): without it, PULSE ships a JSONL append store locally and the ecosystem lacks an embedded store for any service |
 | `xiom.http.middleware` | Composable middleware chain over request/response envelopes with built-ins: request-id, structured access log, recover-to-500, CORS, CSRF token helpers | app framework concern; needs router/envelope types first | xiom.std (+ router types if shared) | S9 lists middleware/cors/csrf/xss; PULSE Step 2 audit/log envelope |
 
 ## Suggested order for the packages lane
@@ -45,8 +46,15 @@ manual until that lands.
    unblocks registry consumers immediately.
 2. `xiom.jwt` HS256 (PULSE Step 2 JWT; stdlib crypto is now linkable).
 3. `xiom.router` + `xiom.http.middleware` (PULSE Step 2 skeleton).
-4. `xiom.session`, `xiom.ratelimit`, `xiom.metrics`, `xiom.static`
+4. `xiom.kv` (embedded store; PULSE Step 3), then
+   `xiom.session`, `xiom.ratelimit`, `xiom.metrics`, `xiom.static`
    (Step 2-4 hardening).
+
+**Registry notes (checked 2026-10-05):** `xiom.sql` is not published
+(`xiom pkg info xiom.sql` -> empty); `xiom.bolt` v0.1.2 is pure-XIOM but
+read-only (bbolt page parser); no embedded writable KV/storage package is
+available. PULSE Step 3 therefore starts with a zero-dependency JSONL
+append store and files `xiom.kv` above.
 
 ## Contract notes for the packages lane
 
