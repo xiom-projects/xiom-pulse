@@ -44,6 +44,7 @@ adopt it the moment the toolchain grows support.
 ```
 
 - `SESSION.md` -- live state, pin, open blockers, findings rows (upstream relay).
+- `docs/PROGRESS.md` -- **weighted production-grade tracker** (what works, what is pending, % done).
 - `docs/repro/` -- minimal upstream repro bundles.
 - `src/` -- the service; `tests/` -- suites and probes.
 

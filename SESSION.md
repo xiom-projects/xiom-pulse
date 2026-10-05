@@ -142,8 +142,10 @@ SHA-256/HMAC for PULSE JWT (Step 2).
 ## 1. Upstream findings (relay rows -- batched at every step wrap)
 
 **Relay documents (owner hands these to the lanes; keep updated every wrap):**
-- `docs/COMPILER-FINDINGS-PULSE.md` -> compiler lane (C-PULSE-01/02/04/05 +
-  test-gap notes + v0.64.0 bump checklist).
+- `docs/PROGRESS.md` -> owner tracker (weighted production-grade %; update
+  with evidence at every wrap).
+- `docs/COMPILER-FINDINGS-PULSE.md` -> compiler lane (C-PULSE-01/02/04/05/06 +
+  test-gap notes + v0.64.0 results + bump procedure).
 - `docs/STDLIB-WISHLIST-PULSE.md` -> stdlib lane (str_bytes RESOLVED;
   socket options/timeouts, server-side request parser, write_all,
   flush_stdout confirmed empty, harness -- all queued).
