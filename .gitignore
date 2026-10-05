@@ -24,6 +24,9 @@ a.out
 *.log
 /probe-logs/
 /soak/
+# XIOM PULSE runtime data (JSONL stores)
+/pulse-events.jsonl
+/pulse-store-test.jsonl
 /pulse-audit.log
 
 # Kilo / Agent Manager workspace state (never commit)

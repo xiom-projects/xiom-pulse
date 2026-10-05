@@ -14,6 +14,6 @@ package xiom_pulse {
   keywords: ["http", "server", "backend", "web"];
   license: "MIT OR Apache-2.0";
   authors: ["Lefteris Notas"];
-  modules: ["xiom.pulse", "xiom.pulse.http", "xiom.pulse.router", "xiom.pulse.envelope", "xiom.pulse.config", "xiom.pulse.metrics", "xiom.pulse.session", "xiom.pulse.jwt_hs", "xiom.pulse.server"];
+  modules: ["xiom.pulse", "xiom.pulse.http", "xiom.pulse.router", "xiom.pulse.envelope", "xiom.pulse.config", "xiom.pulse.metrics", "xiom.pulse.session", "xiom.pulse.jwt_hs", "xiom.pulse.store", "xiom.pulse.server"];
   deps: { "xiom.std": ">=0.60.0 <1.0.0", "xiom.http": "0.1.0", "xiom.cookie": "0.1.1", "xiom.jwt": "0.1.1" };
 }

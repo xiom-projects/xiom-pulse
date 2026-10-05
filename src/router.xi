@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
 // Static route table, no function pointers (pin-safe). Route ids:
-//   1 GET  /health            6 POST /api/session/logout
-//   2 GET  /api/version       7 POST /api/token
-//   3 POST /api/echo          8 POST /api/token/verify
-//   4 POST /api/session/login 9 GET  /metrics
-//   5 GET  /api/me           10 GET  /api/items/:id
+//   1 GET  /health            7 POST /api/token
+//   2 GET  /api/version       8 POST /api/token/verify
+//   3 POST /api/echo          9 GET  /metrics
+//   4 POST /api/session/login 10 GET  /api/items/:id
+//   5 GET  /api/me            11 POST /api/events
+//   6 POST /api/session/logout 12 GET /api/events/count
+//                             13 GET /api/events
 module xiom.pulse.router
 
 use xiom.string;
@@ -37,6 +39,8 @@ pub fn route_id_of(path: Str) -> Int {
   if path == "/api/token" { return 7; }
   if path == "/api/token/verify" { return 8; }
   if path == "/metrics" { return 9; }
+  if path == "/api/events" { return 11; }
+  if path == "/api/events/count" { return 12; }
   if string.str_starts_with(path, ITEMS_PREFIX) && path.len() > ITEMS_PREFIX.len() {
     return 10;
   }
@@ -57,6 +61,8 @@ pub fn allowed_methods_of(path: Str) -> Str {
   if id == 8 { return "POST"; }
   if id == 9 { return "GET"; }
   if id == 10 { return "GET"; }
+  if id == 11 { return "POST"; }
+  if id == 12 { return "GET"; }
   return "";
 }
 
@@ -72,6 +78,23 @@ pub fn route_match(method: Str, target: Str) -> RouteMatch {
   };
   let id = route_id_of(target);
   if id == 0 {
+    return m;
+  }
+  // Multi-method path: /api/events allows POST (append) and GET (list).
+  if id == 11 {
+    if method == "POST" {
+      m.kind = 1;
+      m.route_id = 11;
+      return m;
+    }
+    if method == "GET" {
+      m.kind = 1;
+      m.route_id = 13;
+      return m;
+    }
+    m.kind = 2;
+    m.route_id = 11;
+    m.allow = "GET, POST";
     return m;
   }
   let allowed = allowed_methods_of(target);

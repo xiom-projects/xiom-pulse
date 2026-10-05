@@ -18,6 +18,7 @@ use xiom.pulse.config;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
 use xiom.pulse.jwt_hs;
+use xiom.pulse.store;
 use xiom.pulse.server;
 
 fn check(name: Str, ok: Bool) -> Int {
@@ -131,6 +132,36 @@ pub fn main() -> Int {
   f = f + check("dispatch token 200", token_resp.status == 200 && string.str_contains(token_resp.body, "\"token\":\""));
   let metrics_resp = route_req("GET", "/metrics", "");
   f = f + check("dispatch metrics 200", metrics_resp.status == 200 && string.str_contains(metrics_resp.content_type, "text/plain"));
+
+  // --- store (JSONL, crash tolerance) --------------------------------------
+  let sp = "pulse-store-test.jsonl";
+  let _rm0 = io.remove_file(sp);
+  f = f + check("store init", store.store_init(sp));
+  f = f + check("store init idempotent", store.store_init(sp));
+  f = f + check("store empty", store.store_count(sp) == 0);
+  f = f + check("store append", store.store_append_event(sp, "{\"a\":1}"));
+  f = f + check("store count 1", store.store_count(sp) == 1);
+  let torn = io.append_file(sp, "{\"torn\":");
+  f = f + check("store torn append ok", torn.is_ok);
+  f = f + check("store torn tolerated", store.store_count(sp) == 1);
+  f = f + check("store last", store.store_last(sp, 10).len() == 1);
+  let joined = store.store_join_array(&store.store_last(sp, 10));
+  f = f + check("store join array", string.str_starts_with(joined, "[") && string.str_contains(joined, "\"a\":1"));
+
+  env.set_var("PULSE_STORE_PATH", sp);
+  let ev = route_req("POST", "/api/events", "{\"kind\":\"click\",\"n\":1}");
+  f = f + check("dispatch events post", ev.status == 200 && string.str_contains(ev.body, "\"stored\":true"));
+  let ec = route_req("GET", "/api/events/count", "");
+  f = f + check("dispatch events count", ec.status == 200 && string.str_contains(ec.body, "\"count\":2"));
+  let el = route_req("GET", "/api/events", "");
+  f = f + check("dispatch events list", el.status == 200 && string.str_contains(el.body, "click"));
+  let e405 = route_req("PUT", "/api/events", "");
+  f = f + check("dispatch events 405 allow", e405.status == 405 && e405.headers.len() == 1);
+  let evbad = route_req("POST", "/api/events", "notjson");
+  f = f + check("dispatch events 400", evbad.status == 400);
+  env.remove_var("PULSE_STORE_PATH");
+  let rm1 = io.remove_file(sp);
+  f = f + check("store cleanup", rm1.is_ok);
 
   if f == 0 {
     io.println("pulse-app: GREEN");

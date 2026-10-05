@@ -26,34 +26,41 @@
   - stdlib   `15cb889` 2026-10-05T14:03:35+03:00
   - compiler `586426e9` 2026-10-05T15:32:11+03:00
   - packages `3f21385c` 2026-10-05T15:47:13+03:00
-- **Last green slice:** **Step 2 app skeleton live** on `out\pulse_app.exe`:
-  router (params + 405/Allow), uniform error envelope, config
-  (`PULSE_PORT`/`PULSE_LOG`/`PULSE_AUDIT_PATH`/`PULSE_JWT_SECRET`/
-  `PULSE_SESSION_TTL`), structured JSON access log, `/metrics` (Prometheus
-  text), audit trail (`pulse-audit.log`), cookie sessions
-  (login/me/logout), JWT HS256 issue/verify/tamper (stdlib crypto).
-  Suite 41/41 x2 (`tests/test_app.xi`), smoke 31/31
-  (`scripts\http_smoke.ps1 -Port 18081 -ServerExe out\pulse_app.exe`),
-  64/64 concurrent on :18083, handles flat. Soak (Step 1 binary) healthy at
-  2168s / 4263 requests / 0 fail.
+- **Last green slice:** **Step 3 storage core live**: JSONL event store
+  (`src/store.xi`) with schema record, torn-line tolerance and
+  newline-healing appends; events routes `POST /api/events`,
+  `GET /api/events`, `GET /api/events/count`; end-to-end crash/reopen test
+  (`scripts/crash_test.ps1`, 6/6: 20 events -> hard kill -> torn line ->
+  reopen count=20 -> heal append count=21). Suite 57/57 x2, smoke 31/31.
+  New finding **C-PULSE-05** filed (W005 const-receiver `.to_str()` stub
+  wrote invalid JSON; workaround `convert.int_to_string`). Soaks (PS + WSL)
+  running on the Step 1 binary against :18080.
 - **Open blockers:** C-PULSE-01 (read method) worked around via raw
   socket_recv; C-PULSE-02 (dep->root mapping) worked around via xiom.toml
-  source-roots; C-PULSE-04 (&mut Int bare read) documented (PULSE code uses
-  value locals); `xiom.http` v0.1.0 parser broken (package defect filed).
-- **Next action:** read `probe-logs\soak-http.summary.txt` for the 1h soak
-  verdict (wakeup scheduled 16:12Z), then Step 3 storage.
+  source-roots; C-PULSE-04 (&mut Int bare read) documented; C-PULSE-05
+  (const `.to_str()` W005 stub) worked around; `xiom.http` v0.1.0 parser
+  broken (package defect filed).
+- **Next action:** soak verdicts (wakeup scheduled 16:21Z: PS 30m soak +
+  WSL 30m client cross-check). Then Step 3 wrap: a store soak (many events,
+  reopen size check) and the Storage section handoff; then Step 4 (TLS via
+  proxy only if needed).
 
-### Step 3 decision (2026-10-05)
+### Step 3 progress (storage)
 
 `xiom.sql` is not in the registry; `xiom.bolt` v0.1.2 is pure-XIOM but a
 read-only bbolt page parser; no writable embedded store is published.
-Step 3 therefore starts with a **zero-dependency append-only JSONL event
-store** (uses the proven `io.append_line`/`read_file` path, crash/reopen
-testable) and proposes **`xiom.kv`** to the packages lane
-(`docs/PACKAGE-WISHLIST-PULSE.md`) as the reusable embedded store.
-Schema/migrations = a `schema_version` record + per-record `type`/`ts`
-fields; crash/reopen test = kill the server mid-write, reopen, assert the
-prefix is intact and parsing stops at the first torn line.
+Step 3 therefore ships a **zero-dependency append-only JSONL event store**
+(proven `io.append_line`/`read_file_lines` path) and proposes **`xiom.kv`**
+to the packages lane (`docs/PACKAGE-WISHLIST-PULSE.md`).
+
+| Item | Result | Evidence |
+|---|---|---|
+| Schema record + loader (invalid/torn lines skipped) | DONE | `src/store.xi`; suite store tests |
+| Torn-line healing append (`\n` repair before write) | DONE | suite `store torn tolerated`; crash test |
+| Events routes (`POST/GET /api/events`, `GET /api/events/count`) | DONE | suite dispatch tests; smoke extension pending |
+| Crash/reopen end-to-end | DONE 6/6 | `scripts\crash_test.ps1` (20 events -> kill -> torn -> reopen 20 -> heal 21) |
+| W005 const-`.to_str()` workaround | DONE | `convert.int_to_string` in `schema_line`; C-PULSE-05 filed |
+| Storage soak (many events, reopen size check) | pending | -- |
 
 ### Step 2 progress
 

@@ -26,6 +26,7 @@ use xiom.pulse.config;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
 use xiom.pulse.jwt_hs;
+use xiom.pulse.store;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -165,6 +166,31 @@ pub fn handle_route(m: RouteMatch, req: &PulseRequest, body: Str) -> HandlerOut 
     }
     return out_json(200, json_ok_field("item", m.param_values[0]));
   }
+  if m.route_id == 11 {
+    let pv = json.json_parse(body);
+    if pv.is_err || json.json_type(pv.value) != "object" {
+      return out_json(400, envelope.error_body("invalid_json", "body must be a JSON object"));
+    }
+    let path = config.cfg_store_path();
+    if !store.store_append_event(path, body) {
+      return out_json(500, envelope.error_body("store_error", "append failed"));
+    }
+    var v = json.json_set(json.json_object_new(), "stored", json.json_bool(true));
+    v = json.json_set(v, "count", json.json_number(convert.int_to_float(store.store_count(path))));
+    return out_json(200, json.json_stringify(v));
+  }
+  if m.route_id == 12 {
+    let n = store.store_count(config.cfg_store_path());
+    let out_body = "{\"count\":" + n.to_str() + "}";
+    return out_json(200, out_body);
+  }
+  if m.route_id == 13 {
+    let path = config.cfg_store_path();
+    let recs = store.store_last(path, 10);
+    let arr = store.store_join_array(&recs);
+    let out_body = "{\"count\":" + store.store_count(path).to_str() + ",\"events\":" + arr + "}";
+    return out_json(200, out_body);
+  }
   return out_json(404, envelope.error_body("not_found", "not found"));
 }
 
@@ -242,6 +268,12 @@ pub fn main() -> Int {
   }
   io.println("pulse: listening on 127.0.0.1:" + port.to_str());
   io.flush_stdout();
+
+  let store_ok = store.store_init(config.cfg_store_path());
+  if !store_ok {
+    io.println("pulse: store init failed for " + config.cfg_store_path());
+    io.flush_stdout();
+  }
 
   var served: Int = 0;
   var running: Bool = true;

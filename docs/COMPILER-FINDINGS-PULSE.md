@@ -25,6 +25,7 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 | 2026-10-05 | **C-PULSE-01: a method named `read` with exactly ONE argument is hijacked by the raw-pointer codegen builtin.** | `docs/repro/read-method-builtin-shadow/` | raw `xiom.net.socket.socket_recv(fd, max)`; never name one-arg methods `read` | kills `xiom.net.TcpStream.read` (all stdlib networking reads) and `os.Pipe.read`; silent, no diagnostic |
 | 2026-10-05 | **C-PULSE-04: a `&mut Int` parameter used BARE in value position (arithmetic RHS or `return`) yields the pointer ADDRESS, not the pointee.** Explicit `*p` is correct. | `docs/repro/mut-int-bare-read/` | always `*p = *p + k; return *p;` (existing `xiom.gbnf` pattern) | silent wrong values in cursor-style parsers; broke `xiom.http` v0.1.0's parser for consumers |
 | 2026-10-05 | **C-PULSE-02: installed registry packages are not mapped to module-catalog source roots.** `[dependencies]`/`dependencies:` are parsed by `xiom-graph` but never resolved to directories; the driver adds only project roots + stdlib. | `docs/repro/registry-dep-resolution/` | `xiom.toml` `[project].source-roots` lists the installed package `src/` dirs | `xiom pkg install` alone cannot be `use`d; registry adoption requires manual wiring |
+| 2026-10-05 | **C-PULSE-05 (W005 delta): the erased-interface default stub fires for a module-`const` receiver method call.** `SCHEMA_VERSION.to_str()` inside a project package module emits `warning[W005]: unresolved call '@to_str' ... emitting a typed default stub` and renders as EMPTY, producing invalid JSON on disk. A call-result receiver in the same module (`time.unix_timestamp().to_str()`) renders correctly. | PULSE `src/store.xi schema_line()`; ground truth: `tests/probes/probe_store_debug.xi` prints `line[0]=[{"kind":"schema","version":}]` (before fix) vs `version":1` (after `convert.int_to_string`). Warning text references the compiler's own `docs/COMPILER_BUGS.md`. | `xiom.convert.int_to_string(n)` free function instead of the interface method | silent data corruption class: malformed JSON written to disk with only a stderr warning; a crash-safe store cannot trust `.to_str()` on const receivers |
 
 ## C-PULSE-01 -- details
 
@@ -130,6 +131,36 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
   package root (barrels like `http.xi` live there) and feed them into
   `expand_sources_with_graph` / catalog `add_external_dir`; `xiom pkg lock`
   already has the resolved tree.
+
+## C-PULSE-05 -- details (W005 delta: const receiver)
+
+- **Warning:** `warning[W005]: unresolved call '@to_str' from
+  @pulse.store.schema_line (IR line N) is a known erased-interface/
+  contract-clause gap; emitting a typed default stub (see
+  docs/COMPILER_BUGS.md)`.
+- **Minimal shape:** in a project package module,
+
+  ```xiom
+  const SCHEMA_VERSION: Int = 1;
+  fn schema_line() -> Str {
+    return "{\"kind\":\"schema\",\"version\":" + SCHEMA_VERSION.to_str() + "}";
+  }
+  ```
+
+  renders `{"kind":"schema","version":}` (empty) on v0.63.1. Replacing the
+  method call with `convert.int_to_string(SCHEMA_VERSION)` renders `1`.
+  `time.unix_timestamp().to_str()` (call-result receiver) in the same file
+  renders correctly.
+- **Delta vs the documented W005 rows** (`docs/COMPILER_BUGS.md`
+  m142/m146 sections): those cover contract clauses and interface VALUES
+  in `Option[Error]` payloads / erased receivers. This is a plain concrete
+  `Int` receiver that happens to be a module-level `const` inside a
+  compiled package module; the receiver type is statically known, so a
+  default stub is strictly worse than either static dispatch or a hard
+  error.
+- **Suggested fix:** const-fold the receiver and resolve through the
+  concrete impl (same path the call-result receiver takes), or turn the
+  W005 stub into an error when the receiver type is concrete.
 
 ## Positive confirmations on the pin (do not chase)
 

@@ -50,6 +50,13 @@ pub fn cfg_jwt_secret() -> Str {
   return env.var_or("PULSE_JWT_SECRET", "dev-secret-change-me");
 }
 
+/// cfg_store_path returns the JSONL event store path
+/// (PULSE_STORE_PATH, default "pulse-events.jsonl").
+/// Complexity: O(1). Pure.
+pub fn cfg_store_path() -> Str {
+  return env.var_or("PULSE_STORE_PATH", "pulse-events.jsonl");
+}
+
 /// cfg_session_ttl_secs returns the session lifetime (PULSE_SESSION_TTL,
 /// default 3600 seconds).
 /// Complexity: O(n). Pure.
