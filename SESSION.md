@@ -30,16 +30,14 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **hardening + router adoption wave** on v0.64.0:
-  `xiom.router` 0.1.0 live and adopted (`src/router.xi` thin wrapper; probe
-  8/8); query strings + URL decoding; header caps (16 KiB head / 100
-  headers); security headers (nosniff, frame-DENY, referrer-policy);
-  binary `send_all`; app icon + landing page. Suites x2 (`test_http` 47,
-  `test_app` 64 checks), smoke 44/44 on `out\pulse_app_v5.exe`. Soaks:
-  v0.63.1 1h server **13,198/13,198**; v0.64.0 30m server **6,543/6,543**;
-  flat memory/handles both. WSL transients fully classified: 2 per run,
-  `curl_rc=28` in the last 5s -- the client races the PS driver's shutdown
-  QUIT; zero server involvement.
+- **Last green slice:** **M4 hardening wave 2** on v0.64.0: `xiom.rate`
+  0.2.0 adopted (global token bucket; `PULSE_RATE_LIMIT`/`PULSE_RATE_BURST`;
+  429 + `Retry-After`; `scripts\rate_smoke.ps1` green: burst 200=2, 429=6,
+  refill 200); latency histogram (`pulse_http_request_duration_ms_*`) +
+  `dur_ms` in the access log; `docs/DEPLOYMENT.md` (proxy-first TLS);
+  C-PULSE-07 filed (module-scope package ctor -> undefined call/crash;
+  limiter refactored to a caller-owned value). Suites x2, smoke 44/44,
+  rate smoke green on `out\pulse_app_v6.exe`.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const
@@ -47,9 +45,11 @@
   workaround `convert.int_to_string` still required); C-PULSE-02 **still
   open** (13 T001 without source-roots); runtime-link/crypto-link
   **RESOLVED env-free**; `xiom.http` parser defect fixed in 0.1.1.
-- **Next action:** v0.64.0 soak verdict (wakeup 18:07Z), then Step 3
-  handoff wrap and Step 4 (TLS decision: proxy-only unless the product
-  needs in-XIOM TLS; keep the proxy fallback documented).
+- **Next action:** Step 4 wrap: run the through-proxy E2E checklist
+  (`docs/DEPLOYMENT.md`) once a proxy is installed (Caddy/nginx); meanwhile
+  continue M4 (CORS/CSRF helpers, HEAD handling, schema validation,
+  keep-alive) and adopt `xiom.http.middleware`/`xiom.session` when the
+  packages lane publishes them.
 
 ### Step 3 progress (storage)
 
@@ -185,10 +185,18 @@ SHA-256/HMAC for PULSE JWT (Step 2).
   Allow/validation); `src/router.xi` is now a thin app wrapper over the
   package (route ids + query parsing/decoding); suites x2 + smoke 44/44 on
   `out\pulse_app_v5.exe`. Clean first consumer pass, no hotfix.
+- **packages (rate)**: `xiom.rate` 0.2.0 adopted for the global limiter
+  (token bucket wrapper, caller-owned; tests + `rate_smoke` green). Package
+  itself clean; the crash we hit was a compiler gap, not the package.
 - **compiler (icon)**: reply recorded -- immediate workaround is post-build
   `rcedit`, planned `xiom --icon` for v0.64.1+ (llvm-rc, cached by icon
   hash). PULSE wired the rcedit hook into `scripts\build.ps1` (activates
   when rcedit is on PATH) and will delete it when `--icon` lands.
+- **compiler (new finding)**: C-PULSE-07 -- module-scope initialization from
+  a package constructor is accepted but emits an undefined call
+  (`@rate_keyed_new`) or crashes at module init; repro bundle
+  `docs/repro/module-scope-package-init/`; PULSE policy: package aggregates
+  stay caller-owned.
 - **website message**: routed for the website lane, not PULSE scope.
 
 Reference docs read before reporting (do NOT re-run known bisections; add

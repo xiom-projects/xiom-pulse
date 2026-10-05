@@ -24,6 +24,35 @@ fn cfg_parse_port(s: Str) -> Int {
   return v;
 }
 
+/// cfg_parse_uint parses a non-negative decimal, or returns fallback.
+/// Complexity: O(n). Pure.
+fn cfg_parse_uint(s: Str, fallback: Int) -> Int {
+  if s.len() == 0 { return fallback; }
+  var v: Int = 0;
+  var i: Int = 0;
+  while i < s.len() {
+    let b = s.byte_at(i);
+    if b < 48u8 || b > 57u8 { return fallback; }
+    v = v * 10 + ((b as Int) - 48);
+    i = i + 1;
+  }
+  return v;
+}
+
+/// cfg_rate_limit returns the global requests/second cap
+/// (PULSE_RATE_LIMIT, 0 = disabled).
+/// Complexity: O(1). Pure.
+pub fn cfg_rate_limit() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_RATE_LIMIT", "0"), 0);
+}
+
+/// cfg_rate_burst returns the token-bucket capacity
+/// (PULSE_RATE_BURST, 0 = same as the rate).
+/// Complexity: O(1). Pure.
+pub fn cfg_rate_burst() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_RATE_BURST", "0"), 0);
+}
+
 /// cfg_port returns the listen port (PULSE_PORT, default 8080).
 /// Complexity: O(1). Pure.
 pub fn cfg_port() -> Int {

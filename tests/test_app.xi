@@ -20,6 +20,7 @@ use xiom.pulse.config;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
 use xiom.pulse.store;
+use xiom.pulse.ratelimit;
 use xiom.pulse.server;
 
 fn check(name: Str, ok: Bool) -> Int {
@@ -86,6 +87,34 @@ pub fn main() -> Int {
   let mr = metrics.metrics_render();
   f = f + check("metrics render total", string.str_contains(mr, "pulse_http_requests_total 3"));
   f = f + check("metrics render class", string.str_contains(mr, "pulse_http_responses_total{class=\"2xx\"} 1"));
+
+  // --- duration histogram --------------------------------------------------
+  metrics.metrics_record_duration(1);
+  metrics.metrics_record_duration(5);
+  metrics.metrics_record_duration(50);
+  metrics.metrics_record_duration(9000);
+  let mr2 = metrics.metrics_render();
+  f = f + check("hist count", string.str_contains(mr2, "pulse_http_request_duration_ms_count 4"));
+  f = f + check("hist +Inf", string.str_contains(mr2, "pulse_http_request_duration_ms_bucket{le=\"+Inf\"} 4"));
+  f = f + check("hist le5 cumulative", string.str_contains(mr2, "pulse_http_request_duration_ms_bucket{le=\"5\"} 2"));
+  f = f + check("hist sum", string.str_contains(mr2, "pulse_http_request_duration_ms_sum 9056"));
+
+  // --- rate limiting (registry xiom.rate 0.2.0) ----------------------------
+  env.set_var("PULSE_RATE_LIMIT", "2");
+  env.set_var("PULSE_RATE_BURST", "2");
+  var rl = ratelimit.limiter_new(config.cfg_rate_limit(), config.cfg_rate_burst());
+  f = f + check("rate enabled", rl.enabled);
+  let rnow = 1000000;
+  f = f + check("rate allow 1", ratelimit.limiter_allow(&mut rl, rnow));
+  f = f + check("rate allow 2", ratelimit.limiter_allow(&mut rl, rnow));
+  f = f + check("rate deny 3", !ratelimit.limiter_allow(&mut rl, rnow));
+  f = f + check("rate retry positive", ratelimit.limiter_retry_after_ms(&rl, rnow) > 0);
+  f = f + check("rate refill after 1s", ratelimit.limiter_allow(&mut rl, rnow + 1000));
+  env.set_var("PULSE_RATE_LIMIT", "0");
+  var rl2 = ratelimit.limiter_new(config.cfg_rate_limit(), config.cfg_rate_burst());
+  f = f + check("rate disabled", !rl2.enabled && ratelimit.limiter_allow(&mut rl2, rnow));
+  env.remove_var("PULSE_RATE_LIMIT");
+  env.remove_var("PULSE_RATE_BURST");
 
   // --- sessions ------------------------------------------------------------
   session.session_reset();

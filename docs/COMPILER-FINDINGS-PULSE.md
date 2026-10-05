@@ -25,6 +25,7 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 | 2026-10-05 | **C-PULSE-01 (RESOLVED in v0.64.0): a method named `read` with exactly ONE argument is hijacked by the raw-pointer codegen builtin. PULSE re-verified: `probe_method_matrix.xi` exit 0; `probe_read_no_io.xi` and `probe_net_roundtrip.xi` now green; the stdlib `TcpStream.read` path is functional.** | `docs/repro/read-method-builtin-shadow/` | none needed on v0.64.0 (raw `socket_recv` still used by the server for `&mut Vec` clarity) | resolved |
 | 2026-10-05 | **C-PULSE-04 (STILL OPEN on v0.64.0): a `&mut Int` parameter used BARE in value position (arithmetic RHS or `return`) yields the pointer ADDRESS, not the pointee.** Explicit `*p` is correct. Re-verified 2026-10-05 on v0.64.0: `mut-int-ref bad=5`, `bare_add a=180233435864 r=180233435856`. | `docs/repro/mut-int-bare-read/` | always `*p = *p + k; return *p;` (existing `xiom.gbnf` pattern) | silent wrong values in cursor-style parsers; broke `xiom.http` v0.1.0's parser for consumers |
 | 2026-10-05 | **C-PULSE-02 (STILL OPEN on v0.64.0): installed registry packages are not mapped to module-catalog source roots.** `[dependencies]`/`dependencies:` are parsed by `xiom-graph` but never resolved to directories; re-tested on v0.64.0 with source-roots removed: 13x `T001 undefined variable 'http_*'`. | `docs/repro/registry-dep-resolution/` | `xiom.toml` `[project].source-roots` lists the installed package `src/` dirs | `xiom pkg install` alone cannot be `use`d; registry adoption requires manual wiring |
+| 2026-10-05 | **C-PULSE-07 (OPEN on v0.64.0): a module-scope `var` initialized by a cross-package constructor call is accepted but emits `call @rate_keyed_new` with no definition (clang: `use of undefined value`) or crashes at module init (0xC0000005).** | `docs/repro/module-scope-package-init/probe.xi` (clang undefined value); PULSE `src/ratelimit.xi` first version crashed the suite before any output; caller-owned `Limiter` value fixed it (suite 75 checks green). | keep package aggregates in function-scoped / caller-owned values (module-scope stdlib constructors are fine) | crashes before `main`/first log line; looks like a linker or runtime fault, not a checker gap |
 | 2026-10-05 | **C-PULSE-06 (OPEN on v0.64.0): a struct literal with a MISSING field compiles with no diagnostic; the omitted field reads uninitialized garbage.** In PULSE's server this produced `0xC0000005` on real requests. | `docs/repro/missing-struct-field/probe.xi`: `Pair{ a: 1; }` (missing `b: Vec[UInt8]`) compiles; `p.b.len()` prints `2296606801712`. App crash evidence: `server_exit=-1073741819` on `POST /api/session/login` before the fix; smoke 44/44 after. | always initialize every declared field (pin discipline extended to struct literals) | silent uninitialized memory; crashes that look like unrelated regressions |
 | 2026-10-05 | **C-PULSE-05 (OPEN; v0.64.0 delta: now ABORTS): the erased-interface default stub fires for a module-`const` receiver method call.** On v0.63.1 `SCHEMA_VERSION.to_str()` rendered EMPTY (invalid JSON); on **v0.64.0 it terminates the process with exit `0x80000003`** (STATUS_BREAKPOINT) and the same W005 warning. `probe_const_to_str.xi` reproduces. Call-result receivers in the same module render correctly. | `tests/probes/probe_const_to_str.xi`; PULSE `src/store.xi schema_line()` (workaround in place) | `xiom.convert.int_to_string(n)` free function instead of the interface method | silent data corruption on v0.63.1 -> hard abort on v0.64.0; any package module using `.to_str()` on a const receiver dies |
 
@@ -144,6 +145,18 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 - **PULSE-side policy (adopted):** every struct literal lists every field,
   even defaults.
 
+## C-PULSE-07 -- details (module-scope package ctor)
+
+- Module-level `var b = rate_keyed_new(1, 1);` (cross-package call) is
+  accepted by the checker; codegen emits `call i64 @rate_keyed_new(...)`
+  with **no definition** -> clang `error: use of undefined value
+  '@rate_keyed_new'`. In PULSE's larger `src/ratelimit.xi` first version the
+  program built and crashed with `0xC0000005` during module init, before
+  the first test printed. Caller-owned values are unaffected.
+- Repro: `docs/repro/module-scope-package-init/probe.xi`.
+- **PULSE-side policy (adopted):** no package calls in module initializers;
+  package aggregates live in function-scoped / caller-owned values.
+
 ## Feature gap -- Windows exe icon embedding (not a defect)
 
 PULSE received the official app icon (`resources/img/pulse-ico.ico`,
@@ -225,6 +238,8 @@ fleet results from the PULSE side:
 | C-PULSE-01 (`read` elision) | **RESOLVED** -- matrix exit 0; `probe_read_no_io` + `probe_net_roundtrip` green |
 | C-PULSE-04 (`&mut Int` bare read) | **OPEN** -- exit 5, stack addresses printed |
 | C-PULSE-05 (const `.to_str()` W005) | **OPEN and WORSE** -- silent empty on v0.63.1 becomes `0x80000003` abort on v0.64.0 (`probe_const_to_str.xi`) |
+| C-PULSE-06 (missing struct field) | **OPEN** -- struct literal without a field -> garbage read / crash (`probe_missing_field.xi`) |
+| C-PULSE-07 (module-scope package ctor) | **OPEN** -- accepted init emits undefined call / crashes at module init (`probe_module_pkg_init.xi`) |
 | C-PULSE-02 (deps -> catalog roots) | **OPEN** -- 13x T001 with source-roots removed |
 | Stricter checking | **POSITIVE** -- v0.64.0 rejects argument type mismatches that v0.63.1 silently accepted; it caught a stale PULSE test (`test_http.xi` passing strings to the Step-2 `handle_route`) which is now fixed. Consider a migration note: code compiled under v0.63.1 may not type-check under v0.64.0. |
 | Fleet on v0.64.0 | suites x2 (`test_smoke`/`test_http`/`test_app`), smoke 38/38, 64/64 concurrent, registry probes, read probes -- all green on `out\pulse_app_v3.exe` |

@@ -28,6 +28,7 @@ use xiom.pulse.session;
 use xiom.jwt;
 use xiom.string.slice;
 use xiom.pulse.store;
+use xiom.pulse.ratelimit;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -298,9 +299,9 @@ fn send_all(fd: Int, data: &Vec[UInt8]) -> Bool {
   return off >= data.len();
 }
 
-fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int) {
+fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_ms: Int) {
   if !config.cfg_log_enabled() { return; }
-  let line = "{\"ts\":" + time.unix_timestamp().to_str() + ",\"rid\":\"" + rid + "\",\"method\":\"" + method + "\",\"target\":\"" + target + "\",\"status\":" + status.to_str() + ",\"bytes\":" + bytes.to_str() + "}";
+  let line = "{\"ts\":" + time.unix_timestamp().to_str() + ",\"rid\":\"" + rid + "\",\"method\":\"" + method + "\",\"target\":\"" + target + "\",\"status\":" + status.to_str() + ",\"bytes\":" + bytes.to_str() + ",\"dur_ms\":" + dur_ms.to_str() + "}";
   io.println(line);
   io.flush_stdout();
 }
@@ -351,6 +352,12 @@ pub fn main() -> Int {
     io.flush_stdout();
   }
 
+  var limiter = ratelimit.limiter_new(config.cfg_rate_limit(), config.cfg_rate_burst());
+  if limiter.enabled {
+    io.println("pulse: rate limit " + limiter.per_sec.to_str() + " req/s (global)");
+    io.flush_stdout();
+  }
+
   var served: Int = 0;
   var running: Bool = true;
   while running {
@@ -361,6 +368,7 @@ pub fn main() -> Int {
       return 1;
     }
     let client = ar.value;
+    let t0_ms = time.monotonic_ms();
     let raw = read_request(client);
 
     if raw.len() == 0 {
@@ -374,11 +382,29 @@ pub fn main() -> Int {
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (400)"); io.flush_stdout(); }
         socket.socket_close(client);
+        let dur = time.monotonic_ms() - t0_ms;
         metrics.metrics_record(400, resp.len());
-        access_log(rid, "?", "-", 400, resp.len());
+        metrics.metrics_record_duration(dur);
+        access_log(rid, "?", "-", 400, resp.len(), dur);
       } else if http.header_get(&req, "x-pulse-quit") == "1" {
         socket.socket_close(client);
         running = false;
+      } else if !ratelimit.limiter_allow(&mut limiter, time.monotonic_ms()) {
+        let now_ms = time.monotonic_ms();
+        let retry_ms = ratelimit.limiter_retry_after_ms(&limiter, now_ms);
+        var secs: Int = retry_ms / 1000;
+        if secs < 1 { secs = 1; }
+        var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+        hs.push(("Retry-After", secs.to_str()));
+        let rbody = envelope.error_body("rate_limited", "too many requests");
+        let resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody);
+        let w_ok = send_all(client, &resp);
+        if !w_ok { io.println("pulse: send failed (429)"); io.flush_stdout(); }
+        socket.socket_close(client);
+        let dur = time.monotonic_ms() - t0_ms;
+        metrics.metrics_record(429, rbody.len());
+        metrics.metrics_record_duration(dur);
+        access_log(rid, req.method, req.target, 429, rbody.len(), dur);
       } else {
         let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
         let m = router.route_match(req.method, req.target);
@@ -398,8 +424,10 @@ pub fn main() -> Int {
         }
         socket.socket_close(client);
         served = served + 1;
+        let dur = time.monotonic_ms() - t0_ms;
         metrics.metrics_record(out.status, payload_len);
-        access_log(rid, req.method, req.target, out.status, payload_len);
+        metrics.metrics_record_duration(dur);
+        access_log(rid, req.method, req.target, out.status, payload_len, dur);
         if req.method != "GET" {
           audit_event(rid, req.method, req.target, out.status);
         }

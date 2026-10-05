@@ -20,6 +20,7 @@ source-roots = [
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-router-0.1.0/xiom-router/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
 ]
 
 [dependencies]
@@ -27,6 +28,7 @@ xiom.http = "0.1.1"
 xiom.cookie = "0.1.1"
 xiom.jwt = "0.2.0"
 xiom.router = "0.1.0"
+xiom.rate = "0.2.0"
 
 [compiler]
 target = "native"
