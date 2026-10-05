@@ -97,7 +97,7 @@ fn json_ok_field(key: Str, value: Str) -> Str {
 
 /// handle_route dispatches a matched route to a HandlerOut.
 /// Complexity: O(body).
-pub fn handle_route(m: RouteMatch, req: &PulseRequest, body: Str) -> HandlerOut {
+pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut {
   if m.kind == 0 {
     return out_json(404, envelope.error_body("not_found", "not found"));
   }
@@ -261,6 +261,8 @@ fn read_request(client: Int) -> Vec[UInt8] {
           let cap: Int = he + 4 + MAX_BODY;
           if want > cap { want = cap; }
           if raw.len() >= want { done = true; }
+        } else if header_overflow(&raw) {
+          done = true;
         }
       }
     }

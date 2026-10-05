@@ -16,7 +16,9 @@ param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$File,
     [string]$Name = "",
-    [int]$TimeoutSec = 180
+    [int]$TimeoutSec = 180,
+    [string]$Icon = "resources\img\pulse-ico.ico",
+    [switch]$NoIcon
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,5 +73,27 @@ if (-not (Test-Path -LiteralPath $outExe)) {
     Write-Host "build: compiler exit 0 but $outExe missing"
     exit 1
 }
+
+# --- Windows exe icon (workaround until `xiom --icon` ships, v0.64.1+) -----
+# Uses rcedit when available; not an error when missing (the service also
+# serves the same icon at /favicon.ico). See docs/COMPILER-FINDINGS-PULSE.md.
+if (-not $NoIcon -and $Icon) {
+    $iconPath = Join-Path $repoRoot $Icon
+    if (Test-Path -LiteralPath $iconPath) {
+        $rcedit = Get-Command rcedit -ErrorAction SilentlyContinue
+        if ($null -eq $rcedit) { $rcedit = Get-Command rcedit-x64 -ErrorAction SilentlyContinue }
+        if ($null -ne $rcedit) {
+            & $rcedit.Source $outExe --set-icon $iconPath 2>&1 | Out-Null
+            if ($?) {
+                Write-Host "build: exe icon set via rcedit ($iconPath)"
+            } else {
+                Write-Host "build: WARNING rcedit failed to set the icon"
+            }
+        } else {
+            Write-Host "build: rcedit not found -- exe icon not set (install rcedit or wait for 'xiom --icon')"
+        }
+    }
+}
+
 Write-Host "build: OK $outExe"
 exit 0

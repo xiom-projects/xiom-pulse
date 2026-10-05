@@ -129,6 +129,8 @@ pub fn main() -> Int {
   f = f + check("dispatch 404 envelope", nf.status == 404 && string.str_contains(nf.body, "\"code\":\"not_found\""));
   let item = route_req("GET", "/api/items/xyz", "");
   f = f + check("dispatch item", item.status == 200 && string.str_contains(item.body, "\"item\":\"xyz\""));
+  let itemq = route_req("GET", "/api/items/7?x=1", "");
+  f = f + check("dispatch item with query", itemq.status == 200 && string.str_contains(itemq.body, "\"item\":\"7\""));
   let login = route_req("POST", "/api/session/login", "{\"user\":\"carol\"}");
   f = f + check("dispatch login 200", login.status == 200 && login.headers.len() == 1);
   f = f + check("dispatch login body", string.str_contains(login.body, "\"user\":\"carol\""));

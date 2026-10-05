@@ -15,29 +15,34 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~37% of production grade**
+## 1. Overall score: **~41% of production grade**
+
+_Delta 2026-10-05 (afternoon): 37% -> 41% -- registry `xiom.router` 0.1.0
+adopted (multi-`:param`, 404/405 via the package), query strings + URL
+decoding, header size/count caps, security headers (nosniff/DENY/referrer).
+Evidence: `probe_pkg_router` 8/8, suite 47+64 checks x2, smoke 44/44._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
-| 1 | HTTP core (parse/build/limits) | 12% | 60% | 7.2 | working, edge cases + limits missing |
-| 2 | Routing | 8% | 50% | 4.0 | exact + 1 param; no query/wildcards/groups |
+| 1 | HTTP core (parse/build/limits) | 12% | 72% | 8.6 | query strings + header caps landed; keep-alive/chunked/HEAD missing |
+| 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 10% | 0.8 | logging/audit inline only |
 | 4 | Configuration | 5% | 60% | 3.0 | env-based; no file/validation |
 | 5 | Observability (log/metrics/audit) | 8% | 55% | 4.4 | JSON log + counters + audit; no latency histograms; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256; no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 35% | 3.5 | JSONL store + crash-safe append; no query/update/compaction |
-| 8 | Security hardening | 12% | 15% | 1.8 | no TLS/rate-limit/CORS/CSRF/validation; TLS via proxy by design |
+| 8 | Security hardening | 12% | 22% | 2.6 | security headers + header caps; no rate/CORS/CSRF/validation; TLS via proxy by design |
 | 9 | Static / assets | 4% | 20% | 0.8 | favicon + landing only |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
-| 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198, flat memory; single-thread, no timeouts, no signals |
+| 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 60% | 3.0 | suites+smoke+soak+WSL locally; no CI, no packaging |
-| | **Total** | **100%** | | **36.5** | |
+| | **Total** | **100%** | | **40.9** | |
 
 Two lenses to keep separate:
 
-- **PULSE's own work:** ~55% of the Step 0-4 plan (Steps 0-3 core done,
-  Step 4 TLS decision pending).
-- **Production-grade framework:** **~37%**. The gap is mostly *hardening*
+- **PULSE's own work:** ~65% of the Step 0-4 plan (Steps 0-3 core done with
+  package adoption; Step 4 TLS/deployment pending).
+- **Production-grade framework:** **~41%**. The gap is mostly *hardening*
   and *ecosystem maturity*, not basic function.
 
 ---
@@ -80,7 +85,7 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 | `server.xi` | ~330 | accept loop, dispatch, send_all, log/audit wiring |
 | `http.xi` | ~250 | request parse, response build (text/json/bytes) |
 | `store.xi` | ~120 | JSONL append store, torn-line healing |
-| `router.xi` | ~120 | route table, params, 404/405 |
+| `router.xi` | ~200 | app route table wrapper over registry `xiom.router`; query parsing + decoding |
 | `session.xi` | ~100 | in-memory sessions, cookie bindings |
 | `config.xi` | ~80 | env config with defaults |
 | `metrics.xi` | ~70 | counters, Prometheus render |
@@ -91,20 +96,21 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 
 ## 3. What is missing, area by area (the honest list)
 
-**HTTP core (60%)**
+**HTTP core (72%)**
 - No `keep-alive` (always `Connection: close`) -- the biggest perf item.
 - No chunked transfer-encoding (request or response).
-- Query strings are not split: `/api/items/1?x=1` currently 404s.
-- No header/request-line size caps (body cap 1 MB only) -- DoS surface.
-- No `HEAD` handling, no `Expect: 100-continue`, no URL-decoding.
+- No `HEAD` handling, no `Expect: 100-continue`, path not percent-decoded
+  (query values are decoded).
+- Head caps landed (16 KiB head, 100 headers, 1 MiB body); no per-route or
+  per-connection byte-rate limits.
 - Status is far from 100% even if all of the above land: response
   streaming, compression, HTTP/2 (proxy's job).
 
-**Routing (50%)**
-- Multiple params (`/a/:x/b/:y`), wildcards, optional segments.
-- Query-string parsing, route groups, per-route middleware hooks.
-- `xiom.router` 0.1.0 is incubating in the packages lane -- likely
-  replaces this module once published.
+**Routing (78%)**
+- Registry `xiom.router` 0.1.0 adopted: `src/router.xi` is a thin app
+  wrapper (route ids + query parsing); consumer probe 8/8.
+- Still missing: wildcards, optional segments, route groups, per-route
+  middleware hooks, path percent-decoding.
 
 **Middleware (10%)**
 - Request-id/logging/audit are hardcoded in the loop.
@@ -132,14 +138,15 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
   backup/restore, no indexes (fine at small scale).
 - `xiom.kv` is the proposed packages-lane replacement.
 
-**Security hardening (15%)**
+**Security hardening (22%)**
 - TLS: front-proxy by design (Caddy/nginx), not implemented here; no
   TLS tests yet.
 - No rate limiting (`xiom.rate` 0.2.0 exists, not wired).
-- No CORS, CSRF, security headers (HSTS/CSP/frame-options).
+- No CORS/CSRF; HSTS/CSP pending; nosniff / frame-DENY / referrer-policy
+  headers landed.
 - Input validation is minimal (JSON object check only) -- no schema.
-- No slow-client timeouts (stdlib queued); half-open request can hold the
-  single-threaded loop.
+- Header size/count caps landed (16 KiB / 100); no recv timeouts yet
+  (stdlib queued) -- a half-open request can still hold the loop.
 
 **Static/assets (20%)**
 - Favicon + landing page only; no directory serving, MIME map,
@@ -175,7 +182,8 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 | C-PULSE-02 deps not mapped to catalog roots | OPEN | `xiom.toml source-roots` wiring per package |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |
-| `xiom.router`/`session`/`static`/`http.middleware` | incubating; publish gated on allowlist delta | module replacement + middleware framework |
+| `xiom.router` 0.1.0 | **LIVE and adopted by PULSE** (probe 8/8, suites x2) | routing hardened; wildcards/groups remain package roadmap |
+| `xiom.session`/`static`/`http.middleware` | incubating; publish gated on allowlist delta | module replacement + middleware framework |
 | Concurrency primitives (threads/select) | absent on the pin | caps throughput; single-threaded design |
 
 Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
@@ -189,7 +197,7 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M1 -- Thin slice** | plaintext HTTP/1.1, routes, JSON, 404/405, curl + 64 concurrent + soak | **DONE** (2026-10-05) |
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
-| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~15% |
+| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~25% (queries, caps, security headers landed) |
 | **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~5% |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 
@@ -204,7 +212,8 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 - [x] Durable append store with crash-safe reopen
 - [x] Structured logs, metrics endpoint, audit trail
 - [x] 1h load soak with flat memory/handles
-- [ ] Keep-alive + request/header limits + query-string parsing
+- [x] Request/header caps + query-string parsing
+- [ ] Keep-alive + chunked + HEAD
 - [ ] Real timeouts (recv deadline) and slow-client shedding
 - [ ] Rate limiting + CORS + CSRF + security headers
 - [ ] Schema validation for all inputs

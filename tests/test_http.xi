@@ -102,6 +102,50 @@ pub fn main() -> Int {
   let e405 = route_req("GET", "/api/echo", "");
   f = f + check("route echo 405", e405.status == 405);
 
+  // --- query strings, decoding, caps ---------------------------------------
+  let st = router.split_target("/api/items/42?x=1&y=2");
+  f = f + check("split_target path", st.0 == "/api/items/42");
+  f = f + check("split_target query", st.1 == "x=1&y=2");
+  let st2 = router.split_target("/health");
+  f = f + check("split_target no query", st2.0 == "/health" && st2.1 == "");
+  f = f + check("url_decode plus", router.url_decode("a+b") == "a b");
+  f = f + check("url_decode hex", router.url_decode("x%21%7E") == "x!~");
+  let qp = router.parse_query("a=1&b=hello%20world&c");
+  let n2 = qp.0[2];
+  let v1 = qp.1[1];
+  let v2 = qp.1[2];
+  f = f + check("parse_query count", qp.0.len() == 3 && n2 == "c");
+  f = f + check("parse_query decoded", v1 == "hello world");
+  f = f + check("parse_query flag empty", v2 == "");
+  let mq = router.route_match("GET", "/api/items/7?x=1");
+  let pv0 = mq.param_values[0];
+  let qn0 = mq.query_names[0];
+  let qv0 = mq.query_values[0];
+  f = f + check("route query keeps param", mq.kind == 1 && pv0 == "7");
+  f = f + check("route query parsed", qn0 == "x" && qv0 == "1");
+  let mh = router.route_match("GET", "/health?debug=1");
+  f = f + check("route health with query", mh.kind == 1 && mh.route_id == 1);
+  f = f + check("header_overflow normal false", !http.header_overflow(&r1));
+  var big: Vec[UInt8] = Vec[UInt8].new();
+  var bi: Int = 0;
+  while bi < 20000 {
+    big.push(65u8);
+    bi = bi + 1;
+  }
+  f = f + check("header_overflow oversized true", http.header_overflow(&big));
+  var many_hdr: Str = "GET /health HTTP/1.1\r\n";
+  var hi: Int = 0;
+  while hi < 101 {
+    many_hdr = many_hdr + "X-H" + hi.to_str() + ": v\r\n";
+    hi = hi + 1;
+  }
+  many_hdr = many_hdr + "\r\n";
+  let rmany = http.str_to_bytes(many_hdr);
+  let pmany = http.parse_request(&rmany);
+  f = f + check("too many headers rejected", !pmany.ok);
+  f = f + check("security nosniff", string.str_contains(resp_str, "X-Content-Type-Options: nosniff"));
+  f = f + check("security frame deny", string.str_contains(resp_str, "X-Frame-Options: DENY"));
+
   if f == 0 {
     io.println("pulse-http: GREEN");
   } else {

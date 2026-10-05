@@ -64,10 +64,26 @@ pub fn find_header_end(buf: &Vec[UInt8]) -> Int {
   return -1;
 }
 
+/// header_limit_bytes returns the max request-head size the server buffers.
+/// Complexity: O(1). Pure.
+pub fn header_limit_bytes() -> Int {
+  return 16384;
+}
+
+/// header_overflow is true when no CRLFCRLF terminator was seen within the
+/// head-size limit (slow-client / oversized-header guard). O(n). Pure.
+pub fn header_overflow(raw: &Vec[UInt8]) -> Bool {
+  return find_header_end(raw) < 0 && raw.len() > header_limit_bytes();
+}
+
+/// header_count_limit returns the max accepted header lines. O(1). Pure.
+pub fn header_count_limit() -> Int {
+  return 100;
+}
+
 /// find_crlf returns the index of the next CRLF in [from, limit), or -1.
 /// Complexity: O(n). Pure.
-fn find_crlf(buf: &Vec[UInt8], from: Int, limit: Int) -> Int {
-  var i: Int = from;
+fn find_crlf(buf: &Vec[UInt8], from: Int, limit: Int) -> Int {  var i: Int = from;
   while i + 2 <= limit && i + 2 <= buf.len() {
     if buf[i] == 13u8 && buf[i + 1] == 10u8 {
       return i;
@@ -139,11 +155,17 @@ pub fn parse_request(raw: &Vec[UInt8]) -> PulseRequest {
   }
 
   var pos: Int = line_end + 2;
+  var hcount: Int = 0;
   while pos < hdr_end {
     let next = find_crlf(raw, pos, hdr_end + 2);
     if next < 0 { break; }
     let line = bytes_to_str(raw, pos, next);
     if line.len() > 0 {
+      hcount = hcount + 1;
+      if hcount > header_count_limit() {
+        req.error = "too many headers";
+        return req;
+      }
       var col: Int = -1;
       match string.str_index_of(line, ":") {
         Some(v) => { col = v; },
@@ -256,6 +278,9 @@ pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(
     head = head + h.0 + ": " + h.1 + "\r\n";
     i = i + 1;
   }
+  head = head + "X-Content-Type-Options: nosniff\r\n";
+  head = head + "X-Frame-Options: DENY\r\n";
+  head = head + "Referrer-Policy: no-referrer\r\n";
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
   head = head + "Connection: close\r\n";
   head = head + "Server: xiom-pulse/0.1.0\r\n";
@@ -281,6 +306,9 @@ pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[
     head = head + h.0 + ": " + h.1 + "\r\n";
     i = i + 1;
   }
+  head = head + "X-Content-Type-Options: nosniff\r\n";
+  head = head + "X-Frame-Options: DENY\r\n";
+  head = head + "Referrer-Policy: no-referrer\r\n";
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
   head = head + "Connection: close\r\n";
   head = head + "Server: xiom-pulse/0.1.0\r\n";

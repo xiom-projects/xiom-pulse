@@ -22,7 +22,11 @@ signature checks pass; trust fingerprint `4f:3b:47:f3:ae:17:b1:3c`).
 11/11 and `tests/test_app.xi` 6 jwt checks green): `jwt_sign_hs256`,
 `jwt_signature_valid_hs256`, `jwt_verify_hs256` with the verified payload
 returned. `xiom.rate` v0.2.0 (KeyedBuckets/KeyedWindows) recorded for the
-next hardening slice.
+next hardening slice. **`xiom.router` 0.1.0 adopted 2026-10-05 with a clean
+first consumer pass** (`tests/probes/probe_pkg_router.xi` 8/8: match, param
+capture, 404, 405, allowed-methods, invalid-pattern rejection); PULSE's
+`src/router.xi` is now a thin wrapper and its suites x2 + smoke 44/44 stay
+green. No hotfix needed.
 
 ## Ops scope confirmation (requested by the packages lane)
 
@@ -61,9 +65,8 @@ manual until that lands.
 
 1. ~~`xiom.http` 0.1.1~~ **DONE** -- consumer re-verified by PULSE.
 2. ~~`xiom.jwt` HS256~~ **DONE (0.2.0, adopted by PULSE)**.
-3. `xiom.router` 0.1.0 -- recorded/incubating; **publish gated only on the
-   ops scope confirmation above** (PULSE will adopt and re-run its router
-   suite as the consumer test).
+3. ~~`xiom.router` 0.1.0~~ **DONE -- live and adopted by PULSE**
+   (probe 8/8, suites x2, smoke 44/44; no hotfix needed).
 4. `xiom.http.middleware` (next), then `xiom.session`, `xiom.rate` adoption,
    `xiom.metrics` 0.2.0, `xiom.static`, and `xiom.kv` (embedded store).
 

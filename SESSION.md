@@ -30,16 +30,16 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **app icon + landing page** on v0.64.0: official
-  `resources/img/pulse-ico.ico` served as `GET /favicon.ico`
-  (image/x-icon, 270,398 bytes via a new `send_all` chunked writer --
-  a single `socket_send` short-wrote) and a `GET /` landing page; smoke
-  44/44, suite x2. New finding **C-PULSE-06** filed (missing struct field
-  silently compiles -> garbage Vec -> PULSE crash 0xC0000005; smoke caught
-  it). v0.64.0 fleet green (suites x2, smoke, 64/64 concurrent, registry +
-  read probes) on `out\pulse_app_v4.exe`. 1h soak on v0.63.1: PS
-  **7070/7070**, server **13,198/13,198**, handles flat. v0.64.0 30m dual
-  soak running (wakeup 18:07Z).
+- **Last green slice:** **hardening + router adoption wave** on v0.64.0:
+  `xiom.router` 0.1.0 live and adopted (`src/router.xi` thin wrapper; probe
+  8/8); query strings + URL decoding; header caps (16 KiB head / 100
+  headers); security headers (nosniff, frame-DENY, referrer-policy);
+  binary `send_all`; app icon + landing page. Suites x2 (`test_http` 47,
+  `test_app` 64 checks), smoke 44/44 on `out\pulse_app_v5.exe`. Soaks:
+  v0.63.1 1h server **13,198/13,198**; v0.64.0 30m server **6,543/6,543**;
+  flat memory/handles both. WSL transients fully classified: 2 per run,
+  `curl_rc=28` in the last 5s -- the client races the PS driver's shutdown
+  QUIT; zero server involvement.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const
@@ -180,6 +180,15 @@ SHA-256/HMAC for PULSE JWT (Step 2).
   (details + bump procedure in `docs/COMPILER-FINDINGS-PULSE.md`).
   Fleet on v0.64.0: suites x2, smoke 38/38, 64/64 concurrent, registry +
   read probes green.
+- **packages (router)**: `xiom.router` 0.1.0 published and **adopted by
+  PULSE** within the hour: `probe_pkg_router.xi` 8/8 (match/param/404/405/
+  Allow/validation); `src/router.xi` is now a thin app wrapper over the
+  package (route ids + query parsing/decoding); suites x2 + smoke 44/44 on
+  `out\pulse_app_v5.exe`. Clean first consumer pass, no hotfix.
+- **compiler (icon)**: reply recorded -- immediate workaround is post-build
+  `rcedit`, planned `xiom --icon` for v0.64.1+ (llvm-rc, cached by icon
+  hash). PULSE wired the rcedit hook into `scripts\build.ps1` (activates
+  when rcedit is on PATH) and will delete it when `--icon` lands.
 - **website message**: routed for the website lane, not PULSE scope.
 
 Reference docs read before reporting (do NOT re-run known bisections; add

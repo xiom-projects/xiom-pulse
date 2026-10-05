@@ -148,13 +148,22 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 
 PULSE received the official app icon (`resources/img/pulse-ico.ico`,
 270 KB multi-size). There is no toolchain support to embed it into the AOT
-executable on Windows (no `--icon` flag, no `.rc`/`winres` handling in
+executable on Windows (no `--icon` flag, no `.rc`/winres handling in
 `xiom --help`, compiler source, or the pkg manifest). PULSE serves it as
 `/favicon.ico` instead and keeps the landing page wired to it.
 
-Suggested shape (compiler lane, when prioritized): `--icon <path.ico>`
-that compiles a `.rc` resource (or uses `llvm-rc`) and passes it to the
-link step; alternatively a `[app] icon = "..."` manifest field.
+**Compiler lane reply (2026-10-05):** workaround until shipped --
+post-build `rcedit app.exe --set-icon app.ico` (one line; PULSE wired it
+into `scripts\build.ps1`, active automatically when rcedit is on PATH).
+Planned implementation queued for **v0.64.1+**: `xiom --icon app.ico
+file.xi` (Windows first) -- writes a tiny `.rc`
+(`IDI_ICON1 ICON "app.ico"`), compiles with the already-present LLVM
+(`llvm-rc /fo app.res`), includes the `.res` in the link args, cached by
+icon hash next to the runtime cache; ships with `--help`, compiler
+`AI_CONTEXT.md`, and website docs per the docs-coupling rule. macOS/Linux
+icons (Info.plist / .desktop) are separate scope. PULSE will re-test and
+delete the rcedit hook when `--icon` lands.
+
 
 
 ## C-PULSE-05 -- details (W005 delta: const receiver)
