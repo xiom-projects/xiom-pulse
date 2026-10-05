@@ -1,0 +1,24 @@
+# XIOM PULSE -- compiler project manifest (xiom.toml is the canonical
+# Phase 7 manifest; package.xi remains the registry/pkg manifest).
+#
+# NOTE (C-PULSE-02): on v0.63.1 the compiler's dependency graph only adds the
+# project's own source roots + stdlib to the module catalog. `[dependencies]`
+# entries are parsed but never mapped to source directories, and packages
+# installed under $XIOM_HOME/packages are not on the catalog path. The
+# workaround is to list the installed package's src/ dir in source-roots.
+# Revisit when the compiler maps deps -> roots.
+[project]
+name = "xiom.pulse"
+version = "0.1.0"
+root = "src"
+source-roots = [
+  "src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-0.1.0/xiom-http/src",
+]
+
+[dependencies]
+xiom.http = "0.1.0"
+
+[compiler]
+target = "native"
+timeout-secs = 300

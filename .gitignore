@@ -1,0 +1,44 @@
+# XIOM PULSE -- build artifacts and local state
+# Compiler output (a.exe/a.exe.ll land next to the compiled source)
+a.exe
+a.exe.ll
+*.exe.ll
+*.o
+*.obj
+*.pdb
+*.ilk
+*.dll
+*.lib
+*.exp
+*.ll
+*.bc
+a.out
+
+# Local build/release output
+/out/
+/bin/
+/obj/
+/dist/
+
+# Probe + soak logs (keep summaries, not raw runs)
+*.log
+/probe-logs/
+/soak/
+
+# Kilo / Agent Manager workspace state (never commit)
+.kilo/
+*.code-workspace
+.vscode/
+
+# XIOM package manager local state (xiom.lock stays committed)
+.xiom_ai_cache/
+.xiom-cache/
+
+# Secrets / env
+.env
+.env.*
+
+# OS noise
+Thumbs.db
+Desktop.ini
+.DS_Store
