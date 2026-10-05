@@ -49,7 +49,7 @@
 | curl verification | DONE 13/13 | `scripts/http_smoke.ps1` (note: bodies via `--data-binary @file`; PS 5.1 strips embedded quotes in native args) |
 | 64 concurrent on :8080 | DONE (green) | `scripts\concurrent.ps1 -Clients 64 -Port 8080 -Path /health -ServerExe out\pulse_server.exe` -> connected=64/64, ok=64, served=64, server_exit=0, handles 77->78 |
 | 1h soak (memory/fd stability) | RUNNING (started 2026-10-05 ~15:2xZ) | persistent bg process `bgp_10c9c56c40017FshZrk76eKzkH` on :18080 (session persistent); progress `probe-logs\soak-http-progress.txt` (60s samples), summary `probe-logs\soak-http.summary.txt` |
-| Registry package consumption | DONE with workaround | `probe_pkg_http.xi`; `xiom pkg install xiom.http` (sha256 f8b59d9e...); C-PULSE-02/package defect rows |
+| Registry package consumption | DONE (xiom.http with workaround; cookie/jwt green) | `xiom pkg install xiom.http@0.1.0` (sha256 f8b59d9e...), `xiom.cookie@0.1.1` (sha256 6259e3b3...), `xiom.jwt@0.1.1` (sha256 408643ce...), all signature-checked; `probe_pkg_step2.xi` 8/8 x2 (cookie jar parse/get/serialize-set; jwt shape/alg/sub/exp); `probe_pkg_http.xi` exposes the xiom.http parser defect |
 | WSL cross-boundary client check | DONE (green) | Ubuntu WSL: `curl http://172.26.112.1:18080/health` -> `{"status":"ok"}`; note: WSL `localhost:8080` hits the Docker Desktop container on this machine, not PULSE |
 
 **Environment note (port contention):** on this machine `0.0.0.0:8080` is held by
@@ -59,6 +59,9 @@ app; also reachable as WSL `localhost:8080`). The v0.63.1 Windows
 alongside it, but for clean evidence PULSE gained a `PULSE_PORT` env
 override (`src/server.xi` `server_port()`, default 8080) and the soak runs
 on 18080.
+
+**Soak sample (60s, healthy):** `ok=119 fail=0 ws=8,167,424 handles=110`
+(baseline ws=8,208,384 handles=110).
 
 ### Step 0 progress
 

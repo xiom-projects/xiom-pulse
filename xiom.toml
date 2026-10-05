@@ -14,10 +14,14 @@ root = "src"
 source-roots = [
   "src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-0.1.0/xiom-http/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-jwt-0.1.1/xiom-jwt/src",
 ]
 
 [dependencies]
 xiom.http = "0.1.0"
+xiom.cookie = "0.1.1"
+xiom.jwt = "0.1.1"
 
 [compiler]
 target = "native"
