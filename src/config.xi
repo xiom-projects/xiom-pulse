@@ -7,6 +7,9 @@
 module xiom.pulse.config
 
 use xiom.env;
+use xiom.io;
+use xiom.convert;
+use xiom.serialize.json;
 
 /// cfg_parse_port parses a decimal port, falling back to 8080.
 /// Complexity: O(n). Pure.
@@ -63,6 +66,62 @@ pub fn cfg_cors_origin() -> Str {
 /// Complexity: O(1). Pure.
 pub fn cfg_csrf_enabled() -> Bool {
   return env.var_or("PULSE_CSRF", "1") != "0";
+}
+
+/// cfg_config_path returns PULSE_CONFIG ("" = no file).
+/// Complexity: O(1). Pure.
+pub fn cfg_config_path() -> Str {
+  return env.var_or("PULSE_CONFIG", "");
+}
+
+fn cfg_apply_str(obj: JsonValue, key: Str, env_name: Str) {
+  let opt = json.json_get(obj, key);
+  if opt.is_none { return; }
+  let v = opt.value;
+  match v {
+    JsonValue.String(s) => {
+      let sv = s;
+      env.set_var_if_absent(env_name, sv);
+    },
+    JsonValue.Number(f) => {
+      env.set_var_if_absent(env_name, convert.float_to_int(f).to_str());
+    },
+    JsonValue.Bool(b) => {
+      if b {
+        env.set_var_if_absent(env_name, "1");
+      } else {
+        env.set_var_if_absent(env_name, "0");
+      }
+    },
+    _ => {},
+  }
+}
+
+/// cfg_load_file loads PULSE_CONFIG (a JSON object) into the environment
+/// without overriding already-set variables. Returns false when a
+/// configured file is unreadable or not a JSON object.
+/// Complexity: O(file).
+pub fn cfg_load_file() -> Bool {
+  let path = cfg_config_path();
+  if path.len() == 0 { return true; }
+  let rf = io.read_file(path);
+  if rf.is_err { return false; }
+  let pv = json.json_parse(rf.value);
+  if pv.is_err { return false; }
+  if json.json_type(pv.value) != "object" { return false; }
+  let obj = pv.value;
+  cfg_apply_str(obj, "port", "PULSE_PORT");
+  cfg_apply_str(obj, "log", "PULSE_LOG");
+  cfg_apply_str(obj, "store_path", "PULSE_STORE_PATH");
+  cfg_apply_str(obj, "audit_path", "PULSE_AUDIT_PATH");
+  cfg_apply_str(obj, "jwt_secret", "PULSE_JWT_SECRET");
+  cfg_apply_str(obj, "session_ttl", "PULSE_SESSION_TTL");
+  cfg_apply_str(obj, "icon_path", "PULSE_ICON_PATH");
+  cfg_apply_str(obj, "rate_limit", "PULSE_RATE_LIMIT");
+  cfg_apply_str(obj, "rate_burst", "PULSE_RATE_BURST");
+  cfg_apply_str(obj, "cors_origin", "PULSE_CORS_ORIGIN");
+  cfg_apply_str(obj, "csrf", "PULSE_CSRF");
+  return true;
 }
 
 /// cfg_port returns the listen port (PULSE_PORT, default 8080).

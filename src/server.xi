@@ -214,6 +214,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
   }
   if m.route_id == 13 {
     var limit: Int = 10;
+    var kind_filter: Str = "";
     var qi: Int = 0;
     while qi < m.query_names.len() {
       let qn = m.query_names[qi];
@@ -226,12 +227,23 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
           }
         }
       }
+      if qn == "kind" {
+        let qk = m.query_values[qi];
+        if qk.len() > 0 && qk.len() <= 32 {
+          kind_filter = qk;
+        }
+      }
       qi = qi + 1;
     }
     if limit < 1 { limit = 1; }
     if limit > 100 { limit = 100; }
     let path = config.cfg_store_path();
-    let recs = store.store_last(path, limit);
+    var recs: Vec[Str] = Vec[Str].new();
+    if kind_filter.len() > 0 {
+      recs = store.store_last_kind(path, kind_filter, limit);
+    } else {
+      recs = store.store_last(path, limit);
+    }
     let arr = store.store_join_array(&recs);
     let out_body = "{\"count\":" + store.store_count(path).to_str() + ",\"events\":" + arr + "}";
     return out_json(200, out_body);
@@ -388,6 +400,10 @@ pub fn main() -> Int {
     return 1;
   }
   let fd = sr.value;
+  if !config.cfg_load_file() {
+    io.println("pulse: config load failed: " + config.cfg_config_path());
+    io.flush_stdout();
+  }
   let port = config.cfg_port();
 
   let br = socket.socket_bind(fd, "127.0.0.1", port);

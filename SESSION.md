@@ -30,16 +30,14 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **M4 hardening wave 4** on v0.64.0: store
-  compaction (temp file + `MoveFileEx` replace; drops torn lines), events
-  `?limit=` query, request ids in every error envelope, `io.rename`
-  semantics verified (`MOVEFILE_REPLACE_EXISTING`); service gauges
-  (`pulse_app_info`, `pulse_store_records`, `pulse_uptime_seconds`).
-  Suites x2 (`test_app` 91 checks), smoke **59/59** on
-  `out\pulse_app_v8.exe`; storage soak driver added (20s validation GREEN:
-  84 writes -> compact 84 -> hard kill -> reopen 84; 10m run in progress,
-  wakeup 18:58Z). New stdlib wishlist row: no `fsync`/`FlushFileBuffers`
-  anywhere in the runtime -> "durable" appends are write-back only.
+- **Last green slice:** **storage soak GREEN**: 10m continuous event
+  writes on `out\pulse_app_v8.exe` (841 writes, 0 fail) -> compaction 841
+  -> hard kill -> reopen 841 -> 0 count mismatches, server exit 0, store
+  55,429 bytes (`scripts\store_soak.ps1`, summary in
+  `probe-logs\store-soak.summary.txt`). Combined with wave 4: compaction,
+  events `?limit=`, rid in error envelopes, service gauges. Suites x2
+  (`test_app` 91 checks), smoke **59/59**. New stdlib wishlist row:
+  no `fsync`/`FlushFileBuffers` in the runtime -> write-back only.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const

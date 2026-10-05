@@ -124,6 +124,50 @@ pub fn store_compact(path: Str) -> Bool {
   return true;
 }
 
+/// record_kind returns the record's `data.kind` string, or "".
+/// Complexity: O(record).
+fn record_kind(rec: Str) -> Str {
+  let pv = json.json_parse(rec);
+  if pv.is_err { return ""; }
+  let dopt = json.json_get(pv.value, "data");
+  if dopt.is_none { return ""; }
+  let dv = dopt.value;
+  if json.json_type(dv) != "object" { return ""; }
+  let kopt = json.json_get(dv, "kind");
+  if kopt.is_none { return ""; }
+  let kv = kopt.value;
+  if json.json_type(kv) != "string" { return ""; }
+  var ks: Str = "";
+  match kv {
+    JsonValue.String(x) => { ks = x; },
+    _ => { return ""; },
+  }
+  return ks;
+}
+
+/// store_last_kind returns up to `n` newest records whose `data.kind`
+/// equals `kind`, oldest-first. Complexity: O(n).
+pub fn store_last_kind(path: Str, kind: Str, n: Int) -> Vec[Str] {
+  let all = store_valid_records(path);
+  var picked: Vec[Str] = Vec[Str].new();
+  var i: Int = all.len() - 1;
+  while i >= 0 && picked.len() < n {
+    let r = all[i];
+    let k = record_kind(r);
+    if k == kind {
+      picked.push(r);
+    }
+    i = i - 1;
+  }
+  var rev: Vec[Str] = Vec[Str].new();
+  var j: Int = picked.len() - 1;
+  while j >= 0 {
+    rev.push(picked[j]);
+    j = j - 1;
+  }
+  return rev;
+}
+
 /// store_join_array renders records as a JSON array text.
 /// Complexity: O(n). Pure.
 pub fn store_join_array(records: &Vec[Str]) -> Str {

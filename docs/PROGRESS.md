@@ -15,31 +15,29 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~46% of production grade**
+## 1. Overall score: **~47% of production grade**
 
-_Delta 2026-10-05 (evening wave 5): 45.4% -> 45.6% -- service gauges
-(`pulse_app_info`, `pulse_store_records`, `pulse_uptime_seconds`) and a
-dedicated storage soak driver (`scripts\store_soak.ps1`: continuous writes
--> periodic count checks -> compaction -> hard kill -> reopen; 20s
-validation GREEN: 84 writes, compact 84, reopen 84; 10m run in progress).
-Evidence: suites x2 (`test_app` 91 checks), smoke **59/59**,
-`out\pulse_app_v8.exe`._
+_Delta 2026-10-05 (evening wave 6): 45.6% -> 46.9% -- JSON config file
+(`PULSE_CONFIG`, env-wins precedence), events `?kind=` field filter, and
+the **10m storage soak GREEN** (841 writes, 0 fail; compact 841; hard kill
+-> reopen 841; 0 mismatches; clean exit). Evidence: suites x2 (`test_app`
+99 checks), smoke **61/61**, `out\pulse_app_v9.exe`._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
 | 1 | HTTP core (parse/build/limits) | 12% | 74% | 8.9 | query strings, header caps, HEAD; keep-alive/chunked/Expect missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 10% | 0.8 | logging/audit inline only |
-| 4 | Configuration | 5% | 60% | 3.0 | env-based; no file/validation |
+| 4 | Configuration | 5% | 75% | 3.8 | env + JSON file (env-wins); no schema validation of values |
 | 5 | Observability (log/metrics/audit) | 8% | 72% | 5.8 | JSON log + `dur_ms` + counters + histogram + audit + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF; no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 45% | 4.5 | JSONL store, crash-safe append, `?limit`, compaction, soak driver; no update/delete/index, no fsync |
+| 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; no update/delete/index, no fsync |
 | 8 | Security hardening | 12% | 38% | 4.6 | rate limit + CSRF + opt-in CORS + security headers + caps; no schema lib/TLS E2E |
 | 9 | Static / assets | 4% | 20% | 0.8 | favicon + landing only |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 60% | 3.0 | suites+smoke+rate-smoke+store-soak+soak+WSL locally; no CI, no packaging |
-| | **Total** | **100%** | | **45.6** | |
+| | **Total** | **100%** | | **46.9** | |
 
 Two lenses to keep separate:
 
@@ -122,9 +120,10 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 - Request-id/logging/audit are hardcoded in the loop.
 - No composable chain, no recover-to-500, no CORS/CSRF helpers.
 
-**Config (60%)**
-- Env only; no config file, no schema validation, no startup warnings for
-  missing production values (e.g. dev JWT secret).
+**Configuration (75%)**
+- Env-based with a JSON file (`PULSE_CONFIG`) for all eleven settings;
+  environment variables win over file values.
+- No value schema/range validation beyond per-setting parsers/fallbacks.
 
 **Observability (72%)**
 - JSON access log with `rid`/status/bytes/`dur_ms`; counters + request
@@ -141,10 +140,12 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
   no scopes/roles, no refresh tokens.
 - No RBAC/authorization layer at all.
 
-**Storage (45%)**
-- Append + read last N (`?limit=1..100`) + count + compaction (temp file +
-  atomic replace; drops torn lines). No update/delete/query-by-field,
-  migrations framework, or indexes (fine at small scale).
+**Storage (55%)**
+- Append + read last N (`?limit=1..100`) + `?kind=` field filter + count +
+  compaction (temp file + atomic replace; drops torn lines); **10m soak:
+  841 writes, 0 fail, compact/reopen counts intact, 0 mismatches**
+  (`scripts\store_soak.ps1`). No update/delete, migrations framework, or
+  indexes (fine at small scale).
 - No `fsync` in the runtime: durability today = torn-tail healing, not
   power-loss safety (stdlib wishlist row added).
 - `xiom.kv` is the proposed packages-lane replacement.

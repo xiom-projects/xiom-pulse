@@ -75,6 +75,27 @@ pub fn main() -> Int {
   f = f + check("config port fallback", config.cfg_port() == 8080);
   env.remove_var("PULSE_PORT");
 
+  // --- config file -----------------------------------------------------------
+  let cf = "pulse-test-config.json";
+  let _rmc = io.remove_file(cf);
+  let cw = io.write_file(cf, "{\"port\":12346,\"cors_origin\":\"http://cfg.test\",\"csrf\":false,\"rate_limit\":7}");
+  f = f + check("config file write", cw.is_ok);
+  env.set_var("PULSE_CONFIG", cf);
+  env.remove_var("PULSE_PORT");
+  f = f + check("config file load", config.cfg_load_file());
+  f = f + check("config file port", config.cfg_port() == 12346);
+  f = f + check("config file cors", config.cfg_cors_origin() == "http://cfg.test");
+  f = f + check("config file csrf off", !config.cfg_csrf_enabled());
+  f = f + check("config file rate", config.cfg_rate_limit() == 7);
+  env.set_var("PULSE_PORT", "9999");
+  f = f + check("config env wins", config.cfg_load_file() && config.cfg_port() == 9999);
+  env.remove_var("PULSE_CONFIG");
+  env.remove_var("PULSE_PORT");
+  env.remove_var("PULSE_CORS_ORIGIN");
+  env.remove_var("PULSE_CSRF");
+  env.remove_var("PULSE_RATE_LIMIT");
+  let _rmc2 = io.remove_file(cf);
+
   // --- metrics -------------------------------------------------------------
   metrics.metrics_reset();
   metrics.metrics_record(200, 10);
@@ -220,6 +241,12 @@ pub fn main() -> Int {
   f = f + check("dispatch events list", el.status == 200 && string.str_contains(el.body, "click"));
   let el1 = route_req("GET", "/api/events?limit=1", "");
   f = f + check("dispatch events limit", el1.status == 200 && string.str_contains(el1.body, "click") && !string.str_contains(el1.body, "\"a\":1"));
+  let ek = route_req("GET", "/api/events?kind=click", "");
+  f = f + check("dispatch events kind", ek.status == 200 && string.str_contains(ek.body, "click") && !string.str_contains(ek.body, "\"a\":1"));
+  let kf1 = store.store_last_kind(sp, "click", 10);
+  let k0 = kf1[0];
+  f = f + check("store kind filter", kf1.len() == 1 && string.str_contains(k0, "click"));
+  f = f + check("store kind filter none", store.store_last_kind(sp, "nope", 10).len() == 0);
   let ecmp = route_req("POST", "/api/events/compact", "");
   f = f + check("dispatch compact 200", ecmp.status == 200);
   f = f + check("compact keeps records", store.store_count(sp) == 2);

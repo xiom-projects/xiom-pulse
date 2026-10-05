@@ -177,6 +177,9 @@ Check "events list 200" $r "200 OK"
 Check "events list body" $r '"events":'
 $r = Invoke-CurlGet "/api/events?limit=1"
 Check "events limit 200" $r "200 OK"
+$r = Invoke-CurlGet "/api/events?kind=smoke"
+Check "events kind 200" $r "200 OK"
+Check "events kind body" $r "smoke"
 $r = Invoke-CurlPost "/api/events/compact" ""
 Check "events compact 200" $r "200 OK"
 Check "events compact ok" $r '"ok":true'
