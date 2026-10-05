@@ -3,45 +3,50 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05 (12:55Z), by the PULSE consumer lane.
+**Written:** 2026-10-05 (17:3xZ), by the PULSE consumer lane.
 
-## 0. STATE (2026-10-05 12:55Z)
+## 0. STATE (2026-10-05 17:3xZ)
 
 - **Repo:** `E:\xiom-projects\xiom-pulse`; identity `Lefteris Notas
   <lefterisnotas@gmail.com>`; repo stays **PRIVATE**; `origin` exists
   (github.com/xiom-projects/xiom-pulse) but is **not pushed without owner
   approval**.
-- **PINNED TOOLCHAIN (do not upgrade without the owner):**
-  - `XIOM_COMPILER    = %LOCALAPPDATA%\xiom.new\bin\xiom.exe` (v0.63.1)
-  - `XIOM_STDLIB      = E:\xiom-lang\stdlib`
-  - `XIOM_RUNTIME_DIR = E:\xiom-lang\stdlib\runtime` **REQUIRED** -- the
-    installed AOT link never scans `<install>\lib\runtime`; without the
-    override any closure using `xiom_async_now_ms` fails
-    `lld-link: undefined symbol: xiom_async_now_ms` (upstream packet
-    xiom-packages `5b7547b0`, `docs/repro/runtime-link/`). Also links
-    `sha256_sw.c` -> the `xiom_sha256_hash` crypto-link experiment.
-  - `scripts\dev-env.ps1` sets all three; dot-source it in every terminal.
-    PATH shadow warning: a v0.62.3 staging dir shadows `xiom.new` in PATH.
-- **Read-only lanes (record hashes, never edit):**
-  - stdlib   `15cb889` 2026-10-05T14:03:35+03:00
-  - compiler `586426e9` 2026-10-05T15:32:11+03:00
-  - packages `3f21385c` 2026-10-05T15:47:13+03:00
-- **Last green slice:** registry-adoption cycle green: `str_bytes`
-  (stdlib) + `xiom.jwt` 0.2.0 HS256 (registry) adopted; `xiom.http` 0.1.1
-  consumer-verified; local `jwt_hs.xi` deleted; suite x2, smoke 38/38 on
-  `out\pulse_app_v2.exe`. Step 3 storage core green (JSONL store,
-  crash/reopen 6/6 at 20 and 200 events, smoke 37/37 pre-JWT). 30m dual
-  soak verdict recorded (3538/3538 + 3105/1-transient, server 7248/7248
-  200s); true 1h re-run on `pulse_app.exe` running (wakeup 17:25Z).
-- **Open blockers:** C-PULSE-01 (read method) worked around via raw
-  socket_recv; C-PULSE-02 (dep->root mapping) worked around via xiom.toml
-  source-roots; C-PULSE-04 (&mut Int bare read) documented; C-PULSE-05
-  (const `.to_str()` W005 stub) worked around; `xiom.http` v0.1.0 parser
-  broken (package defect filed).
-- **Next action:** true 1h soak re-run on `out\pulse_app.exe` (PS + WSL,
-  started 16:2xZ, wakeup scheduled ~17:25Z) -> record verdict; then
-  Step 4 (TLS only if the product needs it; keep the proxy fallback
-  documented) and the Step 3 handoff wrap.
+- **VERSION POLICY (owner decision 2026-10-05): track the LATEST compiler /
+  stdlib / packages.** PULSE is the ecosystem's real-world hardening
+  harness; no fixed pin. Record exact versions + lane hashes every wrap; on
+  a latest-version regression, file the finding, note the last known-good
+  as a ROLLBACK OPTION, and keep moving.
+  - `XIOM_COMPILER = %LOCALAPPDATA%\xiom.new\bin\xiom.exe` (**v0.64.0**)
+  - `XIOM_STDLIB   = E:\xiom-lang\stdlib` (stdlib-lane checkout = latest)
+  - **`XIOM_RUNTIME_DIR` RETIRED** -- v0.64.0 R65 links the installed
+    `lib\runtime` + `lib\xiom` without overrides. PULSE verified env-free
+    (both vars unset): hello + `probe_crypto` NIST KAT green (2026-10-05).
+  - `scripts\dev-env.ps1` sets the two and removes any stale
+    `XIOM_RUNTIME_DIR`; PATH shadow warning: a v0.62.3 staging dir shadows
+    `xiom.new` in PATH.
+- **Lane hashes / latest cycle (recorded 2026-10-05):**
+  - compiler v0.64.0 (release archive; `xiom.new-cand-v0.64.0` also present)
+  - stdlib lane checkout `357474c` (per stdlib lane message)
+  - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
+    `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
+    ops scope confirmation)
+- **Last green slice:** **v0.64.0 migration green**: suites x2
+  (`test_smoke`, `test_http` -- fixed stale Step-1 args the stricter
+  v0.64.0 checker now rejects -- `test_app`), smoke 38/38, 64/64
+  concurrent, registry probes + read probes green, all on
+  `out\pulse_app_v3.exe`. 1h soak on v0.63.1: PS **7070/7070**, server
+  **13,198/13,198** 200s, clean exit, handles flat; WSL 6128 ok / 2
+  client-side transients. v0.64.0 30m dual soak running (wakeup 18:07Z).
+- **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
+  exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
+  C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const
+  `.to_str()` now aborts 0x80000003 instead of rendering empty; PULSE
+  workaround `convert.int_to_string` still required); C-PULSE-02 **still
+  open** (13 T001 without source-roots); runtime-link/crypto-link
+  **RESOLVED env-free**; `xiom.http` parser defect fixed in 0.1.1.
+- **Next action:** v0.64.0 soak verdict (wakeup 18:07Z), then Step 3
+  handoff wrap and Step 4 (TLS decision: proxy-only unless the product
+  needs in-XIOM TLS; keep the proxy fallback documented).
 
 ### Step 3 progress (storage)
 
@@ -164,10 +169,12 @@ SHA-256/HMAC for PULSE JWT (Step 2).
   (recorded). `xiom.router` 0.1.0 recorded/incubating -- publish awaits
   the ops scope confirmation (PULSE confirmed the four names in the
   package wishlist doc).
-- **compiler**: **v0.64.0 released** (heap corruption, TcpStream.read
-  elision, unsafe stack exhaustion, installed runtime links, exact float
-  bits). Pin stays **v0.63.1 pending owner approval**; the bump checklist
-  is in `docs/COMPILER-FINDINGS-PULSE.md` Section "Upstream status".
+- **compiler**: **v0.64.0 released and ADOPTED** (owner decision: track
+  latest). PULSE migration green: runtime-link + crypto-link resolved
+  env-free, C-PULSE-01 resolved, C-PULSE-04/05 and C-PULSE-02 still open
+  (details + bump procedure in `docs/COMPILER-FINDINGS-PULSE.md`).
+  Fleet on v0.64.0: suites x2, smoke 38/38, 64/64 concurrent, registry +
+  read probes green.
 - **website message**: routed for the website lane, not PULSE scope.
 
 Reference docs read before reporting (do NOT re-run known bisections; add
@@ -210,10 +217,10 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   v0.63.1.
 - grpc `Vec[(Str,Str)]` read-after-mutation crash/hang: m192-class candidate;
   re-test only on the next compiler archive. No gRPC in the design.
-- crypto-link `xiom_sha256_hash`: **RESOLVED via `XIOM_RUNTIME_DIR`** (Step
-  0d: KAT passes under the override; without it the old undefined symbol).
-  Unblocks stdlib SHA-256/HMAC for JWT; relay to the packages lane to
-  re-test/flip their `docs/repro/crypto-link` row.
+- crypto-link `xiom_sha256_hash`: **RESOLVED on v0.64.0 env-free** (PULSE
+  KAT green with `XIOM_STDLIB` and `XIOM_RUNTIME_DIR` both unset). The old
+  `XIOM_RUNTIME_DIR` override is retired; stdlib SHA-256/HMAC and registry
+  `xiom.jwt` 0.2.0 are fully usable.
 - FFI-class packages (kafka, zstd, lzfse) are stubs; not planned.
 - Pin discipline: initialize every local (`var x: T = <default>;`); `Vec[T]`
   brackets only (byte-level grep after writes); parenthesize bitwise+additive;
@@ -230,26 +237,26 @@ E:\xiom-packages\packages. Repo stays PRIVATE; do not push to origin without
 owner approval. Identity "Lefteris Notas <lefterisnotas@gmail.com>";
 conventional commits.
 
-Toolchain pin: XIOM_COMPILER=%LOCALAPPDATA%\xiom.new\bin\xiom.exe (v0.63.1),
-XIOM_STDLIB=E:\xiom-lang\stdlib,
-XIOM_RUNTIME_DIR=E:\xiom-lang\stdlib\runtime (REQUIRED workaround, see
-SESSION.md). Dot-source scripts\dev-env.ps1. Registry packages now install
-to %LOCALAPPDATA%\xiom\packages; consumption needs xiom.toml source-roots
-(C-PULSE-02).
+VERSION POLICY (owner 2026-10-05): track the LATEST compiler/stdlib/packages
+to harden the ecosystem; no fixed pin. Current: compiler v0.64.0
+(%LOCALAPPDATA%\xiom.new\bin\xiom.exe), stdlib E:\xiom-lang\stdlib (lane
+checkout), registry packages (xiom.http 0.1.1, xiom.cookie 0.1.1,
+xiom.jwt 0.2.0). XIOM_RUNTIME_DIR is RETIRED. Dot-source
+scripts\dev-env.ps1. Registry consumption needs xiom.toml source-roots
+(C-PULSE-02, still open on v0.64.0).
 
-First: read probe-logs\soak-http.summary.txt (1h soak started 2026-10-05 on
-:18080; if absent/incomplete, re-run scripts\soak_http.ps1 with the
-watchdog and watchdog-gated exit code) and confirm the soak verdict. A
-non-zero failure count or handle growth is a finding: file it in SESSION.md
-with the progress file as evidence.
+First: read probe-logs\soak-http.summary.txt (v0.64.0 30m soak, started
+17:3xZ; if absent/incomplete, re-run scripts\soak_http.ps1 with the
+watchdog) and confirm the verdict; record it in SESSION.md.
 
-Step 2 is DONE (suite tests\test_app.xi 41/41 x2; smoke 31/31; 64/64
-concurrent). Then Step 3 (storage): pick the most-tested option first,
-schema/migrations, crash/reopen test, soak. Keep the workarounds: no
-one-arg `read` methods (raw socket_recv), no bare &mut Int reads (*p),
-probes staged in-repo, suite x2, server output redirected to files (never
-undrained pipes). Keep the three relay documents updated at every wrap:
-docs\COMPILER-FINDINGS-PULSE.md, docs\STDLIB-WISHLIST-PULSE.md,
-docs\PACKAGE-WISHLIST-PULSE.md. Batch findings rows in SESSION.md at the
-wrap and commit.
+Step 2 is DONE and on v0.64.0 green; Step 3 storage core is DONE (JSONL
+store + events routes + crash/reopen 6/6 at 20 and 200 events). Next:
+Step 3 handoff wrap, then Step 4 (TLS decision: proxy-only unless the
+product needs in-XIOM TLS; keep the proxy fallback documented). Keep the
+workarounds: no bare &mut Int reads (*p), no const-receiver `.to_str()`
+(use convert.int_to_string), probes staged in-repo, suite x2, server
+output redirected to files (never undrained pipes). Keep the three relay
+documents updated at every wrap: docs\COMPILER-FINDINGS-PULSE.md,
+docs\STDLIB-WISHLIST-PULSE.md, docs\PACKAGE-WISHLIST-PULSE.md. Batch
+findings rows in SESSION.md at the wrap and commit.
 ```

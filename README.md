@@ -10,21 +10,22 @@ service on XIOM, TLS terminated by a front proxy (Caddy/nginx), built as an
 > `E:\xiom-lang\xiom`, or `E:\xiom-packages\packages`; upstream defects are
 > reported through minimal repro bundles + findings rows in `SESSION.md`.
 
-## Toolchain pin (fixed 2026-10-05)
+## Toolchain (latest-tracking, owner decision 2026-10-05)
 
-| Component | Pin |
+PULSE tracks the **latest** compiler / stdlib / packages to harden the
+ecosystem through real use; public release comes later. Exact versions and
+lane hashes are recorded in `SESSION.md` at every wrap.
+
+| Component | Current |
 |---|---|
-| Compiler | v0.63.1 (`%LOCALAPPDATA%\xiom.new\bin\xiom.exe`) |
-| Stdlib | `E:\xiom-lang\stdlib` |
-| Runtime | `E:\xiom-lang\stdlib\runtime` **via `XIOM_RUNTIME_DIR`** |
+| Compiler | **v0.64.0** (`%LOCALAPPDATA%\xiom.new\bin\xiom.exe`) |
+| Stdlib | `E:\xiom-lang\stdlib` (stdlib-lane checkout, latest) |
+| Packages | registry (`%LOCALAPPDATA%\xiom\packages`): xiom.http 0.1.1, xiom.cookie 0.1.1, xiom.jwt 0.2.0 |
 
-`XIOM_RUNTIME_DIR` is **required** on this pin: the installed compiler's AOT
-link only links `xiom_runtime.c`, so any program whose closure uses the
-monotonic clock (`xiom_async_now_ms`, including the stdlib test harness)
-fails with `lld-link: undefined symbol: xiom_async_now_ms`. The override
-makes the link include `async_runtime.c` + `sha256_sw.c` and the rest of the
-runtime dir. Repro: `xiom-packages` commit `5b7547b0`
-(`docs/repro/runtime-link/`).
+`XIOM_RUNTIME_DIR` is **retired** on v0.64.0 (release R65 links the
+installed `lib\runtime` + `lib\xiom`): PULSE verified env-free with both
+`XIOM_STDLIB` and `XIOM_RUNTIME_DIR` unset. Historical workaround context
+is in the relay docs under `docs/`.
 
 ## Start here
 

@@ -22,10 +22,10 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 
 | Date | Finding | Evidence | Workaround in PULSE | Impact |
 |---|---|---|---|---|
-| 2026-10-05 | **C-PULSE-01: a method named `read` with exactly ONE argument is hijacked by the raw-pointer codegen builtin.** | `docs/repro/read-method-builtin-shadow/` | raw `xiom.net.socket.socket_recv(fd, max)`; never name one-arg methods `read` | kills `xiom.net.TcpStream.read` (all stdlib networking reads) and `os.Pipe.read`; silent, no diagnostic |
-| 2026-10-05 | **C-PULSE-04: a `&mut Int` parameter used BARE in value position (arithmetic RHS or `return`) yields the pointer ADDRESS, not the pointee.** Explicit `*p` is correct. | `docs/repro/mut-int-bare-read/` | always `*p = *p + k; return *p;` (existing `xiom.gbnf` pattern) | silent wrong values in cursor-style parsers; broke `xiom.http` v0.1.0's parser for consumers |
-| 2026-10-05 | **C-PULSE-02: installed registry packages are not mapped to module-catalog source roots.** `[dependencies]`/`dependencies:` are parsed by `xiom-graph` but never resolved to directories; the driver adds only project roots + stdlib. | `docs/repro/registry-dep-resolution/` | `xiom.toml` `[project].source-roots` lists the installed package `src/` dirs | `xiom pkg install` alone cannot be `use`d; registry adoption requires manual wiring |
-| 2026-10-05 | **C-PULSE-05 (W005 delta): the erased-interface default stub fires for a module-`const` receiver method call.** `SCHEMA_VERSION.to_str()` inside a project package module emits `warning[W005]: unresolved call '@to_str' ... emitting a typed default stub` and renders as EMPTY, producing invalid JSON on disk. A call-result receiver in the same module (`time.unix_timestamp().to_str()`) renders correctly. | PULSE `src/store.xi schema_line()`; ground truth: `tests/probes/probe_store_debug.xi` prints `line[0]=[{"kind":"schema","version":}]` (before fix) vs `version":1` (after `convert.int_to_string`). Warning text references the compiler's own `docs/COMPILER_BUGS.md`. | `xiom.convert.int_to_string(n)` free function instead of the interface method | silent data corruption class: malformed JSON written to disk with only a stderr warning; a crash-safe store cannot trust `.to_str()` on const receivers |
+| 2026-10-05 | **C-PULSE-01 (RESOLVED in v0.64.0): a method named `read` with exactly ONE argument is hijacked by the raw-pointer codegen builtin. PULSE re-verified: `probe_method_matrix.xi` exit 0; `probe_read_no_io.xi` and `probe_net_roundtrip.xi` now green; the stdlib `TcpStream.read` path is functional.** | `docs/repro/read-method-builtin-shadow/` | none needed on v0.64.0 (raw `socket_recv` still used by the server for `&mut Vec` clarity) | resolved |
+| 2026-10-05 | **C-PULSE-04 (STILL OPEN on v0.64.0): a `&mut Int` parameter used BARE in value position (arithmetic RHS or `return`) yields the pointer ADDRESS, not the pointee.** Explicit `*p` is correct. Re-verified 2026-10-05 on v0.64.0: `mut-int-ref bad=5`, `bare_add a=180233435864 r=180233435856`. | `docs/repro/mut-int-bare-read/` | always `*p = *p + k; return *p;` (existing `xiom.gbnf` pattern) | silent wrong values in cursor-style parsers; broke `xiom.http` v0.1.0's parser for consumers |
+| 2026-10-05 | **C-PULSE-02 (STILL OPEN on v0.64.0): installed registry packages are not mapped to module-catalog source roots.** `[dependencies]`/`dependencies:` are parsed by `xiom-graph` but never resolved to directories; re-tested on v0.64.0 with source-roots removed: 13x `T001 undefined variable 'http_*'`. | `docs/repro/registry-dep-resolution/` | `xiom.toml` `[project].source-roots` lists the installed package `src/` dirs | `xiom pkg install` alone cannot be `use`d; registry adoption requires manual wiring |
+| 2026-10-05 | **C-PULSE-05 (OPEN; v0.64.0 delta: now ABORTS): the erased-interface default stub fires for a module-`const` receiver method call.** On v0.63.1 `SCHEMA_VERSION.to_str()` rendered EMPTY (invalid JSON); on **v0.64.0 it terminates the process with exit `0x80000003`** (STATUS_BREAKPOINT) and the same W005 warning. `probe_const_to_str.xi` reproduces. Call-result receivers in the same module render correctly. | `tests/probes/probe_const_to_str.xi`; PULSE `src/store.xi schema_line()` (workaround in place) | `xiom.convert.int_to_string(n)` free function instead of the interface method | silent data corruption on v0.63.1 -> hard abort on v0.64.0; any package module using `.to_str()` on a const receiver dies |
 
 ## C-PULSE-01 -- details
 
@@ -158,9 +158,15 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
   compiled package module; the receiver type is statically known, so a
   default stub is strictly worse than either static dispatch or a hard
   error.
+- **v0.64.0 delta (2026-10-05):** the same shape now **aborts the process**
+  with exit `0x80000003` (STATUS_BREAKPOINT) after the identical W005
+  warning; nothing is printed. Repro: `tests/probes/probe_const_to_str.xi`
+  (`const V: Int = 41; ... V.to_str()`), exit code `-2147483645` via the
+  `xiom --run` wrapper. This upgrades the impact from silent corruption to
+  hard crash while the receiver type is statically known.
 - **Suggested fix:** const-fold the receiver and resolve through the
   concrete impl (same path the call-result receiver takes), or turn the
-  W005 stub into an error when the receiver type is concrete.
+  W005 stub into a compile-time error when the receiver type is concrete.
 
 ## Positive confirmations on the pin (do not chase)
 
@@ -173,31 +179,26 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 - Contracts on PULSE's code (`requires: true` only) evaluated cleanly; the
   v0.63.1 contract-evaluator fix holds.
 
-## Upstream status (relayed 2026-10-05)
+## Upstream status (v0.64.0 adopted 2026-10-05, owner decision: latest-tracking)
 
-- **v0.64.0 released** (compiler lane): highlights include the heap-corruption
-  fix (m192 class), **TcpStream.read elision fix** (C-PULSE-01), unsafe stack
-  exhaustion, **installed runtime links** (the runtime-link/crypto-link class
-  that forced `XIOM_RUNTIME_DIR`), and exact float bits.
-- **PULSE pin REMAINS v0.63.1** until the owner approves a bump. When the
-  owner approves, run this checklist before re-pinning:
-  1. `xiom --version` = v0.64.0; doctor clean; `XIOM_RUNTIME_DIR` **unset**.
-  2. `probe_crypto.xi` without the override -> SHA-256 KAT must pass (drops
-     the `sha256_sw.c` dependency on the override).
-  3. `probe_method_matrix.xi` -> exit 0 (C-PULSE-01 fixed: A and C green).
-  4. `probe_mut_int_ref.xi` -> exit 0 (C-PULSE-04 fixed?; not in the
-     highlights, verify).
-  5. Store schema line stays valid (C-PULSE-05: W005 const `.to_str()`).
-  6. Full fleet: `test_smoke`, `test_http`, `test_app` x2, smoke, 30m soak,
-     64 concurrent, registry probes (`probe_pkg_http`, `probe_pkg_step2`).
-  7. If 1-6 are green: drop `XIOM_RUNTIME_DIR` from `scripts\dev-env.ps1`
-     and record in SESSION.md.
-- **C-PULSE-01:** fix reported in v0.64.0 (unverified on our side, pin
-  discipline). Keep the raw-fd workaround until the bump.
-- **C-PULSE-04 / C-PULSE-05:** not named in the v0.64.0 highlights; treat as
-  OPEN until the bump verification runs.
-- **C-PULSE-02** (registry deps -> catalog source roots): not mentioned; the
-  `xiom.toml` `source-roots` workaround stays.
+PULSE now tracks the latest compiler/stdlib/packages (no fixed pin). v0.64.0
+fleet results from the PULSE side:
+
+| Item | v0.64.0 result |
+|---|---|
+| `XIOM_RUNTIME_DIR` / runtime-link | **RESOLVED** -- env-free compile+run (both `XIOM_STDLIB` and `XIOM_RUNTIME_DIR` unset) green; doctor reports `lib\runtime` |
+| crypto-link (SHA-256 KAT) | **RESOLVED env-free** -- `sha256(abc)=ba7816bf...15ad` with no overrides |
+| C-PULSE-01 (`read` elision) | **RESOLVED** -- matrix exit 0; `probe_read_no_io` + `probe_net_roundtrip` green |
+| C-PULSE-04 (`&mut Int` bare read) | **OPEN** -- exit 5, stack addresses printed |
+| C-PULSE-05 (const `.to_str()` W005) | **OPEN and WORSE** -- silent empty on v0.63.1 becomes `0x80000003` abort on v0.64.0 (`probe_const_to_str.xi`) |
+| C-PULSE-02 (deps -> catalog roots) | **OPEN** -- 13x T001 with source-roots removed |
+| Stricter checking | **POSITIVE** -- v0.64.0 rejects argument type mismatches that v0.63.1 silently accepted; it caught a stale PULSE test (`test_http.xi` passing strings to the Step-2 `handle_route`) which is now fixed. Consider a migration note: code compiled under v0.63.1 may not type-check under v0.64.0. |
+| Fleet on v0.64.0 | suites x2 (`test_smoke`/`test_http`/`test_app`), smoke 38/38, 64/64 concurrent, registry probes, read probes -- all green on `out\pulse_app_v3.exe` |
+
+**Bump procedure (for the next release):** run `probe_crypto`, `probe_method_matrix`,
+`probe_mut_int_ref`, `probe_const_to_str`, `probe_store_debug`, the three
+suites x2, smoke, 64 concurrent, and a 30m dual soak; record any deltas in
+this doc and SESSION.md.
 
 ## Suggested compiler-side hardening from PULSE's session
 

@@ -9,6 +9,7 @@ module pulse_http_tests
 use xiom.io;
 use xiom.string;
 use xiom.pulse.http;
+use xiom.pulse.router;
 use xiom.pulse.server;
 
 fn check(name: Str, ok: Bool) -> Int {
@@ -22,6 +23,16 @@ fn check(name: Str, ok: Bool) -> Int {
 
 fn req_bytes(s: Str) -> Vec[UInt8] {
   return http.str_to_bytes(s);
+}
+
+/// route_req - full dispatch path: bytes -> parse -> route -> handle.
+/// (Step 2 signature; v0.64.0 correctly rejects passing raw strings.)
+fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
+  let raw_str = method + " " + target + " HTTP/1.1\r\nHost: t\r\nContent-Length: " + body.len().to_str() + "\r\n\r\n" + body;
+  let raw = http.str_to_bytes(raw_str);
+  let req = http.parse_request(&raw);
+  let m = router.route_match(method, target);
+  return server.handle_route(m, &req, body);
 }
 
 pub fn main() -> Int {
@@ -75,20 +86,20 @@ pub fn main() -> Int {
   f = f + check("body at end", string.str_ends_with(resp_str, "{\"status\":\"ok\"}"));
 
   // --- routing -------------------------------------------------------------
-  let h = server.handle_route("GET", "/health", "");
+  let h = route_req("GET", "/health", "");
   f = f + check("route /health 200", h.status == 200 && string.str_contains(h.body, "\"status\":\"ok\""));
-  let h405 = server.handle_route("POST", "/health", "");
+  let h405 = route_req("POST", "/health", "");
   f = f + check("route /health 405", h405.status == 405);
-  let v = server.handle_route("GET", "/api/version", "");
+  let v = route_req("GET", "/api/version", "");
   f = f + check("route /api/version 200", v.status == 200 && string.str_contains(v.body, "\"name\":\"xiom-pulse\""));
   f = f + check("route /api/version version", string.str_contains(v.body, "\"version\":\"0.1.0\""));
-  let nf = server.handle_route("GET", "/nope", "");
+  let nf = route_req("GET", "/nope", "");
   f = f + check("route 404", nf.status == 404);
-  let e = server.handle_route("POST", "/api/echo", "{\"a\":1}");
+  let e = route_req("POST", "/api/echo", "{\"a\":1}");
   f = f + check("route echo 200", e.status == 200 && string.str_contains(e.body, "\"echo\":{\"a\":1}"));
-  let e400 = server.handle_route("POST", "/api/echo", "notjson");
+  let e400 = route_req("POST", "/api/echo", "notjson");
   f = f + check("route echo 400", e400.status == 400);
-  let e405 = server.handle_route("GET", "/api/echo", "");
+  let e405 = route_req("GET", "/api/echo", "");
   f = f + check("route echo 405", e405.status == 405);
 
   if f == 0 {

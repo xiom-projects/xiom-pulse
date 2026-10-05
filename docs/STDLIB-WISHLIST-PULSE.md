@@ -25,24 +25,25 @@ the pin below.
 
 ## Positive confirmations (please keep)
 
-- **`xiom.crypto.sha256_hex` works on v0.63.1 when
-  `XIOM_RUNTIME_DIR` is set** -- NIST KAT `ba7816bf...15ad` for `"abc"`
-  (`tests/probes/probe_crypto.xi`). Without the override the historical
-  `undefined symbol: xiom_sha256_hash` reproduces. This resolves the
-  crypto-link blocker for PULSE; relayed to the packages lane too.
-- **Raw-fd socket path is solid**: `socket_tcp/bind/listen/accept/recv/send/
-  close` served 145/145 requests over a 60s soak and 64/64 simultaneous
-  connections with flat handles (Step 0c/0e evidence).
-- **`xiom.serialize.json`** compact `json_stringify` + `json_parse` +
-  `json_set` handled all PULSE routes and request bodies (v0.63.1).
-- **`xiom.env.var_or`** enabled the `PULSE_PORT` override cleanly.
-- **`xiom.string.str_index_of/str_trim/str_slice`** and the
-  `xiom.string.compare` submodule (`str_eq_ignore_case`) worked from a
-  consumer project (note: submodule import was required -- root
-  `xiom.string` does not re-export `str_eq_ignore_case`;
-  `xiom.convert.parse.parse_int` likewise lives in the `xiom.convert.parse`
-  submodule).
-- **Contracts**: the v0.63.1 contract-evaluator fix held on all PULSE code.
+- **v0.64.0: runtime + crypto link env-free.** PULSE verified with BOTH
+  `XIOM_STDLIB` and `XIOM_RUNTIME_DIR` unset: `probe_hello` and
+  `probe_crypto` (NIST SGK KAT `ba7816bf...15ad`) green; `xiom doctor`
+  reports the installed `lib\runtime`. The `XIOM_RUNTIME_DIR` workaround is
+  retired in PULSE's dev-env.
+- **v0.64.0: `TcpStream.read` path works** (compiler C-PULSE-01 fixed):
+  PULSE's `probe_read_no_io.xi` and `probe_net_roundtrip.xi` (loopback
+  listen/connect/accept/read/write) are green. The queued stdlib loopback
+  fixture in `tests/` will lock this permanently.
+- **`xiom.string.slice.str_bytes`** adopted by PULSE (see the resolved row
+  above).
+- **Raw-fd socket path** remains solid: v0.63.1 1h soak PS 7070/7070 +
+  WSL 6128, server **13,198/13,198** 200s, handles flat, clean shutdown.
+- **`xiom.serialize.json`**, **`xiom.env.var_or`**, contracts: unchanged,
+  green on v0.64.0.
+- **Submodule pattern note:** root modules do not re-export submodule
+  functions (`compare.str_eq_ignore_case`, `convert.parse.parse_int`,
+  `slice.str_bytes`) -- works fine with explicit submodule imports; worth a
+  doc line in each root module README.
 
 ## Notes for the stdlib lane's own coverage
 

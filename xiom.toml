@@ -11,6 +11,9 @@
 name = "xiom.pulse"
 version = "0.1.0"
 root = "src"
+# C-PULSE-02 re-tested on v0.64.0 (2026-10-05): WITHOUT these source-roots
+# the installed deps are still invisible (13x T001 undefined). Keep until the
+# compiler maps [dependencies] to catalog roots.
 source-roots = [
   "src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-0.1.1/xiom-http/src",
