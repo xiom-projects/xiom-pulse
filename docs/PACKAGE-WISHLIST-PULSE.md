@@ -12,14 +12,31 @@ signature checks pass; trust fingerprint `4f:3b:47:f3:ae:17:b1:3c`).
 
 ## Consumer-visible defects
 
-| Date | Package | Finding | Evidence | Impact |
-|---|---|---|---|---|
-| 2026-10-05 | `xiom.http` v0.1.0 | (a) `src/parser.xi` references `HttpRequest`/`HttpMethod`/`HttpHeaders`/`method_from_str` from `xiom.http.types` **without `use xiom.http.types;`** -- a consumer importing only `xiom.http.parser` gets 19 T001s; (b) the request cursor is a `&mut Int` used bare (`pos_ref = pos_ref + str_len + 1`) which is broken on v0.63.1 (compiler C-PULSE-04: bare `&mut Int` read yields the address), so `http_parse_request` on a valid request returns `Unexpected end of request line pos=372324169712`; (c) `tests/test_conformance.xi` never calls `http_parse_request`/`http_parse_response`, so (a)/(b) ship green. | `tests/probes/probe_pkg_http.xi` after `xiom pkg install xiom.http` (sha256 `f8b59d9e...`); with `use xiom.http.types;` added, compile succeeds and the parser returns the error above. | any consumer of `xiom.http`'s parser is blocked until a re-ship; the fix is mechanical (`*pos_ref` + explicit import) plus parser KATs |
-| 2026-10-05 | `xiom.http` v0.1.0 | `src/server.xi` is a ~36-line shell (`server_new`/`server_listen`/`server_handle`/`server_close`) with no accept loop or routing; consumers must build their own server (PULSE did). If the package intends to own HTTP serving, this is the gap; otherwise document it as a stub. | installed package `src/server.xi:1-36`; PULSE `src/server.xi` | unclear package contract; a consumer expecting `server_listen` to serve is misled |
+| Date | Package | Finding | Status |
+|---|---|---|---|
+| 2026-10-05 | `xiom.http` v0.1.0 | parser missing `use xiom.http.types;` + bare `&mut Int` cursor + no parser KATs | **FIXED in 0.1.1** (eco-v0.1.59, run 37335349031); PULSE consumer re-verified: `tests/probes/probe_pkg_http.xi` compiles importing only `xiom.http.parser` and parses (path=/api/echo, bodylen=7), exit 0. Parser KATs 40/40 per the packages lane. |
+| 2026-10-05 | `xiom.http` v0.1.0 | `src/server.xi` shell (no accept loop/routing) | **DOCUMENTED STUB in 0.1.1** (README contract: consumers own transport; routing deferred to `xiom.router`). PULSE builds its own transport. |
 
-**Positive:** `xiom.cookie` v0.1.1 (8/8 in `probe_pkg_step2.xi`: jar
-parse/get/serialize) and `xiom.jwt` v0.1.1 (8/8: shape/alg/claim/exp) are
-clean consumer packages on v0.63.1. Thank you.
+**Positive:** `xiom.cookie` v0.1.1 (8/8), `xiom.jwt` v0.1.1 structural (8/8), and now
+`xiom.jwt` **v0.2.0 HS256 adopted in PULSE** (`tests/probes/probe_pkg_step2.xi`
+11/11 and `tests/test_app.xi` 6 jwt checks green): `jwt_sign_hs256`,
+`jwt_signature_valid_hs256`, `jwt_verify_hs256` with the verified payload
+returned. `xiom.rate` v0.2.0 (KeyedBuckets/KeyedWindows) recorded for the
+next hardening slice.
+
+## Ops scope confirmation (requested by the packages lane)
+
+PULSE (consumer) confirms the four new package names and scopes it needs:
+
+| Name | PULSE consumer scope |
+|---|---|
+| `xiom.router` | Replace `src/router.xi` (exact + `:param`, 404/405 + Allow). Needs: registration-order first match, allowed-methods helper. |
+| `xiom.session` | Replace `src/session.xi` (id via crypto, TTL, cookie binding). Needs: explicit TTL, memory backend, rotate/drop. |
+| `xiom.static` | Later slice (static file serving behind the proxy). |
+| `xiom.http.middleware` | Later slice (request-id, access log, CORS, CSRF helpers) over PULSE's envelope/router. |
+
+The registry allowlist delta itself is the owner's call; this table is the
+consumer-side approval the packages lane asked for.
 
 **Adoption blocker to track (compiler-side):** installed packages are not
 mapped into the compiler's module catalog (C-PULSE-02 in
@@ -42,13 +59,13 @@ manual until that lands.
 
 ## Suggested order for the packages lane
 
-1. `xiom.http` 0.1.1 (fix parser import + `*pos_ref` + add parser KATs) --
-   unblocks registry consumers immediately.
-2. `xiom.jwt` HS256 (PULSE Step 2 JWT; stdlib crypto is now linkable).
-3. `xiom.router` + `xiom.http.middleware` (PULSE Step 2 skeleton).
-4. `xiom.kv` (embedded store; PULSE Step 3), then
-   `xiom.session`, `xiom.ratelimit`, `xiom.metrics`, `xiom.static`
-   (Step 2-4 hardening).
+1. ~~`xiom.http` 0.1.1~~ **DONE** -- consumer re-verified by PULSE.
+2. ~~`xiom.jwt` HS256~~ **DONE (0.2.0, adopted by PULSE)**.
+3. `xiom.router` 0.1.0 -- recorded/incubating; **publish gated only on the
+   ops scope confirmation above** (PULSE will adopt and re-run its router
+   suite as the consumer test).
+4. `xiom.http.middleware` (next), then `xiom.session`, `xiom.rate` adoption,
+   `xiom.metrics` 0.2.0, `xiom.static`, and `xiom.kv` (embedded store).
 
 **Registry notes (checked 2026-10-05):** `xiom.sql` is not published
 (`xiom pkg info xiom.sql` -> empty); `xiom.bolt` v0.1.2 is pure-XIOM but

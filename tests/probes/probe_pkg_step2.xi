@@ -1,5 +1,5 @@
 // probe_pkg_step2 -- registry-package consumption for the Step 2 skeleton:
-// xiom.cookie v0.1.1 + xiom.jwt v0.1.1 (structural decode, no signature).
+// xiom.cookie v0.1.1 + xiom.jwt v0.2.0 (structural decode + HS256 sign/verify).
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
@@ -9,6 +9,7 @@ module pulse_probe_pkg_step2
 
 use xiom.cookie;
 use xiom.jwt;
+use xiom.string.slice;
 use xiom.io;
 use xiom.string;
 
@@ -83,6 +84,30 @@ pub fn main() -> Int {
     fails = fails + 1;
   } else {
     io.println("[PASS] jwt exp expired");
+  }
+
+  // --- xiom.jwt 0.2.0 HS256 sign/verify (consumer roundtrip) ---------------
+  let secret_bytes = slice.str_bytes("pkg-step2-secret");
+  let sr = jwt_sign_hs256("{\"sub\":\"pulse\",\"exp\":4102444800}", &secret_bytes);
+  if sr.is_err {
+    io.println("[FAIL] jwt_sign_hs256");
+    fails = fails + 1;
+  } else {
+    let signed = sr.value;
+    let okv = jwt_verify_hs256(signed, &secret_bytes, 1700000000);
+    if okv.is_err || !string.str_contains(okv.value, "\"sub\":\"pulse\"") {
+      io.println("[FAIL] jwt_verify_hs256");
+      fails = fails + 1;
+    } else {
+      io.println("[PASS] jwt hs256 sign/verify");
+    }
+    let bad = jwt_verify_hs256(signed, &secret_bytes, 4200000000);
+    if bad.is_err {
+      io.println("[PASS] jwt hs256 exp rejected");
+    } else {
+      io.println("[FAIL] jwt hs256 exp accepted");
+      fails = fails + 1;
+    }
   }
 
   if fails == 0 {

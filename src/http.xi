@@ -8,6 +8,7 @@
 module xiom.pulse.http
 
 use xiom.string;
+use xiom.string.slice;
 use xiom.string.compare;
 use xiom.convert.parse;
 
@@ -29,16 +30,11 @@ pub type RouteResult = {
   body: Str;
 }
 
-/// str_to_bytes converts Str to its raw bytes (no FFI reach-around).
-/// Complexity: O(n). Pure.
+/// str_to_bytes converts Str to its raw bytes. Thin alias for the stdlib
+/// `xiom.string.slice.str_bytes` (submodule import; the root `xiom.string`
+/// does not re-export submodule functions). Complexity: O(n). Pure.
 pub fn str_to_bytes(s: Str) -> Vec[UInt8] {
-  var out: Vec[UInt8] = Vec[UInt8].new();
-  var i: Int = 0;
-  while i < s.len() {
-    out.push(s.byte_at(i));
-    i = i + 1;
-  }
-  return out;
+  return slice.str_bytes(s);
 }
 
 /// bytes_to_str converts the byte span [start, end) to Str.

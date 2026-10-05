@@ -26,14 +26,13 @@
   - stdlib   `15cb889` 2026-10-05T14:03:35+03:00
   - compiler `586426e9` 2026-10-05T15:32:11+03:00
   - packages `3f21385c` 2026-10-05T15:47:13+03:00
-- **Last green slice:** **Step 3 storage core live**: JSONL event store
-  (`src/store.xi`) with schema record, torn-line tolerance and
-  newline-healing appends; events routes `POST /api/events`,
-  `GET /api/events`, `GET /api/events/count`; smoke 37/37; crash/reopen
-  6/6 at 20 and 200 events; suite 57/57 x2. New finding **C-PULSE-05**
-  filed (W005 const-receiver `.to_str()` stub wrote invalid JSON;
-  workaround `convert.int_to_string`). 30m dual soak verdict recorded
-  (3538/3538 + 3105/1-transient, server 7248/7248 200s).
+- **Last green slice:** registry-adoption cycle green: `str_bytes`
+  (stdlib) + `xiom.jwt` 0.2.0 HS256 (registry) adopted; `xiom.http` 0.1.1
+  consumer-verified; local `jwt_hs.xi` deleted; suite x2, smoke 38/38 on
+  `out\pulse_app_v2.exe`. Step 3 storage core green (JSONL store,
+  crash/reopen 6/6 at 20 and 200 events, smoke 37/37 pre-JWT). 30m dual
+  soak verdict recorded (3538/3538 + 3105/1-transient, server 7248/7248
+  200s); true 1h re-run on `pulse_app.exe` running (wakeup 17:25Z).
 - **Open blockers:** C-PULSE-01 (read method) worked around via raw
   socket_recv; C-PULSE-02 (dep->root mapping) worked around via xiom.toml
   source-roots; C-PULSE-04 (&mut Int bare read) documented; C-PULSE-05
@@ -135,12 +134,41 @@ SHA-256/HMAC for PULSE JWT (Step 2).
 ## 1. Upstream findings (relay rows -- batched at every step wrap)
 
 **Relay documents (owner hands these to the lanes; keep updated every wrap):**
-- `docs/COMPILER-FINDINGS-PULSE.md` -> compiler lane (C-PULSE-01/02/04 +
-  test-gap notes + exact repro commands).
-- `docs/STDLIB-WISHLIST-PULSE.md` -> stdlib lane (socket options/timeouts,
-  server-side request parser, str_bytes, write_all, flush_stdout, harness).
-- `docs/PACKAGE-WISHLIST-PULSE.md` -> packages lane (xiom.http defect,
-  proposed router/session/jwt-hs256/ratelimit/metrics/static/middleware).
+- `docs/COMPILER-FINDINGS-PULSE.md` -> compiler lane (C-PULSE-01/02/04/05 +
+  test-gap notes + v0.64.0 bump checklist).
+- `docs/STDLIB-WISHLIST-PULSE.md` -> stdlib lane (str_bytes RESOLVED;
+  socket options/timeouts, server-side request parser, write_all,
+  flush_stdout confirmed empty, harness -- all queued).
+- `docs/PACKAGE-WISHLIST-PULSE.md` -> packages lane (xiom.http 0.1.1
+  verified; jwt 0.2.0 adopted; rate 0.2.0 recorded; router publish gated on
+  the ops scope confirmation in the doc).
+
+### Relay cycle 2026-10-05 (incoming + actions taken)
+
+- **stdlib** (`357474c`): `str_bytes` exists at `xiom.string.slice.str_bytes`
+  (`slice.xi:135`) -- PULSE adopted it (`src/http.xi` delegates; no more
+  hand-rolled loops). `flush_stdout` confirmed an empty body at
+  `io.xi:903` (explains lagging redirected logs). Socket options,
+  deadline recv, `write_all`, `server_parse_request`, `hmac_sha256_hex`,
+  loopback fixture are queued; items 1/4 are runtime-backed and need
+  `XIOM_RUNTIME_DIR` until archives bundle the newer runtime. C-PULSE-01
+  forwarded to the compiler lane.
+- **packages**: `xiom.http` **0.1.1** published (types import + deref cursor
+  + parser KATs 40/40; server.xi documented stub). PULSE re-verified from
+  the consumer side: `probe_pkg_http.xi` now compiles importing only
+  `xiom.http.parser` and parses, exit 0. `xiom.jwt` **0.2.0 HS256 is
+  live and adopted by PULSE**: `jwt_sign_hs256` /
+  `jwt_signature_valid_hs256` / `jwt_verify_hs256` (verified payload
+  returned), local `src/jwt_hs.xi` deleted; `tests/test_app.xi` 6 jwt
+  checks + `probe_pkg_step2.xi` 11/11 green. `xiom.rate` 0.2.0 live
+  (recorded). `xiom.router` 0.1.0 recorded/incubating -- publish awaits
+  the ops scope confirmation (PULSE confirmed the four names in the
+  package wishlist doc).
+- **compiler**: **v0.64.0 released** (heap corruption, TcpStream.read
+  elision, unsafe stack exhaustion, installed runtime links, exact float
+  bits). Pin stays **v0.63.1 pending owner approval**; the bump checklist
+  is in `docs/COMPILER-FINDINGS-PULSE.md` Section "Upstream status".
+- **website message**: routed for the website lane, not PULSE scope.
 
 Reference docs read before reporting (do NOT re-run known bisections; add
 delta evidence only): packages `docs/COMPILER-FINDINGS.md`,

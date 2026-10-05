@@ -25,7 +25,8 @@ use xiom.pulse.envelope;
 use xiom.pulse.config;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
-use xiom.pulse.jwt_hs;
+use xiom.jwt;
+use xiom.string.slice;
 use xiom.pulse.store;
 
 const MAX_BODY: Int = 1048576;
@@ -143,7 +144,12 @@ pub fn handle_route(m: RouteMatch, req: &PulseRequest, body: Str) -> HandlerOut 
     var pv = json.json_set(json.json_object_new(), "sub", json.json_string(user));
     pv = json.json_set(pv, "iat", json.json_number(convert.int_to_float(now)));
     pv = json.json_set(pv, "exp", json.json_number(convert.int_to_float(now + 3600)));
-    let token = jwt_hs.hs256_sign(json.json_stringify(pv), config.cfg_jwt_secret());
+    let secret_bytes = slice.str_bytes(config.cfg_jwt_secret());
+    let tr = jwt.jwt_sign_hs256(json.json_stringify(pv), &secret_bytes);
+    if tr.is_err {
+      return out_json(500, envelope.error_body("token_error", "signing failed"));
+    }
+    let token = tr.value;
     return out_json(200, json_ok_field("token", token));
   }
   if m.route_id == 8 {
@@ -152,10 +158,14 @@ pub fn handle_route(m: RouteMatch, req: &PulseRequest, body: Str) -> HandlerOut 
       return out_json(400, envelope.error_body("invalid_request", "body must be {\"token\":\"...\"}"));
     }
     let now = time.unix_timestamp();
-    if !jwt_hs.hs256_verify_now(token, config.cfg_jwt_secret(), now) {
+    let secret_bytes = slice.str_bytes(config.cfg_jwt_secret());
+    let vr = jwt.jwt_verify_hs256(token, &secret_bytes, now);
+    if vr.is_err {
       return out_json(401, envelope.error_body("invalid_token", "signature or expiry check failed"));
     }
-    return out_json(200, envelope.ok_bool(true));
+    let payload = vr.value;
+    let out_body = "{\"ok\":true,\"payload\":" + payload + "}";
+    return out_json(200, out_body);
   }
   if m.route_id == 9 {
     return out_text(200, metrics.metrics_render());

@@ -9,15 +9,16 @@ module pulse_app_tests
 
 use xiom.io;
 use xiom.string;
+use xiom.string.slice;
 use xiom.time;
 use xiom.env;
+use xiom.jwt;
 use xiom.pulse.http;
 use xiom.pulse.router;
 use xiom.pulse.envelope;
 use xiom.pulse.config;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
-use xiom.pulse.jwt_hs;
 use xiom.pulse.store;
 use xiom.pulse.server;
 
@@ -99,18 +100,25 @@ pub fn main() -> Int {
   f = f + check("session dropped", session.session_get(sid) == "");
   session.session_reset();
 
-  // --- jwt hs256 -----------------------------------------------------------
+  // --- jwt hs256 (registry xiom.jwt 0.2.0) --------------------------------
   let now = time.unix_timestamp();
   let payload = "{\"sub\":\"bob\",\"exp\":" + (now + 3600).to_str() + "}";
-  let tok = jwt_hs.hs256_sign(payload, "s3cret");
+  let secret_bytes = slice.str_bytes("s3cret");
+  let tr = jwt.jwt_sign_hs256(payload, &secret_bytes);
+  f = f + check("jwt sign ok", tr.is_ok);
+  var tok: Str = "";
+  if tr.is_ok { tok = tr.value; }
   f = f + check("jwt sign shape", string.str_contains(tok, "."));
-  f = f + check("jwt verify", jwt_hs.hs256_verify(tok, "s3cret"));
-  f = f + check("jwt wrong secret", !jwt_hs.hs256_verify(tok, "other"));
+  let vr = jwt.jwt_verify_hs256(tok, &secret_bytes, now);
+  f = f + check("jwt verify ok", vr.is_ok && string.str_contains(vr.value, "\"sub\":\"bob\""));
+  let wrong_bytes = slice.str_bytes("other");
+  let vw = jwt.jwt_signature_valid_hs256(tok, &wrong_bytes);
+  f = f + check("jwt wrong secret", vw.is_ok && !vw.value);
   let tampered = string.str_slice(tok, 0, tok.len() - 1) + "x";
-  f = f + check("jwt tamper rejected", !jwt_hs.hs256_verify(tampered, "s3cret"));
-  f = f + check("jwt exp ok now", jwt_hs.hs256_verify_now(tok, "s3cret", now));
-  f = f + check("jwt exp rejected later", !jwt_hs.hs256_verify_now(tok, "s3cret", now + 7200));
-  f = f + check("jwt payload text", string.str_contains(jwt_hs.hs256_payload_text(tok), "\"sub\":\"bob\""));
+  let vt = jwt.jwt_signature_valid_hs256(tampered, &secret_bytes);
+  f = f + check("jwt tamper rejected", vt.is_ok && !vt.value);
+  let ve = jwt.jwt_verify_hs256(tok, &secret_bytes, now + 7200);
+  f = f + check("jwt exp rejected later", ve.is_err);
 
   // --- dispatch ------------------------------------------------------------
   let h = route_req("GET", "/health", "");

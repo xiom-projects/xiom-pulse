@@ -6,10 +6,10 @@
 // Run: .\scripts\run.ps1 tests\probes\probe_pkg_http.xi
 module pulse_probe_pkg_http
 
-// NOTE: xiom.http.parser v0.1.0 references HttpRequest/HttpMethod/HttpHeaders
-// and method_from_str from xiom.http.types WITHOUT `use xiom.http.types;`.
-// A consumer must load that module explicitly (see C-PULSE-03 in SESSION.md).
-use xiom.http.types;
+// xiom.http v0.1.1 (hotfix): parser.xi now imports xiom.http.types itself
+// and uses explicit deref for its cursor, so a consumer importing only
+// xiom.http.parser compiles and parses. (The C-PULSE-04 compiler issue was
+// the underlying cause; the package workaround landed in 0.1.1.)
 use xiom.http.parser;
 use xiom.http.status;
 use xiom.io;

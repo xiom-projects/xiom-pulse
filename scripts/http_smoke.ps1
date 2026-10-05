@@ -147,7 +147,8 @@ if ($tokMatch.Success) {
     $tok = $tokMatch.Groups[1].Value
     $r = Invoke-CurlPost "/api/token/verify" "{`"token`":`"$tok`"}"
     Check "token verify 200" $r "200 OK"
-    Check "token verify body" $r '{"ok":true}'
+    Check "token verify body" $r '"ok":true'
+    Check "token verify payload" $r '"payload":'
     $tampered = $tok.Substring(0, $tok.Length - 1) + "x"
     $r = Invoke-CurlPost "/api/token/verify" "{`"token`":`"$tampered`"}"
     Check "token tamper 401" $r "401 Unauthorized"

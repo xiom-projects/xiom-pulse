@@ -173,6 +173,32 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 - Contracts on PULSE's code (`requires: true` only) evaluated cleanly; the
   v0.63.1 contract-evaluator fix holds.
 
+## Upstream status (relayed 2026-10-05)
+
+- **v0.64.0 released** (compiler lane): highlights include the heap-corruption
+  fix (m192 class), **TcpStream.read elision fix** (C-PULSE-01), unsafe stack
+  exhaustion, **installed runtime links** (the runtime-link/crypto-link class
+  that forced `XIOM_RUNTIME_DIR`), and exact float bits.
+- **PULSE pin REMAINS v0.63.1** until the owner approves a bump. When the
+  owner approves, run this checklist before re-pinning:
+  1. `xiom --version` = v0.64.0; doctor clean; `XIOM_RUNTIME_DIR` **unset**.
+  2. `probe_crypto.xi` without the override -> SHA-256 KAT must pass (drops
+     the `sha256_sw.c` dependency on the override).
+  3. `probe_method_matrix.xi` -> exit 0 (C-PULSE-01 fixed: A and C green).
+  4. `probe_mut_int_ref.xi` -> exit 0 (C-PULSE-04 fixed?; not in the
+     highlights, verify).
+  5. Store schema line stays valid (C-PULSE-05: W005 const `.to_str()`).
+  6. Full fleet: `test_smoke`, `test_http`, `test_app` x2, smoke, 30m soak,
+     64 concurrent, registry probes (`probe_pkg_http`, `probe_pkg_step2`).
+  7. If 1-6 are green: drop `XIOM_RUNTIME_DIR` from `scripts\dev-env.ps1`
+     and record in SESSION.md.
+- **C-PULSE-01:** fix reported in v0.64.0 (unverified on our side, pin
+  discipline). Keep the raw-fd workaround until the bump.
+- **C-PULSE-04 / C-PULSE-05:** not named in the v0.64.0 highlights; treat as
+  OPEN until the bump verification runs.
+- **C-PULSE-02** (registry deps -> catalog source roots): not mentioned; the
+  `xiom.toml` `source-roots` workaround stays.
+
 ## Suggested compiler-side hardening from PULSE's session
 
 1. A lint/diagnostic for user definitions colliding with codegen builtin
