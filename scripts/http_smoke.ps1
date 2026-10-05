@@ -1,0 +1,124 @@
+#!/usr/bin/env pwsh
+# ============================================================================
+# XIOM PULSE HTTP smoke: start the compiled server, exercise every route with
+# curl, QUIT, and verify the clean shutdown.
+# ============================================================================
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# Usage: .\scripts\http_smoke.ps1
+# Exit code: 0 = all checks green, 1 = failed.
+#
+# NOTE: request bodies are passed to curl via --data-binary "@file" because
+# PowerShell 5.1 strips embedded double quotes from arguments to native
+# commands (a `{"a":1}` arg reaches curl as `{a:1}`).
+# ============================================================================
+[CmdletBinding()]
+param(
+    [int]$Port = 8080,
+    [string]$ServerExe = ""
+)
+
+$ErrorActionPreference = "Stop"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_server.exe" }
+$base = "http://127.0.0.1:$Port"
+
+$logDir = Join-Path $repoRoot "probe-logs"
+if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
+
+$env:PULSE_PORT = "$Port"
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = $ServerExe
+$psi.WorkingDirectory = $repoRoot
+$psi.UseShellExecute = $false
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError = $true
+$psi.CreateNoWindow = $true
+$srv = New-Object System.Diagnostics.Process
+$srv.StartInfo = $psi
+$null = $srv.Start()
+Start-Sleep -Milliseconds 900
+
+$pass = 0; $fail = 0
+function Check {
+    param([string]$Name, [string]$Haystack, [string]$Needle, [bool]$Want = $true)
+    $has = $Haystack -like "*$Needle*"
+    if ($has -eq $Want) {
+        Write-Host "[PASS] $Name"
+        $script:pass++
+    } else {
+        Write-Host "[FAIL] $Name (want '$Needle' present=$Want)"
+        Write-Host "---- body ----"
+        Write-Host $Haystack
+        Write-Host "--------------"
+        $script:fail++
+    }
+}
+
+function Invoke-CurlPost {
+    param([string]$Path, [string]$Body)
+    $f = Join-Path $env:TEMP ("pulse-body-" + [guid]::NewGuid().ToString("N") + ".json")
+    Set-Content -LiteralPath $f -Value $Body -NoNewline
+    try {
+        return (curl.exe -s -i -X POST -H "Content-Type: application/json" --data-binary "@$f" "$base$Path" 2>&1 | Out-String)
+    } finally {
+        Remove-Item -LiteralPath $f -ErrorAction SilentlyContinue
+    }
+}
+
+# 1. GET /health
+$r = curl.exe -s -i "$base/health" 2>&1 | Out-String
+Check "health 200" $r "200 OK"
+Check "health json" $r '{"status":"ok"}'
+
+# 2. GET /api/version
+$r = curl.exe -s -i "$base/api/version" 2>&1 | Out-String
+Check "version 200" $r "200 OK"
+Check "version name" $r '"name":"xiom-pulse"'
+Check "version value" $r '"version":"0.1.0"'
+
+# 3. POST /api/echo valid
+$r = Invoke-CurlPost "/api/echo" '{"a":1}'
+Check "echo 200" $r "200 OK"
+Check "echo body" $r '{"echo":{"a":1}}'
+
+# 4. POST /api/echo invalid
+$r = Invoke-CurlPost "/api/echo" 'notjson'
+Check "echo invalid 400" $r "400 Bad Request"
+Check "echo invalid json" $r '"error":"invalid json"'
+
+# 5. 404
+$r = curl.exe -s -i "$base/nope" 2>&1 | Out-String
+Check "unknown 404" $r "404 Not Found"
+
+# 6. 405
+$r = curl.exe -s -i -X DELETE "$base/health" 2>&1 | Out-String
+Check "wrong method 405" $r "405 Method Not Allowed"
+
+# 7. POST with a longer body (Content-Length framing)
+$r = Invoke-CurlPost "/api/echo" '{"longer":"payload","n":42}'
+Check "echo longer 200" $r "200 OK"
+Check "echo longer body" $r '{"longer":"payload","n":42}'
+
+# 8. QUIT
+$null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1
+if (-not $srv.WaitForExit(10000)) {
+    Write-Host "smoke: server did not exit after QUIT; killing"
+    & taskkill /T /F /PID $srv.Id 2>$null | Out-Null
+    $srv.WaitForExit(5000) | Out-Null
+}
+$srvExit = $srv.ExitCode
+$srvLog = $srv.StandardOutput.ReadToEnd() + $srv.StandardError.ReadToEnd()
+Set-Content -LiteralPath (Join-Path $logDir "http-smoke.out") -Value $srvLog
+
+Write-Host "--- server output ---"
+Write-Host $srvLog.TrimEnd()
+Write-Host ("smoke: pass={0} fail={1} server_exit={2}" -f $pass, $fail, $srvExit)
+
+if ($fail -eq 0 -and $srvExit -eq 0) {
+    Write-Host "smoke: GREEN"
+    exit 0
+}
+Write-Host "smoke: RED"
+exit 1
