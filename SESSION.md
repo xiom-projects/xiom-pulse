@@ -85,6 +85,14 @@ SHA-256/HMAC for PULSE JWT (Step 2).
 
 ## 1. Upstream findings (relay rows -- batched at every step wrap)
 
+**Relay documents (owner hands these to the lanes; keep updated every wrap):**
+- `docs/COMPILER-FINDINGS-PULSE.md` -> compiler lane (C-PULSE-01/02/04 +
+  test-gap notes + exact repro commands).
+- `docs/STDLIB-WISHLIST-PULSE.md` -> stdlib lane (socket options/timeouts,
+  server-side request parser, str_bytes, write_all, flush_stdout, harness).
+- `docs/PACKAGE-WISHLIST-PULSE.md` -> packages lane (xiom.http defect,
+  proposed router/session/jwt-hs256/ratelimit/metrics/static/middleware).
+
 Reference docs read before reporting (do NOT re-run known bisections; add
 delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
 `docs/STDLIB-WISHLIST.md`, `docs/repro/README.md`, packages `SESSION.md`.
@@ -162,5 +170,8 @@ Then Step 2 (app skeleton): error envelope, config, log, metrics, audit,
 cookie + session; JWT is unblocked (stdlib sha256/HMAC KAT-verified under
 XIOM_RUNTIME_DIR). Keep the workarounds: no one-arg `read` methods (raw
 socket_recv), no bare &mut Int reads (*p), probes staged in-repo, suite x2.
-Batch findings rows in SESSION.md at the wrap and commit.
+Keep the three relay documents updated at every wrap:
+docs\COMPILER-FINDINGS-PULSE.md, docs\STDLIB-WISHLIST-PULSE.md,
+docs\PACKAGE-WISHLIST-PULSE.md. Batch findings rows in SESSION.md at the
+wrap and commit.
 ```
