@@ -27,6 +27,15 @@ installed `lib\runtime` + `lib\xiom`): PULSE verified env-free with both
 `XIOM_STDLIB` and `XIOM_RUNTIME_DIR` unset. Historical workaround context
 is in the relay docs under `docs/`.
 
+## App icon
+
+The official icon lives at `resources/img/pulse-ico.ico` and is served by
+the running service at `GET /favicon.ico` (with a minimal `GET /` landing
+page linking it). Windows **exe** icon embedding is not yet supported by
+the AOT toolchain (no `--icon`/resource flag) -- filed as a feature gap in
+`docs/COMPILER-FINDINGS-PULSE.md`; the asset is committed so the app can
+adopt it the moment the toolchain grows support.
+
 ## Start here
 
 ```powershell
