@@ -153,7 +153,18 @@ if ($tokMatch.Success) {
     Check "token tamper 401" $r "401 Unauthorized"
 }
 
-# 11. QUIT
+# 11. Step 3: JSONL event store routes
+$r = Invoke-CurlPost "/api/events" '{"kind":"smoke","n":1}'
+Check "events post 200" $r "200 OK"
+Check "events post stored" $r '"stored":true'
+$r = Invoke-CurlGet "/api/events/count"
+Check "events count 200" $r "200 OK"
+Check "events count body" $r '"count":'
+$r = Invoke-CurlGet "/api/events"
+Check "events list 200" $r "200 OK"
+Check "events list body" $r '"events":'
+
+# 12. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1
 if (-not $srv.WaitForExit(10000)) {
     Write-Host "smoke: server did not exit after QUIT; killing"

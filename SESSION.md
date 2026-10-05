@@ -29,12 +29,11 @@
 - **Last green slice:** **Step 3 storage core live**: JSONL event store
   (`src/store.xi`) with schema record, torn-line tolerance and
   newline-healing appends; events routes `POST /api/events`,
-  `GET /api/events`, `GET /api/events/count`; end-to-end crash/reopen test
-  (`scripts/crash_test.ps1`, 6/6: 20 events -> hard kill -> torn line ->
-  reopen count=20 -> heal append count=21). Suite 57/57 x2, smoke 31/31.
-  New finding **C-PULSE-05** filed (W005 const-receiver `.to_str()` stub
-  wrote invalid JSON; workaround `convert.int_to_string`). Soaks (PS + WSL)
-  running on the Step 1 binary against :18080.
+  `GET /api/events`, `GET /api/events/count`; smoke 37/37; crash/reopen
+  6/6 at 20 and 200 events; suite 57/57 x2. New finding **C-PULSE-05**
+  filed (W005 const-receiver `.to_str()` stub wrote invalid JSON;
+  workaround `convert.int_to_string`). Soaks (PS + WSL) running on the
+  Step 1 binary against :18080.
 - **Open blockers:** C-PULSE-01 (read method) worked around via raw
   socket_recv; C-PULSE-02 (dep->root mapping) worked around via xiom.toml
   source-roots; C-PULSE-04 (&mut Int bare read) documented; C-PULSE-05
@@ -59,8 +58,8 @@ to the packages lane (`docs/PACKAGE-WISHLIST-PULSE.md`).
 | Torn-line healing append (`\n` repair before write) | DONE | suite `store torn tolerated`; crash test |
 | Events routes (`POST/GET /api/events`, `GET /api/events/count`) | DONE | suite dispatch tests; smoke extension pending |
 | Crash/reopen end-to-end | DONE 6/6 | `scripts\crash_test.ps1` (20 events -> kill -> torn -> reopen 20 -> heal 21) |
+| Storage soak (200 events, crash, reopen) | DONE 6/6 | `scripts\crash_test.ps1 -Events 200` (store 12,731 bytes -> kill -> torn -> reopen count=200 -> heal 201) |
 | W005 const-`.to_str()` workaround | DONE | `convert.int_to_string` in `schema_line`; C-PULSE-05 filed |
-| Storage soak (many events, reopen size check) | pending | -- |
 
 ### Step 2 progress
 
