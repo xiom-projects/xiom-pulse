@@ -57,6 +57,13 @@ pub fn cfg_store_path() -> Str {
   return env.var_or("PULSE_STORE_PATH", "pulse-events.jsonl");
 }
 
+/// cfg_icon_path returns the app icon path (PULSE_ICON_PATH, default
+/// "resources/img/pulse-ico.ico").
+/// Complexity: O(1). Pure.
+pub fn cfg_icon_path() -> Str {
+  return env.var_or("PULSE_ICON_PATH", "resources/img/pulse-ico.ico");
+}
+
 /// cfg_session_ttl_secs returns the session lifetime (PULSE_SESSION_TTL,
 /// default 3600 seconds).
 /// Complexity: O(n). Pure.

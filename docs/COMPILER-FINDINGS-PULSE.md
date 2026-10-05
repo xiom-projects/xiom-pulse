@@ -25,6 +25,7 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
 | 2026-10-05 | **C-PULSE-01 (RESOLVED in v0.64.0): a method named `read` with exactly ONE argument is hijacked by the raw-pointer codegen builtin. PULSE re-verified: `probe_method_matrix.xi` exit 0; `probe_read_no_io.xi` and `probe_net_roundtrip.xi` now green; the stdlib `TcpStream.read` path is functional.** | `docs/repro/read-method-builtin-shadow/` | none needed on v0.64.0 (raw `socket_recv` still used by the server for `&mut Vec` clarity) | resolved |
 | 2026-10-05 | **C-PULSE-04 (STILL OPEN on v0.64.0): a `&mut Int` parameter used BARE in value position (arithmetic RHS or `return`) yields the pointer ADDRESS, not the pointee.** Explicit `*p` is correct. Re-verified 2026-10-05 on v0.64.0: `mut-int-ref bad=5`, `bare_add a=180233435864 r=180233435856`. | `docs/repro/mut-int-bare-read/` | always `*p = *p + k; return *p;` (existing `xiom.gbnf` pattern) | silent wrong values in cursor-style parsers; broke `xiom.http` v0.1.0's parser for consumers |
 | 2026-10-05 | **C-PULSE-02 (STILL OPEN on v0.64.0): installed registry packages are not mapped to module-catalog source roots.** `[dependencies]`/`dependencies:` are parsed by `xiom-graph` but never resolved to directories; re-tested on v0.64.0 with source-roots removed: 13x `T001 undefined variable 'http_*'`. | `docs/repro/registry-dep-resolution/` | `xiom.toml` `[project].source-roots` lists the installed package `src/` dirs | `xiom pkg install` alone cannot be `use`d; registry adoption requires manual wiring |
+| 2026-10-05 | **C-PULSE-06 (OPEN on v0.64.0): a struct literal with a MISSING field compiles with no diagnostic; the omitted field reads uninitialized garbage.** In PULSE's server this produced `0xC0000005` on real requests. | `docs/repro/missing-struct-field/probe.xi`: `Pair{ a: 1; }` (missing `b: Vec[UInt8]`) compiles; `p.b.len()` prints `2296606801712`. App crash evidence: `server_exit=-1073741819` on `POST /api/session/login` before the fix; smoke 44/44 after. | always initialize every declared field (pin discipline extended to struct literals) | silent uninitialized memory; crashes that look like unrelated regressions |
 | 2026-10-05 | **C-PULSE-05 (OPEN; v0.64.0 delta: now ABORTS): the erased-interface default stub fires for a module-`const` receiver method call.** On v0.63.1 `SCHEMA_VERSION.to_str()` rendered EMPTY (invalid JSON); on **v0.64.0 it terminates the process with exit `0x80000003`** (STATUS_BREAKPOINT) and the same W005 warning. `probe_const_to_str.xi` reproduces. Call-result receivers in the same module render correctly. | `tests/probes/probe_const_to_str.xi`; PULSE `src/store.xi schema_line()` (workaround in place) | `xiom.convert.int_to_string(n)` free function instead of the interface method | silent data corruption on v0.63.1 -> hard abort on v0.64.0; any package module using `.to_str()` on a const receiver dies |
 
 ## C-PULSE-01 -- details
@@ -131,6 +132,30 @@ run with `.\scripts\run.ps1 <probe> -Quiet` (watchdog + exit-code gate).
   package root (barrels like `http.xi` live there) and feed them into
   `expand_sources_with_graph` / catalog `add_external_dir`; `xiom pkg lock`
   already has the resolved tree.
+
+## C-PULSE-06 -- details (missing struct field)
+
+- Repro and evidence above. The PULSE crash happened because `HandlerOut`
+  gained `body_bytes: Vec[UInt8]`; two literals were not updated, the build
+  stayed green, and the missing Vec read garbage at runtime.
+- **Hardening suggestion (compiler lane):** reject incomplete struct
+  literals (or warn). The ecosystem already pins "initialize every local";
+  struct literals are the remaining hole.
+- **PULSE-side policy (adopted):** every struct literal lists every field,
+  even defaults.
+
+## Feature gap -- Windows exe icon embedding (not a defect)
+
+PULSE received the official app icon (`resources/img/pulse-ico.ico`,
+270 KB multi-size). There is no toolchain support to embed it into the AOT
+executable on Windows (no `--icon` flag, no `.rc`/`winres` handling in
+`xiom --help`, compiler source, or the pkg manifest). PULSE serves it as
+`/favicon.ico` instead and keeps the landing page wired to it.
+
+Suggested shape (compiler lane, when prioritized): `--icon <path.ico>`
+that compiles a `.rc` resource (or uses `llvm-rc`) and passes it to the
+link step; alternatively a `[app] icon = "..."` manifest field.
+
 
 ## C-PULSE-05 -- details (W005 delta: const receiver)
 

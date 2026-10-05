@@ -165,7 +165,17 @@ $r = Invoke-CurlGet "/api/events"
 Check "events list 200" $r "200 OK"
 Check "events list body" $r '"events":'
 
-# 12. QUIT
+# 12. App icon + landing page
+$r = Invoke-CurlGet "/favicon.ico"
+Check "favicon 200" $r "200 OK"
+Check "favicon type" $r "Content-Type: image/x-icon"
+Check "favicon length" $r "Content-Length: "
+$r = Invoke-CurlGet "/"
+Check "landing 200" $r "200 OK"
+Check "landing title" $r "XIOM PULSE"
+Check "landing html" $r "text/html"
+
+# 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1
 if (-not $srv.WaitForExit(10000)) {
     Write-Host "smoke: server did not exit after QUIT; killing"

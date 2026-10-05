@@ -171,6 +171,19 @@ pub fn main() -> Int {
   let rm1 = io.remove_file(sp);
   f = f + check("store cleanup", rm1.is_ok);
 
+  // --- app icon + landing page --------------------------------------------
+  let m14 = router.route_match("GET", "/favicon.ico");
+  f = f + check("route favicon matched", m14.kind == 1 && m14.route_id == 14);
+  let m15 = router.route_match("GET", "/");
+  f = f + check("route landing matched", m15.kind == 1 && m15.route_id == 15);
+  f = f + check("icon load", server.load_icon("resources/img/pulse-ico.ico"));
+  let fav = route_req("GET", "/favicon.ico", "");
+  f = f + check("favicon 200 binary", fav.status == 200 && fav.body_bytes.len() > 1000);
+  f = f + check("favicon content type", string.str_contains(fav.content_type, "image/x-icon"));
+  let landing = route_req("GET", "/", "");
+  f = f + check("landing 200", landing.status == 200 && string.str_contains(landing.body, "XIOM PULSE"));
+  f = f + check("landing html type", string.str_contains(landing.content_type, "text/html"));
+
   if f == 0 {
     io.println("pulse-app: GREEN");
   } else {

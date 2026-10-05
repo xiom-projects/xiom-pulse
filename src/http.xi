@@ -270,6 +270,30 @@ pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(
   return out;
 }
 
+/// build_response_bytes builds a response with a raw byte body (icons,
+/// binary assets). Complexity: O(n). Pure.
+pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: &Vec[UInt8]) -> Vec[UInt8] {
+  var head: Str = "HTTP/1.1 " + status.to_str() + " " + status_text(status) + "\r\n";
+  head = head + "Content-Type: " + content_type + "\r\n";
+  var i: Int = 0;
+  while i < extra_headers.len() {
+    let h = extra_headers[i];
+    head = head + h.0 + ": " + h.1 + "\r\n";
+    i = i + 1;
+  }
+  head = head + "Content-Length: " + body.len().to_str() + "\r\n";
+  head = head + "Connection: close\r\n";
+  head = head + "Server: xiom-pulse/0.1.0\r\n";
+  head = head + "\r\n";
+  var out: Vec[UInt8] = str_to_bytes(head);
+  var j: Int = 0;
+  while j < body.len() {
+    out.push(body[j]);
+    j = j + 1;
+  }
+  return out;
+}
+
 /// build_response builds a JSON response with Connection: close.
 /// Complexity: O(n). Pure.
 pub fn build_response(status: Int, body: Str) -> Vec[UInt8] {

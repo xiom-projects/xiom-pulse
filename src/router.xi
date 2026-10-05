@@ -10,6 +10,8 @@
 //   5 GET  /api/me            11 POST /api/events
 //   6 POST /api/session/logout 12 GET /api/events/count
 //                             13 GET /api/events
+//                             14 GET /favicon.ico
+//                             15 GET /
 module xiom.pulse.router
 
 use xiom.string;
@@ -41,6 +43,8 @@ pub fn route_id_of(path: Str) -> Int {
   if path == "/metrics" { return 9; }
   if path == "/api/events" { return 11; }
   if path == "/api/events/count" { return 12; }
+  if path == "/favicon.ico" { return 14; }
+  if path == "/" { return 15; }
   if string.str_starts_with(path, ITEMS_PREFIX) && path.len() > ITEMS_PREFIX.len() {
     return 10;
   }
@@ -63,6 +67,8 @@ pub fn allowed_methods_of(path: Str) -> Str {
   if id == 10 { return "GET"; }
   if id == 11 { return "POST"; }
   if id == 12 { return "GET"; }
+  if id == 14 { return "GET"; }
+  if id == 15 { return "GET"; }
   return "";
 }
 

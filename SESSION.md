@@ -30,13 +30,16 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **v0.64.0 migration green**: suites x2
-  (`test_smoke`, `test_http` -- fixed stale Step-1 args the stricter
-  v0.64.0 checker now rejects -- `test_app`), smoke 38/38, 64/64
-  concurrent, registry probes + read probes green, all on
-  `out\pulse_app_v3.exe`. 1h soak on v0.63.1: PS **7070/7070**, server
-  **13,198/13,198** 200s, clean exit, handles flat; WSL 6128 ok / 2
-  client-side transients. v0.64.0 30m dual soak running (wakeup 18:07Z).
+- **Last green slice:** **app icon + landing page** on v0.64.0: official
+  `resources/img/pulse-ico.ico` served as `GET /favicon.ico`
+  (image/x-icon, 270,398 bytes via a new `send_all` chunked writer --
+  a single `socket_send` short-wrote) and a `GET /` landing page; smoke
+  44/44, suite x2. New finding **C-PULSE-06** filed (missing struct field
+  silently compiles -> garbage Vec -> PULSE crash 0xC0000005; smoke caught
+  it). v0.64.0 fleet green (suites x2, smoke, 64/64 concurrent, registry +
+  read probes) on `out\pulse_app_v4.exe`. 1h soak on v0.63.1: PS
+  **7070/7070**, server **13,198/13,198**, handles flat. v0.64.0 30m dual
+  soak running (wakeup 18:07Z).
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const
