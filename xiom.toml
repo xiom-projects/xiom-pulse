@@ -14,13 +14,27 @@ root = "src"
 # C-PULSE-02 re-tested on v0.64.0 (2026-10-05): WITHOUT these source-roots
 # the installed deps are still invisible (13x T001 undefined). Keep until the
 # compiler maps [dependencies] to catalog roots.
+#
+# m212 follow-up (PULSE, 2026-10-07): the lane checkout has
+# dependency_roots_under now, but (a) it is NOT in the shipped v0.64.0
+# binaries (docs/repro/dep-roots-name-form: both key forms still fail), and
+# (b) its matcher uses `dep.name` verbatim, so canonical dotted keys
+# ("xiom.rate") will never match installed dirs ("xiom-rate-0.2.0"). The
+# repro bundle is the acceptance gate for the next archive.
 source-roots = [
   "src",
+  # Windows install tree (%LOCALAPPDATA%\xiom\packages)
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-0.1.1/xiom-http/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-router-0.1.0/xiom-router/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
+  # WSL/Linux install tree (~/xiom/packages; dead entries are skipped)
+  "/home/lefteris/xiom/packages/xiom-http-0.1.1/xiom-http/src",
+  "/home/lefteris/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
+  "/home/lefteris/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
+  "/home/lefteris/xiom/packages/xiom-router-0.1.0/xiom-router/src",
+  "/home/lefteris/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
 ]
 
 [dependencies]

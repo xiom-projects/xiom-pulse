@@ -1,0 +1,8 @@
+# C-PULSE-02/m212 probe -- dash-form dependency key (installed dir layout).
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+[project]
+name = "m212probe_dash"
+
+[dependencies]
+xiom-rate = "0.2.0"
