@@ -3,10 +3,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
 // Off by default ("" origin). `*` allows any request origin; otherwise the
-// configured origin must match the request exactly.
+// configured origin must match the request exactly. Header lines are built
+// by registry xiom.http.middleware 0.1.0.
 module xiom.pulse.cors
 
 use xiom.pulse.config;
+use xiom.http.middleware;
 
 /// cors_enabled reports whether an allowed origin is configured.
 /// Complexity: O(1). Pure.
@@ -31,8 +33,12 @@ pub fn cors_allow_origin(req_origin: Str) -> Str {
 pub fn cors_header_block(req_origin: Str) -> Str {
   let oc = cors_allow_origin(req_origin);
   if oc.len() == 0 { return ""; }
-  return "Access-Control-Allow-Origin: " + oc + "\r\n"
-    + "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
-    + "Access-Control-Allow-Headers: Content-Type, X-CSRF-Token\r\n"
-    + "Access-Control-Max-Age: 600\r\n";
+  let lines = middleware_cors_headers(oc, "GET, POST, PUT, DELETE, OPTIONS", "Content-Type, X-CSRF-Token", 600);
+  var out: Str = "";
+  var i: Int = 0;
+  while i < lines.len() {
+    out = out + lines[i] + "\r\n";
+    i = i + 1;
+  }
+  return out;
 }

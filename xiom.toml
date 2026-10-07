@@ -29,20 +29,37 @@ source-roots = [
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-router-0.1.0/xiom-router/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
+  # Windows install tree -- 2026-10-07 registry wave (install first:
+  # xiom pkg install xiom.metrics@0.2.0 xiom.http.middleware@0.1.0 ...)
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-metrics-0.2.0/xiom-metrics/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-middleware-0.1.0/xiom-http-middleware/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-session-0.1.0/xiom-session/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-static-0.1.0/xiom-static/src",
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-kv-0.1.0/xiom-kv/src",
   # WSL/Linux install tree (~/xiom/packages; dead entries are skipped)
   "/home/lefteris/xiom/packages/xiom-http-0.1.1/xiom-http/src",
   "/home/lefteris/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
   "/home/lefteris/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
   "/home/lefteris/xiom/packages/xiom-router-0.1.0/xiom-router/src",
   "/home/lefteris/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
+  "/home/lefteris/xiom/packages/xiom-metrics-0.2.0/xiom-metrics/src",
+  "/home/lefteris/xiom/packages/xiom-http-middleware-0.1.0/xiom-http-middleware/src",
+  "/home/lefteris/xiom/packages/xiom-session-0.1.0/xiom-session/src",
+  "/home/lefteris/xiom/packages/xiom-static-0.1.0/xiom-static/src",
+  "/home/lefteris/xiom/packages/xiom-kv-0.1.0/xiom-kv/src",
 ]
 
 [dependencies]
-xiom.http = "0.1.1"
-xiom.cookie = "0.1.1"
-xiom.jwt = "0.2.0"
-xiom.router = "0.1.0"
-xiom.rate = "0.2.0"
+"xiom.http" = "0.1.1"
+"xiom.cookie" = "0.1.1"
+"xiom.jwt" = "0.2.0"
+"xiom.router" = "0.1.0"
+"xiom.rate" = "0.2.0"
+"xiom.metrics" = "0.2.0"
+"xiom.http.middleware" = "0.1.0"
+"xiom.session" = "0.1.0"
+"xiom.static" = "0.1.0"
+"xiom.kv" = "0.1.0"
 
 [compiler]
 target = "native"

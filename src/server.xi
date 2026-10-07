@@ -33,6 +33,7 @@ use xiom.pulse.cors;
 use xiom.pulse.validate;
 use xiom.pulse.reqctx;
 use xiom.convert.parse;
+use xiom.static;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -256,10 +257,38 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, envelope.ok_bool(true));
   }
   if m.route_id == 14 {
-    if !icon_loaded {
-      return out_json(404, envelope.error_body("not_found", "icon not loaded"));
+    // Static assets via registry xiom.static 0.1.0: ETag/Last-Modified/
+    // Cache-Control, If-None-Match -> 304, Range -> 206/416, traversal guard.
+    // NOTE: static_serve takes the path AFTER the leading "/"; a leading
+    // slash is rejected as "absolute".
+    let parts = router.split_target(req.target);
+    var rel: Str = parts.0;
+    if rel.len() > 0 && rel.byte_at(0) == 47u8 {
+      rel = string.str_slice(rel, 1, rel.len());
     }
-    return HandlerOut{ status: 200; content_type: "image/x-icon"; headers: Vec[(Str, Str)].new(); body: ""; body_bytes: icon_bytes; };
+    // The URL /favicon.ico serves the app icon file (config sets its
+    // directory via PULSE_STATIC_DIR; the file name is the repo default).
+    if rel == "favicon.ico" {
+      rel = "pulse-ico.ico";
+    }
+    let pol = StaticPolicy{ max_age: 86400; immutable: false; must_revalidate: false; no_store: false; };
+    let sr = static_serve(config.cfg_static_dir(), rel, http.header_get(req, "if-none-match"), http.header_get(req, "range"), false, &pol);
+    if sr.status == 404 {
+      return out_json(404, envelope.error_body("not_found", "asset not found"));
+    }
+    var ct: Str = "application/octet-stream";
+    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    var hi: Int = 0;
+    while hi < sr.headers.len() {
+      let h = sr.headers[hi];
+      if h.name == "Content-Type" {
+        ct = h.value;
+      } else {
+        hs.push((h.name, h.value));
+      }
+      hi = hi + 1;
+    }
+    return HandlerOut{ status: sr.status; content_type: ct; headers: hs; body: ""; body_bytes: sr.body; };
   }
   if m.route_id == 15 {
     let page: Str = "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>XIOM PULSE</title>\n<link rel=\"icon\" href=\"/favicon.ico\">\n</head>\n<body>\n<h1>XIOM PULSE</h1>\n<p>Plaintext HTTP/1.1 service on XIOM. Try /health, /api/version, /api/events, /metrics.</p>\n</body>\n</html>\n";
@@ -427,6 +456,8 @@ pub fn main() -> Int {
     io.println("pulse: store init failed for " + config.cfg_store_path());
     io.flush_stdout();
   }
+
+  session.session_init(config.cfg_session_ttl_secs());
 
   let icon_ok = load_icon(config.cfg_icon_path());
   if !icon_ok {

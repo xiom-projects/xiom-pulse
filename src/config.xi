@@ -117,6 +117,7 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "jwt_secret", "PULSE_JWT_SECRET");
   cfg_apply_str(obj, "session_ttl", "PULSE_SESSION_TTL");
   cfg_apply_str(obj, "icon_path", "PULSE_ICON_PATH");
+  cfg_apply_str(obj, "static_dir", "PULSE_STATIC_DIR");
   cfg_apply_str(obj, "rate_limit", "PULSE_RATE_LIMIT");
   cfg_apply_str(obj, "rate_burst", "PULSE_RATE_BURST");
   cfg_apply_str(obj, "cors_origin", "PULSE_CORS_ORIGIN");
@@ -162,6 +163,13 @@ pub fn cfg_store_path() -> Str {
 /// Complexity: O(1). Pure.
 pub fn cfg_icon_path() -> Str {
   return env.var_or("PULSE_ICON_PATH", "resources/img/pulse-ico.ico");
+}
+
+/// cfg_static_dir returns the static-assets root served by the /favicon.ico
+/// route (PULSE_STATIC_DIR, default "resources/img").
+/// Complexity: O(1). Pure.
+pub fn cfg_static_dir() -> Str {
+  return env.var_or("PULSE_STATIC_DIR", "resources/img");
 }
 
 /// cfg_session_ttl_secs returns the session lifetime (PULSE_SESSION_TTL,

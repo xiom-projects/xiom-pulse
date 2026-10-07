@@ -15,5 +15,5 @@ package xiom_pulse {
   license: "MIT OR Apache-2.0";
   authors: ["Lefteris Notas"];
   modules: ["xiom.pulse", "xiom.pulse.http", "xiom.pulse.router", "xiom.pulse.envelope", "xiom.pulse.config", "xiom.pulse.metrics", "xiom.pulse.session", "xiom.pulse.store", "xiom.pulse.ratelimit", "xiom.pulse.cors", "xiom.pulse.validate", "xiom.pulse.reqctx", "xiom.pulse.server"];
-  deps: { "xiom.std": ">=0.60.0 <1.0.0", "xiom.http": "0.1.1", "xiom.cookie": "0.1.1", "xiom.jwt": "0.2.0", "xiom.router": "0.1.0", "xiom.rate": "0.2.0" };
+  deps: { "xiom.std": ">=0.60.0 <1.0.0", "xiom.http": "0.1.1", "xiom.cookie": "0.1.1", "xiom.jwt": "0.2.0", "xiom.router": "0.1.0", "xiom.rate": "0.2.0", "xiom.metrics": "0.2.0", "xiom.http.middleware": "0.1.0", "xiom.session": "0.1.0", "xiom.static": "0.1.0", "xiom.kv": "0.1.0" };
 }

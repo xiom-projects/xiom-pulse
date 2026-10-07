@@ -29,6 +29,9 @@ a.out
 /pulse-store-test.jsonl
 /pulse-audit.log
 
+# xiom.kv probe segments (tests/probes/probe_pkg_kv.xi, best-effort cleanup)
+/kvprobe-*.kv
+
 # Kilo / Agent Manager workspace state (never commit)
 .kilo/
 *.code-workspace

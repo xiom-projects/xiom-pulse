@@ -2,6 +2,14 @@
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
+// Storage stays the PULSE-owned parallel-vector store: the registry
+// xiom.session 0.1.0 store integration crashes on v0.64.0 when driven from
+// PULSE wrapper modules (exit -1, no output; green when called inline from
+// the consuming module -- see tests/probes/probe_session_inline.xi vs
+// probe_adopt_smoke.xi and docs/PACKAGE-WISHLIST-PULSE.md). Adopted from the
+// registry wave: CSRF token generation + constant-time comparison
+// (xiom.http.middleware 0.1.0).
+//
 // Step 2 store: parallel vectors, expiry checked on read, logout marks the
 // session expired (no compaction yet -- documented limitation).
 module xiom.pulse.session
@@ -10,6 +18,7 @@ use xiom.string;
 use xiom.time;
 use xiom.crypto.rng_crypto;
 use xiom.cookie;
+use xiom.http.middleware;
 
 var s_ids: Vec[Str] = Vec[Str].new();
 var s_users: Vec[Str] = Vec[Str].new();
@@ -72,6 +81,13 @@ pub fn session_reset() {
   s_exp = Vec[Int].new();
 }
 
+/// session_init is a no-op kept for the server startup hook (the local
+/// store needs no configuration).
+/// Complexity: O(1).
+pub fn session_init(ttl_secs: Int) {
+  let _t = ttl_secs;
+}
+
 /// session_cookie_header returns the Set-Cookie VALUE for a session
 /// (header name is added by the response builder).
 /// Complexity: O(1). Pure.
@@ -96,10 +112,12 @@ pub fn session_id_from_cookie(cookie_header: Str) -> Str {
   return v;
 }
 
-/// csrf_new_token returns a fresh CSRF token (crypto random hex).
-/// Complexity: O(1).
+/// csrf_new_token returns a fresh CSRF token (registry middleware, "" on
+/// generation failure). Complexity: O(1).
 pub fn csrf_new_token() -> Str {
-  return rng_crypto.crypto_random_string(32, "0123456789abcdef");
+  let r = middleware_csrf_token_new();
+  if r.is_err { return ""; }
+  return r.value;
 }
 
 /// csrf_cookie_header returns the Set-Cookie VALUE for the CSRF token.
@@ -108,22 +126,14 @@ pub fn csrf_cookie_header(token: Str) -> Str {
   return "csrf=" + token + "; Path=/; SameSite=Lax; Max-Age=3600";
 }
 
-/// csrf_matches compares the `csrf` cookie with the request header token
-/// in constant time. Complexity: O(n).
+/// csrf_matches compares the `csrf` cookie with the request header token in
+/// constant time (registry middleware_csrf_valid).
+/// Complexity: O(n).
 pub fn csrf_matches(cookie_header: Str, header_token: Str) -> Bool {
   if cookie_header.len() == 0 || header_token.len() == 0 { return false; }
   let jar = cookie.cookie_parse_request(cookie_header);
   let opt = cookie.cookie_get(&jar, "csrf");
   if opt.is_none { return false; }
   let tok = opt.value;
-  if tok.len() != header_token.len() { return false; }
-  var diff: Int = 0;
-  var i: Int = 0;
-  while i < tok.len() {
-    var d: Int = (tok.byte_at(i) as Int) - (header_token.byte_at(i) as Int);
-    if d < 0 { d = 0 - d; }
-    diff = diff + d;
-    i = i + 1;
-  }
-  return diff == 0;
+  return middleware_csrf_valid(header_token, tok);
 }
