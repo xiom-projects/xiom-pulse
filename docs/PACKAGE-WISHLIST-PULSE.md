@@ -87,3 +87,31 @@ append store and files `xiom.kv` above.
 - New packages should stay stdlib-only or declare deps explicitly; PULSE's
   `xiom.toml` currently wires each installed package `src/` manually
   (C-PULSE-02).
+
+## Delta 2026-10-07 (registry wave, Linux/WSL session)
+
+**Adopted and green by PULSE (consumer-verified):**
+
+| Package | Probe (all x1, green) | Use in PULSE |
+|---|---|---|
+| `xiom.metrics` 0.2.0 | `probe_pkg_metrics.xi` -- counter/gauge/histogram/labels/registry/find/exposition/latency-bounds | `src/metrics.xi` wrapper: labeled status counters, 11-bound latency histogram, Prometheus exposition; uptime gauge at render |
+| `xiom.http.middleware` 0.1.0 | `probe_pkg_middleware.xi` | CSRF token + constant-time validate (`src/session.xi`); CORS header block (`src/cors.xi`) |
+| `xiom.static` 0.1.0 | `probe_pkg_static.xi` | `/favicon.ico` through `static_serve`: mime, ETag/Last-Modified/Cache-Control, If-None-Match 304, Range 206/416, traversal guard |
+| `xiom.session` 0.1.0 | `probe_pkg_session.xi` (green) | **store integration deferred** -- C-PULSE-09 crash when driven from wrapper modules (inline green); local store retained |
+| `xiom.kv` 0.1.0 | `probe_pkg_kv.xi` (**known-red**) | **blocked** -- kv_get Str corruption + multi-key bytes truncation (C-PULSE-10); JSONL store stays the documented fallback |
+
+**API notes for the packages lane:**
+
+- `static_resolve_path` rejects a leading `/` as "absolute"; consumers must
+  strip it from the request target (documented in the probe). Worth a
+  README line.
+- `xiom.kv` defect bundle: `docs/repro/kv-get-str-corruption/` -- a
+  kv_get-after-kv_put case with values >= 8 bytes and a multi-key
+  overwrite case would have caught both symptoms in the package's own
+  suite.
+- `xiom.session` conformance: add a two-module consumer case (state owner
+  module + thin wrapper module) matching PULSE's integration shape if the
+  crash turns out to be reproducible outside the compiler.
+
+**Roadmap status:** items 1-3 done; of item 4, metrics/middleware/static
+are adopted, session + kv are gated on the C-PULSE-09/10 fixes.

@@ -140,3 +140,34 @@ Through-proxy verification checklist:
 - Sessions are in-memory (restart logs users out); secret rotation and
   session persistence are roadmap items (see `docs/PROGRESS.md`).
 - `/metrics` has no auth of its own -- restrict at the proxy.
+
+## 8. Linux deployment (verified 2026-10-07)
+
+The Linux lane is real: the same v0.64.0 toolchain builds a native Linux
+ELF (`scripts/build.sh src/server.xi --name pulse_app`), and the whole
+fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
+`scripts/proxy_e2e.sh` 11/11 through nginx 1.24 TLS).
+
+1. **Build:** install the Unix toolchain (canonical layout
+   `~/.local/share/xiom`), install the registry deps
+   (`xiom pkg install xiom.http@0.1.1 xiom.cookie@0.1.1
+   xiom.jwt@0.2.0 xiom.router@0.1.0 xiom.rate@0.2.0
+   xiom.metrics@0.2.0 xiom.http.middleware@0.1.0 xiom.static@0.1.0`),
+   then `. scripts/dev-env.sh && scripts/build.sh src/server.xi --name
+   pulse_app`.
+2. **Verify:** `scripts/http_smoke.sh --server-exe out/pulse_app
+   --port 18093`, then the TLS path `scripts/proxy_e2e.sh
+   --nginx-path <nginx>` (distro nginx needs the five
+   `*_temp_path` directives from the script's generated config when
+   running unprivileged).
+3. **Supervise:** systemd unit with `Restart=on-failure`; env file as in
+   section 4 (`X-Pulse-Quit` is test-only; production restarts are
+   supervisor-driven).
+4. **Docker rehearsal:** for a hermetic pre-staging check, run the Linux
+   binary in a clean glibc-compatible container with nginx alongside;
+   on a Linux host this mirrors the VPS composition. Docker Desktop on
+   Windows isolates containers in their own network namespace, so proxy
+   the two sides within containers (or use host networking) when
+   rehearsing there.
+5. All scripts ship as `.ps1` and `.sh` twins; the shell twins are
+   verified from WSL/Linux and enforced LF via `.gitattributes`.

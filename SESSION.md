@@ -5,7 +5,57 @@
 
 **Written:** 2026-10-05 (17:3xZ), by the PULSE consumer lane.
 
-## 0. STATE (2026-10-05 17:3xZ)
+## 0. STATE (2026-10-07, Linux/WSL + registry wave session)
+
+- **Repo:** unchanged (`E:\xiom-projects\xiom-pulse`, private, no push
+  without owner approval). Commits this session: `b58f7a8` (bash twins +
+  Linux build path + m212 repro), `220f814` (registry wave adoptions +
+  findings), plus this docs wrap.
+- **Toolchain (owner policy: track latest):**
+  - Windows: compiler v0.64.0 (`%LOCALAPPDATA%\xiom.new\bin\xiom.exe`),
+    stdlib `E:\xiom-lang\stdlib`, `XIOM_RUNTIME_DIR` retired.
+  - **Linux (NEW, verified):** WSL Ubuntu compiler v0.64.0 at the
+    canonical Unix install (`~/.local/share/xiom`, `xiom` on PATH);
+    stdlib from `XIOM_STDLIB=/mnt/e/xiom-lang/stdlib` when present, else
+    the compiler's bundled tree; registry packages live in
+    `~/xiom/packages` (legacy home) and install from the live registry
+    (reachable from WSL, signatures verified).
+- **Linux binary:** `out/pulse_app` (native x86-64 ELF, 609 KiB) built by
+  `scripts/build.sh`; full runtime green.
+- **WINDOWS SESSION MUST-DO:** the app now imports `xiom.metrics`,
+  `xiom.static`, `xiom.http.middleware`; install them on Windows first:
+  `xiom pkg install xiom.metrics@0.2.0 xiom.http.middleware@0.1.0
+  xiom.static@0.1.0` (then suites x2 + smoke to re-verify Windows).
+  Windows source-roots for the wave are already staged in `xiom.toml`.
+- **Green evidence this session (Linux/WSL):** 12 `.sh` twins verified
+  (run hello + crypto KAT, 3 binaries built, smoke 61/61, concurrent
+  64/64, soak_tcp 25/25, crash 6/6, rate smoke, store_soak 20s, soak_http
+  20s, proxy_e2e 11/11 via nginx 1.24 TLS); on the adopted binary: suites
+  x2 all 0 failures, smoke 61/61, crash/rate/store-soak/proxy-E2E green;
+  probes green: metrics, middleware, session (package surface), static,
+  state-holder, adopt-smoke, session-inline.
+- **Registry wave status:** `xiom.metrics` 0.2.0 -> `src/metrics.xi`
+  (labeled counters + latency preset + exposition); `xiom.static` 0.1.0 ->
+  favicon route (mime/ETag/Cache-Control/304/Range/traversal-guard);
+  `xiom.http.middleware` 0.1.0 -> CSRF + CORS. `xiom.session` 0.1.0 store
+  integration DEFERRED (C-PULSE-09 crash via wrapper modules; inline
+  green; local store retained). `xiom.kv` 0.1.0 BLOCKED (C-PULSE-10
+  kv_get corruption; JSONL fallback stays; `probe_pkg_kv` is the
+  known-red gate).
+- **New findings (details in relay docs):** C-PULSE-08 (m212 dotted-key
+  latent, repro `docs/repro/dep-roots-name-form`), C-PULSE-09 (session
+  store integration crash), C-PULSE-10 (kv_get corruption; classification
+  open), C-PULSE-11 (`pub type X = PackageType` invisible cross-module ->
+  "defaulting to i64" warning).
+- **Ops relay updated:** `docs/OPS-REQUEST.md` now carries the Linux
+  evidence (VPS OS question resolved: Linux is fine) and the WSL-vs-Docker
+  guidance for staging rehearsal.
+- **Next action:** Windows re-verify of the wave; continue M4/M5
+  (keep-alive, schema helper, recv timeouts, CI file when public); watch
+  C-PULSE-08/09/10/11 on the next compiler archive; the `probe_pkg_kv`
+  gate flips green when kv is fixed.
+
+## 0b. STATE HISTORY (2026-10-05) -- superseded
 
 - **Repo:** `E:\xiom-projects\xiom-pulse`; identity `Lefteris Notas
   <lefterisnotas@gmail.com>`; repo stays **PRIVATE**; `origin` exists
@@ -266,7 +316,50 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session
+## 3. Paste prompt for the next PULSE session (2026-10-07)
+
+```
+You are the PULSE session for E:\xiom-projects\xiom-pulse (official XIOM
+full web backend). Read SESSION.md first, then docs\PROGRESS.md and the
+reference relay docs it lists. Consumer lane: never edit
+E:\xiom-lang\stdlib, E:\xiom-lang\xiom, E:\xiom-packages\packages. Repo
+stays PRIVATE; do not push to origin without owner approval. Identity
+"Lefteris Notas <lefterisnotas@gmail.com>"; conventional commits, DCO -s.
+
+Track the LATEST toolchain: Windows compiler v0.64.0
+(%LOCALAPPDATA%\xiom.new\bin\xiom.exe); Linux/WSL compiler v0.64.0
+(~/.local/share/xiom) — the Linux lane is verified and every script has a
+verified .sh twin (scripts/*.sh + scripts/lib.sh). XIOM_RUNTIME_DIR
+retired. Registry consumption still needs xiom.toml source-roots
+(C-PULSE-02).
+
+TASK ORDER (owner-ordered, 2026-10-07 wrap):
+1. WINDOWS RE-VERIFY of the registry wave: first run
+   `xiom pkg install xiom.metrics@0.2.0 xiom.http.middleware@0.1.0
+   xiom.static@0.1.0` (the app imports them now; Windows source-roots are
+   already in xiom.toml), then suites x2 + smoke + crash + rate on
+   Windows; record deltas vs the Linux run.
+2. Continue M4/M5 per docs\PROGRESS.md: keep-alive, schema helper, recv
+   timeouts (stdlib), CI file when the repo goes public, packaging per
+   docs/OPS-REQUEST.md.
+3. Watch the compiler lane for C-PULSE-08 (m212 dotted-key gate:
+   docs/repro/dep-roots-name-form both variants must exit 0), C-PULSE-09
+   (xiom.session store integration crash), C-PULSE-10 (xiom.kv kv_get
+   corruption; probe_pkg_kv is the known-red gate), C-PULSE-11 (package
+   type aliases). Re-run the probes when the next archive lands; swap the
+   session store and the kv backend when green.
+4. Update SESSION.md STATE + the three relay docs + PROGRESS.md at every
+   wrap; commit signed (DCO -s).
+
+Discipline: every struct literal lists every field; never init module
+vars with package constructors (use the Vec-holder pattern,
+probe_pkg_state_holder); no const-receiver .to_str(); explicit *p for
+&mut Int reads; quote dotted TOML dep keys; probes in-repo; suites x2;
+outputs to files, never inherited pipes; durable step logs for anything
+that can crash (io.flush_stdout is a no-op).
+```
+
+## 3b. Paste prompt (2026-10-05, superseded)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (official XIOM

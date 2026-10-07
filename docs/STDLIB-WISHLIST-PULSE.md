@@ -56,3 +56,18 @@ the pin below.
 - `xiom/net/socket.xi` stubs are *documented* Err returns -- good -- but a
   server framework cannot ship without at least the timeout option; the
   runtime already links `setsockopt` on both branches except Windows bind.
+
+## Delta 2026-10-07 (Linux/WSL session)
+
+- **Linux runtime + crypto fully green env-free**: native ELF build and
+  NIST SHA-256 KAT from the installed Unix layout; net/fs/time/serialize
+  all work. Every open wishlist row (socket timeouts, `write_all`, real
+  flush, server-side request parser) reproduces on Linux unchanged.
+- `xiom.net.mime.mime_type_of` is now load-bearing (favicon via
+  `xiom.static`): `ico -> image/x-icon` verified; no gaps found.
+- `xiom.string.str_index_of` / `str_slice` handle query-string and path
+  work correctly; nothing new needed.
+- `io.flush_stdout` is still a no-op, and it cost evidence time again:
+  a crashing program with block-buffered stdout prints nothing. The
+  durable step-log workaround (`tests/probes/probe_adopt_smoke.xi`)
+  stands until a real flush lands.

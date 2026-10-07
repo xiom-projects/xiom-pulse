@@ -259,3 +259,26 @@ this doc and SESSION.md.
 3. A `--emit-ir` "call not emitted" warning is impossible in general, but a
    differential test between JIT and AOT for the stdlib net module would
    catch builtin-vs-method divergence.
+
+## Delta 2026-10-07 (Linux/WSL session)
+
+**Headline:** the Linux target is real and verified. The same v0.64.0
+source builds a native Linux ELF from WSL (`out/pulse_app`, x86-64),
+crypto links env-free (NIST SHA-256 KAT), and the full fleet is green on
+Linux: suites x2 (`test_http`/`test_app`/`test_smoke`, 0 failures), smoke
+61/61, crash 6/6, rate smoke, store soak 20s, proxy E2E 11/11 (nginx
+1.24 TLS, extracted from Ubuntu debs, no root). All 12 `.sh` twins were
+written and verified from WSL.
+
+| Finding | Evidence | Impact |
+|---|---|---|
+| **C-PULSE-08 (m212 latent, dotted keys):** `dependency_roots_under` (`crates/xiom-graph/src/manifest.rs`, not in the shipped v0.64.0 binaries) matches `dep.name` verbatim, so canonical dotted keys (`xiom.rate`) will never match installed dirs (`xiom-rate-0.2.0`). Its unit tests cover dash-form keys only. | `docs/repro/dep-roots-name-form/` -- on v0.64.0 both dash and dot variants fail identically (6x T001); the gate is "both exit 0" once m212 ships | keeps the `source-roots` workaround on both platforms; next archive would otherwise leave dotted-key consumers with no roots |
+| **C-PULSE-09 (package-aggregate integration crash):** a `Vec[SessionStore]` store driven from PULSE wrapper modules crashes at runtime (exit -1, no output) while the identical calls inline in the consuming module are green. Repro pair: `tests/probes/probe_adopt_smoke.xi` (crashes at the session step) vs `tests/probes/probe_session_inline.xi` (green, 15 durable steps). Same class suspected as C-PULSE-07 (module-state vs package aggregates). | above probes, 2026-10-07, WSL Linux; PULSE reverted the session-store swap (local store retained) | any consumer wrapping a package aggregate behind a second PULSE module; needs a compiler-lane bisect |
+| **C-PULSE-10 (kv_get Str corruption, classification open):** after `kv_put`, `kv_get` returns an address-like decimal `Str` for every key; multi-key writes also corrupt `kv_get_bytes` (9-byte value read back as 6). Stored bytes verified correct via `kv_get_bytes` + `from_utf8` in a clean single-key run. | `docs/repro/kv-get-str-corruption/`; `tests/probes/probe_pkg_kv.xi` (known-red gate) | blocks `xiom.kv` adoption; could be a package-internal Str construction miscompiled on v0.64.0 (C-PULSE-04/05 family) -- packages + compiler lanes to triage |
+| **C-PULSE-11 (type alias to a package type fails cross-module):** `pub type Store = SessionStore;` in module A is "unknown type 'Store'" in module B; the build emits `warning: unknown type 'Store' -- defaulting to i64` and continues (silent miscompile risk). | session-adoption build log 2026-10-07; wrapper-struct workaround used | any consumer exposing a package type through an alias; the defaulting warning should be a hard error at least |
+| **POSITIVE -- holder pattern for package aggregates:** module-scope `Vec[Registry].new()` (a builtin, not a package ctor) + push-in-function + `&mut v[0]` works and is now used by `src/metrics.xi`. Pinned by `tests/probes/probe_pkg_state_holder.xi`. | probe green on v0.64.0 | the sanctioned C-PULSE-07 workaround for process-global package state |
+
+**Bump procedure addendum:** also run `probe_pkg_state_holder`,
+`probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv` (the kv gate
+should flip to green), and both variants of
+`docs/repro/dep-roots-name-form/` on the next archive.

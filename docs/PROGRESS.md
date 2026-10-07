@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-05 (PULSE session, v0.64.0 wave)
+**Last updated:** 2026-10-07 (PULSE session, Linux/WSL + registry wave)
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -15,42 +15,51 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~47% of production grade**
+## 1. Overall score: **~51% of production grade**
 
-_Delta 2026-10-05 (evening wave 6): 45.6% -> 46.9% -- JSON config file
-(`PULSE_CONFIG`, env-wins precedence), events `?kind=` field filter, and
-the **10m storage soak GREEN** (841 writes, 0 fail; compact 841; hard kill
--> reopen 841; 0 mismatches; clean exit). Evidence: suites x2 (`test_app`
-99 checks), smoke **61/61**, `out\pulse_app_v9.exe`._
+_Delta 2026-10-07 (Linux/registry wave): 46.9% -> ~51.2% -- the **Linux
+target verified end-to-end** (native ELF from the same v0.64.0 source:
+suites x2 with 0 failures, smoke 61/61, crash 6/6, store-soak 20s,
+proxy E2E 11/11 through Linux nginx 1.24 TLS on the extracted-package
+path; crypto KAT env-free), **12 `.sh` twins** written and verified from
+WSL, and the **registry wave**: `xiom.metrics` 0.2.0 (labeled counters +
+latency preset), `xiom.static` 0.1.0 (ETag/Cache-Control/Range/304 +
+traversal guard) and `xiom.http.middleware` 0.1.0 (CSRF/CORS) adopted
+green. `xiom.session` store-integration and `xiom.kv` are filed as
+C-PULSE-09/10 with repros; local store + JSONL remain the documented
+fallbacks._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
 | 1 | HTTP core (parse/build/limits) | 12% | 74% | 8.9 | query strings, header caps, HEAD; keep-alive/chunked/Expect missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
-| 3 | Middleware framework | 8% | 10% | 0.8 | logging/audit inline only |
-| 4 | Configuration | 5% | 75% | 3.8 | env + JSON file (env-wins); no schema validation of values |
-| 5 | Observability (log/metrics/audit) | 8% | 72% | 5.8 | JSON log + `dur_ms` + counters + histogram + audit + rid + gauges; flush no-op |
-| 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF; no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; no update/delete/index, no fsync |
-| 8 | Security hardening | 12% | 38% | 4.6 | rate limit + CSRF + opt-in CORS + security headers + caps; no schema lib/TLS E2E |
-| 9 | Static / assets | 4% | 20% | 0.8 | favicon + landing only |
+| 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
+| 4 | Configuration | 5% | 75% | 3.8 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; no schema validation of values |
+| 5 | Observability (log/metrics/audit) | 8% | 78% | 6.2 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit + rid + gauges; flush no-op |
+| 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
+| 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; `xiom.kv` blocked (C-PULSE-10), no fsync |
+| 8 | Security hardening | 12% | 38% | 4.6 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard; no schema lib |
+| 9 | Static / assets | 4% | 55% | 2.2 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon; no directory serving |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 60% | 3.0 | suites+smoke+rate-smoke+store-soak+soak+WSL locally; no CI, no packaging |
-| | **Total** | **100%** | | **46.9** | |
+| 12 | Testing / CI / release | 5% | 68% | 3.4 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins; no CI, no packaging |
+| | **Total** | **100%** | | **51.2** | |
 
 Two lenses to keep separate:
 
-- **PULSE's own work:** ~72% of the Step 0-4 plan (Steps 0-3 core + most of
-  the M4 hardening wave; only the proxy E2E run is left for Step 4).
-- **Production-grade framework:** **~43%**. The gap is mostly *hardening*
+- **PULSE's own work:** ~80% of the Step 0-4 plan (Steps 0-3 core, the M4
+  hardening wave, proxy E2E green on Windows and Linux, the Linux port +
+  `.sh` twins, and the registry adoption wave except the two blocked
+  packages).
+- **Production-grade framework:** **~46%**. The gap is mostly *hardening*
   and *ecosystem maturity*, not basic function.
 
 ---
 
 ## 2. What works today (evidence-backed)
 
-Run `out\pulse_app_v4.exe` and these work end-to-end (smoke 44/44):
+Run `out/` (Linux) or `out\pulse_app_v9.exe` (Windows); smoke 61/61 and
+suites x2 on both platforms, these work end-to-end:
 
 | Method | Path | What it does |
 |---|---|---|
@@ -116,19 +125,21 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 - Still missing: wildcards, optional segments, route groups, per-route
   middleware hooks, path percent-decoding.
 
-**Middleware (10%)**
-- Request-id/logging/audit are hardcoded in the loop.
-- No composable chain, no recover-to-500, no CORS/CSRF helpers.
+**Middleware (30%)**
+- Request-id/logging/audit are still wired inline in the loop.
+- Registry `xiom.http.middleware` 0.1.0 adopted for CSRF token/validate and
+  CORS header building; no composable chain, no recover-to-500.
 
 **Configuration (75%)**
 - Env-based with a JSON file (`PULSE_CONFIG`) for all eleven settings;
   environment variables win over file values.
 - No value schema/range validation beyond per-setting parsers/fallbacks.
 
-**Observability (72%)**
-- JSON access log with `rid`/status/bytes/`dur_ms`; counters + request
-  duration histogram + `/metrics`; audit trail; request ids embedded in
-  error envelopes; gauges (`pulse_app_info`, `pulse_store_records`,
+**Observability (78%)**
+- On registry `xiom.metrics` 0.2.0: labeled status-class counters, the
+  11-bound latency-preset histogram, Prometheus exposition; JSON access
+  log with `rid`/status/bytes/`dur_ms`; audit trail; request ids embedded
+  in error envelopes; gauges (`pulse_app_info`, `pulse_store_records`,
   `pulse_uptime_seconds`).
 - `io.flush_stdout()` is an empty body in the current stdlib -> logs can
   lag until process exit (stdlib wave queued).
@@ -163,9 +174,10 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 - Header size/count caps landed (16 KiB / 100); no recv timeouts yet
   (stdlib queued) -- a half-open request can still hold the loop.
 
-**Static/assets (20%)**
-- Favicon + landing page only; no directory serving, MIME map,
-  ETag/Range/Cache-Control.
+**Static/assets (55%)**
+- Favicon served through registry `xiom.static` 0.1.0: MIME map, ETag,
+  Last-Modified, Cache-Control, `If-None-Match` 304, `Range` 206/416,
+  traversal guard; landing page dynamic. No directory serving yet.
 
 **Protocol extras (0%)**
 - Templates, SSE, WebSocket, REST helpers, GraphQL: not started.
@@ -179,9 +191,11 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 - No signal handling / graceful in-flight drain (test-only QUIT).
 - A trap anywhere kills the process (no supervisor/restart policy).
 
-**Testing/CI/release (60%)**
-- Local: 3 suites, smoke (44), crash/reopen (6), soak drivers (PS+WSL),
-  15+ probes, byte-level lint greps. All manual/watchdog-run.
+**Testing/CI/release (68%)**
+- Local, both platforms: 3 suites (x2), smoke (61), crash/reopen (6),
+  soak drivers (PS + shell), rate/store soaks, 20+ probes, byte-level
+  lint greps. Every script ships as `.ps1` + `.sh` (LF enforced); WSL
+  verification of all 12 twins.
 - No CI pipeline, no coverage number, no fuzzing, no packaging/release
   process, DCO-only workflow.
 
@@ -194,7 +208,11 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 | C-PULSE-04 bare `&mut Int` read -> address | OPEN | keeps `*p` discipline; blocks cursor-style parsing in lane code |
 | C-PULSE-05 const-receiver `.to_str()` W005 -> abort | OPEN (worse: 0x80000003) | `convert.int_to_string` workaround stays |
 | C-PULSE-06 missing struct field -> garbage | OPEN | every struct literal must list all fields |
-| C-PULSE-07 module-scope package ctor -> undefined call/crash | OPEN | package aggregates stay caller-owned |
+| C-PULSE-07 module-scope package ctor -> undefined call/crash | OPEN | package aggregates stay caller-owned (Vec-holder pattern pinned by `probe_pkg_state_holder`) |
+| C-PULSE-08 m212 dotted-key roots (latent, lane source) | latent | `source-roots` workaround stays; gate `docs/repro/dep-roots-name-form` |
+| C-PULSE-09 xiom.session store integration crash via wrapper modules | OPEN | session store swap deferred; local store retained (`probe_adopt_smoke` vs `probe_session_inline`) |
+| C-PULSE-10 xiom.kv kv_get Str corruption + bytes truncation | OPEN (classification) | `xiom.kv` adoption blocked; JSONL fallback documented (`docs/repro/kv-get-str-corruption`) |
+| C-PULSE-11 package type alias invisible cross-module (defaults to i64) | OPEN | use wrapper structs, never `pub type X = PackageType` |
 | C-PULSE-02 deps not mapped to catalog roots | OPEN | `xiom.toml source-roots` wiring per package |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |
@@ -213,8 +231,8 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M1 -- Thin slice** | plaintext HTTP/1.1, routes, JSON, 404/405, curl + 64 concurrent + soak | **DONE** (2026-10-05) |
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
-| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~50% (queries, caps, headers, rate limit, histogram, CSRF, CORS, HEAD landed) |
-| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~5% |
+| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~60% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD landed) |
+| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~15% (TLS E2E green on Windows **and** Linux; `.sh` twins; deployment runbook + ops request; CI/packaging pending) |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 
 ---
@@ -238,7 +256,7 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 - [ ] Schema validation for all inputs
 - [ ] Credentials + RBAC; session persistence/rotation
 - [ ] Graceful shutdown/signal handling + supervisor story
-- [ ] TLS end-to-end test through the proxy
+- [x] TLS end-to-end test through the proxy (Windows nginx + Linux nginx 1.24, 11/11 both)
 - [ ] CI (suites+soak on push) + release packaging
 - [ ] Static/templates/SSE/WS/REST extras (framework surface)
 - [ ] Crash/chaos suite (kill -9 matrix, disk-full, corrupt store)
