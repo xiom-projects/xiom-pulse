@@ -30,14 +30,31 @@
   - packages: `xiom.http` 0.1.1, `xiom.cookie` 0.1.1, `xiom.jwt` 0.2.0,
     `xiom.rate` 0.2.0, `xiom.router` 0.1.0 (incubating, publish pending
     ops scope confirmation)
-- **Last green slice:** **storage soak GREEN**: 10m continuous event
-  writes on `out\pulse_app_v8.exe` (841 writes, 0 fail) -> compaction 841
-  -> hard kill -> reopen 841 -> 0 count mismatches, server exit 0, store
-  55,429 bytes (`scripts\store_soak.ps1`, summary in
-  `probe-logs\store-soak.summary.txt`). Combined with wave 4: compaction,
-  events `?limit=`, rid in error envelopes, service gauges. Suites x2
-  (`test_app` 91 checks), smoke **59/59**. New stdlib wishlist row:
-  no `fsync`/`FlushFileBuffers` in the runtime -> write-back only.
+- **Last green slice:** **through-proxy TLS E2E GREEN 11/11** on
+  `out\pulse_app_v9.exe`: nginx 1.28.3 terminates TLS (self-signed cert
+  via Git-OpenSSL) on 127.0.0.1:8443 -> PULSE :18091; verified health,
+  HSTS, `Server: nginx` with no upstream token leak, POST bodies, metrics,
+  404+rid. Script `scripts\proxy_e2e.ps1`; production example
+  `deploy\nginx\pulse.conf.example`. Before it: wave 6 (config file,
+  events `?kind=`, 10m store soak 841/841/841 GREEN) and wave 5
+  (compaction, `?limit`, rid, gauges).
+- **Registry wave ready to wire (owner relay 2026-10-07):** all published
+  and signature-verified: `xiom.http` 0.1.1, `xiom.jwt` 0.2.0,
+  `xiom.rate` 0.2.0, `xiom.metrics` 0.2.0, `xiom.router` 0.1.0,
+  `xiom.http.middleware` 0.1.0, `xiom.session` 0.1.0, `xiom.static`
+  0.1.0, `xiom.kv` 0.1.0.
+- **Pipeline-hang lesson (cost the owner hours):** launching a detached
+  child (nginx) with inherited stdout/stderr pipes makes the caller wait
+  on the pipe forever, past any process timeout. Always `Start-Process`
+  with file redirection, poll readiness with a bounded socket connect,
+  and kill by PID tree.
+- **Next action (owner-ordered):** FIRST port every script to a `.sh`
+  twin (dev-env, run, build, smoke, soak, concurrent, crash, rate,
+  store, proxy-e2e) so Linux developers can use them; THEN adopt the
+  registry wave (`xiom.metrics` 0.2.0 labels/latency preset,
+  `xiom.http.middleware`, `xiom.session`, `xiom.static` for the favicon/
+  landing, `xiom.kv` as the durable store replacement); continue M4/M5
+  hardening per `docs/PROGRESS.md`.
 - **Findings status on v0.64.0:** C-PULSE-01 **RESOLVED** (read matrix
   exit 0; `probe_read_no_io` + `probe_net_roundtrip` now green);
   C-PULSE-04 **still open** (exit 5); C-PULSE-05 **worse** (W005 const
@@ -253,32 +270,40 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (official XIOM
-full web backend). Read SESSION.md first, then the reference docs listed in
-it. Consumer lane: never edit E:\xiom-lang\stdlib, E:\xiom-lang\xiom,
-E:\xiom-packages\packages. Repo stays PRIVATE; do not push to origin without
-owner approval. Identity "Lefteris Notas <lefterisnotas@gmail.com>";
-conventional commits.
+full web backend). Read SESSION.md first, then docs\PROGRESS.md and the
+reference relay docs it lists. Consumer lane: never edit
+E:\xiom-lang\stdlib, E:\xiom-lang\xiom, E:\xiom-packages\packages. Repo
+stays PRIVATE; do not push to origin without owner approval. Identity
+"Lefteris Notas <lefterisnotas@gmail.com>"; conventional commits, DCO -s.
 
-VERSION POLICY (owner 2026-10-05): track the LATEST compiler/stdlib/packages
-to harden the ecosystem; no fixed pin. Current: compiler v0.64.0
-(%LOCALAPPDATA%\xiom.new\bin\xiom.exe), stdlib E:\xiom-lang\stdlib (lane
-checkout), registry packages (xiom.http 0.1.1, xiom.cookie 0.1.1,
-xiom.jwt 0.2.0). XIOM_RUNTIME_DIR is RETIRED. Dot-source
-scripts\dev-env.ps1. Registry consumption needs xiom.toml source-roots
-(C-PULSE-02, still open on v0.64.0).
+Track the LATEST toolchain: compiler v0.64.0
+(%LOCALAPPDATA%\xiom.new\bin\xiom.exe), stdlib E:\xiom-lang\stdlib,
+XIOM_RUNTIME_DIR retired. Dot-source scripts\dev-env.ps1. Registry
+consumption needs xiom.toml source-roots (C-PULSE-02, still open).
 
-First: read probe-logs\soak-http.summary.txt (v0.64.0 30m soak, started
-17:3xZ; if absent/incomplete, re-run scripts\soak_http.ps1 with the
-watchdog) and confirm the verdict; record it in SESSION.md.
+TASK ORDER (owner-ordered, 2026-10-07):
+1. PORT EVERY SCRIPT TO A .sh TWIN so Linux developers can use them:
+   scripts\dev-env, run, build, http_smoke, soak_http, soil_tcp?, concurrent,
+   crash_test, rate_smoke, store_soak, proxy_e2e -> each gets a bash
+   equivalent that runs on WSL/Linux (same flags, same exit-code gating,
+   watchdog via `timeout`). Verify each .sh from WSL before moving on.
+2. ADOPT THE PUBLISHED REGISTRY WAVE (all signature-verified):
+   xiom.metrics 0.2.0 (labels + latency preset) to replace/extend our
+   counters; xiom.http.middleware 0.1.0 for the middleware chain;
+   xiom.session 0.1.0 to replace src\session.xi; xiom.static 0.1.0 for
+   favicon/landing serving; xiom.kv 0.1.0 as the durable store backend
+   (keep the JSONL fallback documented). Run each consumer probe first
+   (tests\probes\probe_pkg_*.xi pattern), then swap, suites x2 + smoke.
+3. Continue M4/M5 per docs\PROGRESS.md (proxy E2E is GREEN 11/11 via
+   scripts\proxy_e2e.ps1 + deploy\nginx\pulse.conf.example; keep-alive,
+   schema helper, audit rotation, CI file when public).
+4. Update SESSION.md STATE + the three relay docs + PROGRESS.md at every
+   wrap; commit signed.
 
-Step 2 is DONE and on v0.64.0 green; Step 3 storage core is DONE (JSONL
-store + events routes + crash/reopen 6/6 at 20 and 200 events). Next:
-Step 3 handoff wrap, then Step 4 (TLS decision: proxy-only unless the
-product needs in-XIOM TLS; keep the proxy fallback documented). Keep the
-workarounds: no bare &mut Int reads (*p), no const-receiver `.to_str()`
-(use convert.int_to_string), probes staged in-repo, suite x2, server
-output redirected to files (never undrained pipes). Keep the three relay
-documents updated at every wrap: docs\COMPILER-FINDINGS-PULSE.md,
-docs\STDLIB-WISHLIST-PULSE.md, docs\PACKAGE-WISHLIST-PULSE.md. Batch
-findings rows in SESSION.md at the wrap and commit.
+Discipline: every struct literal lists every field; never init module vars
+with package constructors; no const-receiver `.to_str()` (use
+convert.int_to_string); explicit `*p` for &mut Int reads; probes in-repo;
+suites x2; outputs to files, never inherited pipes (Start-Process +
+redirection, bounded socket polls, kill by PID tree).
 ```
+
