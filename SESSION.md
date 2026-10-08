@@ -131,16 +131,27 @@
   next compiler/stdlib/package release, sweep bugs/blockers against it
   (C-PULSE-08/09/10/11 gates ready), then coordinate ops for the three
   showcase sites; non-blocked hardening continues until then.
-- **Next action:** on v0.64.1: re-run the probe fleet
-  (`probe_stdlib_server_parse`, `probe_pkg_state_holder`,
-  `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv`,
-  `probe_audit_rotate`, `probe_schema`) and the m212 repro gate (both
-  variants must exit 0); retry the session-store swap (C-PULSE-09) and
-  the kv backend (C-PULSE-10); adopt socket timeouts / signals / define
-  flag when the stdlib exposes them; watch the bindings lane for the
-  durable DB/KV binding (final stage; store seam in PROGRESS section
-  6b); when the owner greenlights: CI file + dl release flow + the
-  three showcase sites (ops mechanics in docs/OPS-REQUEST.md).
+- **2026-10-08 (v0.64.1 sweep):** the installed Windows toolchain was
+  updated in place to **v0.64.1**; the package store was wiped by that
+  maintenance and all ten deps were reinstalled. **C-PULSE-08 CLOSED**
+  (m212 gate: dash + dot both exit 0, no source-roots), **C-PULSE-10
+  CLOSED** (kv probe GREEN; kv_get returns the stored text), C-PULSE-11
+  alias fix confirmed by the release notes. Full regression on v0.64.1:
+  suites x2 + smoke 73/73 + crash 6/6 + rate, all green. **NEW finding:**
+  v0.64.1's extern-unsafe enforcement breaks the published `xiom.http`
+  0.1.1 (67 T001s) -- PULSE pruned the already-unused package
+  (`probe_pkg_http` is the known-red republish gate; the packages lane
+  owns the fix). Next: session-store swap retry with the alias design
+  (m216), kv backend adoption, Linux-side sweep when dl publishes
+  v0.64.1, then ops on greenlight.
+- **Next action:** session-store swap retry with the alias design (m216
+  fix; keep the local store until suites pass), kv backend adoption
+  behind the same store API, Linux-side probe sweep + suites when dl
+  publishes v0.64.1, adopt socket timeouts / signals / define flag when
+  the stdlib exposes them, watch the bindings lane for the durable DB/KV
+  binding (store seam, PROGRESS 6b); when the owner greenlights: CI file
+  + dl release flow + the three showcase sites (ops mechanics in
+  docs/OPS-REQUEST.md).
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded
 

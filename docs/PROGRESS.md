@@ -2,7 +2,18 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-08 (PULSE continuation: Windows re-verify + stdlib adoption)
+**Last updated:** 2026-10-08 (v0.64.1 sweep + registry wave adoption state)
+
+_Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
+**v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
+source-roots), **C-PULSE-10 CLOSED** (`probe_pkg_kv` green -- kv_get
+returns stored text), C-PULSE-11 alias fix noted; full regression green
+on v0.64.1 (suites x2, smoke 73/73, crash 6/6, rate). NEW ecosystem
+breakage filed: v0.64.1 extern-unsafe enforcement rejects the published
+`xiom.http` 0.1.1 (67 T001s); PULSE pruned the already-unused package
+(`probe_pkg_http` = known-red republish gate, packages lane owns it).
+Score holds (toolchain adoption, no new capability)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

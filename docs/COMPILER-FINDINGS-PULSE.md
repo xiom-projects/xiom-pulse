@@ -296,6 +296,46 @@ should flip to green), and both variants of
 archive-bump fleet (it gates the parser contract) and re-run the Windows
 `xiom pkg install` + suite set after any compiler archive change.
 
+## Delta 2026-10-08 (v0.64.1 sweep -- Windows toolchain updated in place)
+
+**Closed by v0.64.1 (verified):**
+- **C-PULSE-08 CLOSED:** `docs/repro/dep-roots-name-form/` -- BOTH the
+  dash and dot dependency-key variants now exit 0 with no `source-roots`
+  workaround. The m215 dotted-key normalization works.
+- **C-PULSE-10 CLOSED:** `probe_pkg_kv` GREEN -- `kv_get` returns the
+  stored text (m217 nested payload chains), multi-key reads stable. The
+  `docs/repro/kv-get-str-corruption/` bundle should now pass as written.
+- **C-PULSE-11 (package type aliases in vectors): fixed per the release
+  notes** (m216); the session-store swap retry using the alias design is
+  the acceptance test (next step).
+- **Regression:** suites x2 (`test_http`/`test_app`/`test_smoke`), smoke
+  73/73, crash 6/6, rate smoke -- all GREEN on v0.64.1 on Windows.
+
+**NEW (consumer-visible breakage, needs the packages lane):**
+- **v0.64.1 enforces extern-unsafe confinement in catalog bodies and the
+  published `xiom.http` 0.1.1 violates it**: 67 T001s ("calling extern
+  \"C\" function 'xiom_alloc' requires an `unsafe` block"; "safe fn
+  'make_ptr_value' cannot return raw pointer type '*UInt8'"). Any project
+  with `xiom-http-0.1.1/src` on the catalog path fails to compile.
+  PULSE response: `xiom.http` was already unused (the stdlib parser
+  adoption replaced it), so it is pruned from `xiom.toml`/`package.xi`;
+  `tests/probes/probe_pkg_http.xi` is the known-red gate. **`xiom.http`
+  needs a compat republish (unsafe-wrapped internals) before other
+  consumers adopt v0.64.1.** The release notes list "Breaking changes:
+  None" -- this should be called out or the enforcement gated.
+
+**Consumer cautions from the v0.64.1 release notes (known issues):**
+- Passing a byte vector by reference to `Str.from_utf8` can emit invalid
+  code -- pass by value (PULSE's kv workaround already does).
+- Assigning an optional into an existing vector element can leave the
+  slot unreadable; a mutating method through a nested field can update a
+  copy -- relevant to any wrapper-struct aggregate design (the C-PULSE-09
+  class); PULSE's alias-based retry avoids nested fields.
+
+**Bump procedure addendum 3:** run `probe_pkg_http` too (expected red
+until the package republishes) and `probe_pkg_middleware`/`probe_pkg_*`
+after any compiler change.
+
 **Toolchain asks (2026-10-08 continuation):**
 
 - **Compile-time build stamping:** no `--define KEY=VAL`-style flag exists
