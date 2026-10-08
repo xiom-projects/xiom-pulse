@@ -160,7 +160,9 @@ if ($tokMatch.Success) {
     Check "token verify 200" $r "200 OK"
     Check "token verify body" $r '"ok":true'
     Check "token verify payload" $r '"payload":'
-    $tampered = $tok.Substring(0, $tok.Length - 1) + "x"
+    # Append a char: deterministic 401 (replacing the last base64url char
+    # is flaky -- trailing padding bits can decode to the same bytes).
+    $tampered = $tok + "x"
     $r = Invoke-CurlPost "/api/token/verify" "{`"token`":`"$tampered`"}"
     Check "token tamper 401" $r "401 Unauthorized"
 }

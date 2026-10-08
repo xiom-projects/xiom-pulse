@@ -134,7 +134,9 @@ if [ -n "$TOK" ]; then
   pulse_check "token verify 200" "$R" "200 OK"
   pulse_check "token verify body" "$R" '"ok":true'
   pulse_check "token verify payload" "$R" '"payload":'
-  TAM="${TOK%?}x"
+  # Append a char: deterministic 401 (replacing the last base64url char is
+  # flaky -- trailing padding bits can decode to the same signature bytes).
+  TAM="${TOK}x"
   R=$(post_json /api/token/verify "{\"token\":\"$TAM\"}")
   pulse_check "token tamper 401" "$R" "401 Unauthorized"
 else

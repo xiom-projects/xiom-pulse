@@ -179,7 +179,10 @@ pub fn main() -> Int {
   let wrong_bytes = slice.str_bytes("other");
   let vw = jwt.jwt_signature_valid_hs256(tok, &wrong_bytes);
   f = f + check("jwt wrong secret", vw.is_ok && !vw.value);
-  let tampered = string.str_slice(tok, 0, tok.len() - 1) + "x";
+  // Append a byte to the signature: deterministic 401 (replacing the last
+  // base64url char is flaky -- trailing padding bits can decode to the
+  // same signature bytes, and replacing 'x' with 'x' is a no-op).
+  let tampered = tok + "x";
   let vt = jwt.jwt_signature_valid_hs256(tampered, &secret_bytes);
   f = f + check("jwt tamper rejected", vt.is_ok && !vt.value);
   let ve = jwt.jwt_verify_hs256(tok, &secret_bytes, now + 7200);

@@ -37,6 +37,7 @@ use xiom.pulse.store;
 use xiom.pulse.ratelimit;
 use xiom.pulse.cors;
 use xiom.pulse.validate;
+use xiom.pulse.schema;
 use xiom.pulse.reqctx;
 use xiom.convert.parse;
 use xiom.static;
@@ -132,10 +133,13 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, json.json_stringify(v));
   }
   if m.route_id == 4 {
-    let user = validate.field_str(body, "user", 64);
-    if user.len() == 0 {
-      return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"} (<=64 chars)"));
+    var rules = schema.schema_rules_new();
+    schema.schema_string(&mut rules, "user", true, 1, 64);
+    let vr = schema.schema_validate(&rules, body);
+    if !vr.ok {
+      return out_json(400, envelope.error_body("invalid_request", vr.message));
     }
+    let user = schema.schema_str_value(body, "user");
     let ttl = config.cfg_session_ttl_secs();
     let sid = session.session_create(user, ttl);
     let csrf = session.csrf_new_token();
@@ -168,10 +172,13 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: envelope.ok_bool(true); body_bytes: Vec[UInt8].new(); };
   }
   if m.route_id == 7 {
-    let user = validate.field_str(body, "user", 64);
-    if user.len() == 0 {
-      return out_json(400, envelope.error_body("invalid_request", "body must be {\"user\":\"...\"}"));
+    var rules = schema.schema_rules_new();
+    schema.schema_string(&mut rules, "user", true, 1, 64);
+    let vr = schema.schema_validate(&rules, body);
+    if !vr.ok {
+      return out_json(400, envelope.error_body("invalid_request", vr.message));
     }
+    let user = schema.schema_str_value(body, "user");
     let now = time.unix_timestamp();
     var pv = json.json_set(json.json_object_new(), "sub", json.json_string(user));
     pv = json.json_set(pv, "iat", json.json_number(convert.int_to_float(now)));
@@ -185,10 +192,13 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(200, json_ok_field("token", token));
   }
   if m.route_id == 8 {
-    let token = validate.field_str(body, "token", 4096);
-    if token.len() == 0 {
-      return out_json(400, envelope.error_body("invalid_request", "body must be {\"token\":\"...\"}"));
+    var rules = schema.schema_rules_new();
+    schema.schema_string(&mut rules, "token", true, 1, 4096);
+    let vr = schema.schema_validate(&rules, body);
+    if !vr.ok {
+      return out_json(400, envelope.error_body("invalid_request", vr.message));
     }
+    let token = schema.schema_str_value(body, "token");
     let now = time.unix_timestamp();
     let secret_bytes = slice.str_bytes(config.cfg_jwt_secret());
     let vr = jwt.jwt_verify_hs256(token, &secret_bytes, now);
