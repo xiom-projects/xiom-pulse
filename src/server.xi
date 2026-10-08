@@ -144,12 +144,19 @@ fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOu
 /// handle_route dispatches a matched route to a HandlerOut.
 /// Complexity: O(body).
 pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut {
-  // Transfer-Encoding is not implemented: reject outright. A front proxy
-  // that honors TE while PULSE honors Content-Length would desync into
-  // request smuggling (CL.TE), so TE -- alone or with CL -- never reaches
-  // a route. 501 = unsupported transfer-coding (RFC 9110).
-  if http.header_get(req, "transfer-encoding").len() > 0 {
-    return out_json(501, envelope.error_body("unsupported_transfer_encoding", "Transfer-Encoding is not supported"));
+  // Transfer-Encoding policy (chunked support since 2026-10-08):
+  //   * `chunked` alone -> decoded body reaches the route;
+  //   * `chunked` + Content-Length -> 400: ambiguous framing is the classic
+  //     CL.TE smuggling shape and is refused outright;
+  //   * any other coding -> 501 (unsupported transfer-coding, RFC 9110).
+  let te_hdr = http.header_get(req, "transfer-encoding");
+  if te_hdr.len() > 0 {
+    if !http.te_is_chunked(te_hdr) {
+      return out_json(501, envelope.error_body("unsupported_transfer_encoding", "Transfer-Encoding is not supported"));
+    }
+    if http.header_get(req, "content-length").len() > 0 {
+      return out_json(400, envelope.error_body("bad_request", "Transfer-Encoding with Content-Length is ambiguous"));
+    }
   }
   if m.kind == 0 {
     return out_json(404, envelope.error_body("not_found", "not found"));
@@ -396,10 +403,25 @@ fn read_request(client: Int) -> Vec[UInt8] {
               sent100 = true;
             }
           }
-          var want: Int = he + 4 + content_length_of(&raw, he);
-          let cap: Int = he + 4 + MAX_BODY;
-          if want > cap { want = cap; }
-          if raw.len() >= want { done = true; }
+          let te = http.transfer_encoding_of(&raw, he);
+          if te.len() > 0 {
+            if http.te_is_chunked(te) {
+              // Wait for the terminating zero chunk (or malformed framing);
+              // the raw cap leaves a 16 KiB budget for chunk metadata.
+              let tcap: Int = he + 4 + MAX_BODY + 16384;
+              let st = http.chunked_state(&raw, he);
+              if st != 0 || raw.len() >= tcap { done = true; }
+            } else {
+              // Unsupported coding: the body (if any) is not ours to read;
+              // the route layer answers 501 after this head.
+              done = true;
+            }
+          } else {
+            var want: Int = he + 4 + content_length_of(&raw, he);
+            let cap: Int = he + 4 + MAX_BODY;
+            if want > cap { want = cap; }
+            if raw.len() >= want { done = true; }
+          }
         } else if header_overflow(&raw) {
           done = true;
         }
@@ -624,16 +646,22 @@ pub fn main() -> Int {
       let req = http.parse_request(&raw);
       let cookie_header = http.header_get(&req, "cookie");
       if !req.ok {
+        var status: Int = 400;
+        var code: Str = "bad_request";
+        if string.str_contains(req.error, "too large") {
+          status = 413;
+          code = "payload_too_large";
+        }
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-        var resp = http.build_response_full(400, CONTENT_JSON, &no_headers, envelope.error_body("bad_request", "bad request"));
+        var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, "bad request"));
         resp = with_date(with_cors(resp, &req));
         let w_ok = send_all(client, &resp);
-        if !w_ok { io.println("pulse: send failed (400)"); io.flush_stdout(); }
+        if !w_ok { io.println("pulse: send failed (" + status.to_str() + ")"); io.flush_stdout(); }
         socket.socket_close(client);
         let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(400, resp.len());
+        metrics.metrics_record(status, resp.len());
         metrics.metrics_record_duration(dur);
-        access_log(rid, "?", "-", 400, resp.len(), dur);
+        access_log(rid, "?", "-", status, resp.len(), dur);
       } else if http.header_get(&req, "x-pulse-quit") == "1" {
         socket.socket_close(client);
         running = false;

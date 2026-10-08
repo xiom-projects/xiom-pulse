@@ -156,6 +156,45 @@ pub fn main() -> Int {
   f = f + check("security nosniff", string.str_contains(resp_str, "X-Content-Type-Options: nosniff"));
   f = f + check("security frame deny", string.str_contains(resp_str, "X-Frame-Options: DENY"));
 
+  // --- chunked transfer-encoding (2026-10-08) ------------------------------
+  let ck1 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n");
+  let che1 = http.find_header_end(&ck1);
+  f = f + check("te chunked detected", http.te_is_chunked(http.transfer_encoding_of(&ck1, che1)));
+  f = f + check("chunked_state complete", http.chunked_state(&ck1, che1) == 1);
+  let creq1 = http.parse_request(&ck1);
+  f = f + check("chunked parse ok", creq1.ok);
+  f = f + check("chunked body", http.bytes_to_str(&creq1.body, 0, creq1.body.len()) == "Wikipedia");
+  let cdec = http.decode_chunked(&ck1, che1, 3);
+  f = f + check("chunked decoded cap", !cdec.ok && string.str_contains(cdec.error, "too large"));
+
+  let ck2 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n4;ext=1\r\nWiki\r\n0\r\nX-Trailer: v\r\n\r\n");
+  let che2 = http.find_header_end(&ck2);
+  f = f + check("chunked trailer state complete", http.chunked_state(&ck2, che2) == 1);
+  let creq2 = http.parse_request(&ck2);
+  f = f + check("chunked ext+trailer ok", creq2.ok && http.bytes_to_str(&creq2.body, 0, creq2.body.len()) == "Wiki");
+
+  let ck3 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\nzz\r\n");
+  let che3 = http.find_header_end(&ck3);
+  f = f + check("chunked malformed state", http.chunked_state(&ck3, che3) == -1);
+  let creq3 = http.parse_request(&ck3);
+  f = f + check("chunked malformed parse", !creq3.ok && string.str_contains(creq3.error, "malformed"));
+
+  let ck4 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nWiki\r\n");
+  let che4 = http.find_header_end(&ck4);
+  f = f + check("chunked partial state", http.chunked_state(&ck4, che4) == 0);
+  let creq4 = http.parse_request(&ck4);
+  f = f + check("chunked partial parse", !creq4.ok && string.str_contains(creq4.error, "incomplete"));
+
+  let ck5 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n1\r\na\r\n1\r\nb\r\n0\r\n\r\n");
+  let creq5 = http.parse_request(&ck5);
+  f = f + check("chunked multi-chunk", creq5.ok && http.bytes_to_str(&creq5.body, 0, creq5.body.len()) == "ab");
+
+  let ck6 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: gzip\r\n\r\n");
+  let che6 = http.find_header_end(&ck6);
+  f = f + check("te gzip not chunked", !http.te_is_chunked(http.transfer_encoding_of(&ck6, che6)));
+  let creq6 = http.parse_request(&ck6);
+  f = f + check("te gzip parse empty body", creq6.ok && creq6.body.len() == 0);
+
   if f == 0 {
     io.println("pulse-http: GREEN");
   } else {

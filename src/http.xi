@@ -94,8 +94,9 @@ fn find_crlf(buf: &Vec[UInt8], from: Int, limit: Int) -> Int {  var i: Int = fro
   return -1;
 }
 
-/// parse_request parses the request line, headers and Content-Length body
-/// from raw bytes. Never traps: failures set ok=false + error.
+/// parse_request parses the request line, headers and body (Content-Length
+/// or chunked transfer-encoding) from raw bytes. Never traps: failures set
+/// ok=false + error.
 ///
 /// Since 2026-10-07 the syntax layer is the shared stdlib parser
 /// (`xiom.net.server.server_parse_request`, built for PULSE); this adapter
@@ -106,7 +107,11 @@ fn find_crlf(buf: &Vec[UInt8], from: Int, limit: Int) -> Int {  var i: Int = fro
 ///     case-insensitive, so callers are unaffected;
 ///   - header values are trimmed (stdlib strips one leading space only);
 ///   - invalid Content-Length (negative/non-numeric) is now REJECTED
-///     (hardening; the differential probe pins it on both parsers).
+///     (hardening; the differential probe pins it on both parsers);
+///   - `Transfer-Encoding: chunked` bodies are decoded (chunk extensions
+///     ignored, trailers validated + skipped, 1 MiB decoded cap, errors:
+///     "incomplete/malformed chunked body", "chunked body too large");
+///     any other transfer-coding keeps the body empty for the 501 guard.
 /// Complexity: O(n). Pure.
 pub fn parse_request(raw: &Vec[UInt8]) -> PulseRequest {
   var req: PulseRequest = PulseRequest{
@@ -164,6 +169,25 @@ pub fn parse_request(raw: &Vec[UInt8]) -> PulseRequest {
     hi = hi + 1;
   }
 
+  // Transfer-Encoding: `chunked` is decoded here (v0.64.1-era smuggling
+  // guard kept: any OTHER coding stays unread and the route layer answers
+  // 501; TE + Content-Length together are rejected by the route layer).
+  let te = header_get(&req, "transfer-encoding");
+  if te.len() > 0 {
+    if !te_is_chunked(te) {
+      req.ok = true;
+      return req;
+    }
+    let dec = decode_chunked(raw, hdr_end, body_limit_bytes());
+    if !dec.ok {
+      req.error = dec.error;
+      return req;
+    }
+    req.body = dec.body;
+    req.ok = true;
+    return req;
+  }
+
   var bs: Int = r.body_start;
   var be: Int = r.body_start + r.body_len;
   if be > raw.len() { be = raw.len(); }
@@ -194,9 +218,22 @@ pub fn header_get(req: &PulseRequest, name: Str) -> Str {
 /// content_length_of returns the request's Content-Length parsed from the
 /// header span [0, hdr_end), or 0 when absent/invalid. O(n). Pure.
 pub fn content_length_of(raw: &Vec[UInt8], hdr_end: Int) -> Int {
+  let v = raw_header_value(raw, hdr_end, "content-length");
+  if v.len() == 0 { return 0; }
+  let pr = parse_int(v);
+  if pr.is_ok {
+    return pr.value;
+  }
+  return 0;
+}
+
+/// raw_header_value returns the first value of the named header
+/// (case-insensitive) from the head span [0, hdr_end) of raw bytes, or "".
+/// Complexity: O(n). Pure.
+pub fn raw_header_value(raw: &Vec[UInt8], hdr_end: Int, name: Str) -> Str {
   var pos: Int = 0;
   var line_end = find_crlf(raw, pos, hdr_end + 2);
-  if line_end < 0 { return 0; }
+  if line_end < 0 { return ""; }
   pos = line_end + 2;
   while pos < hdr_end {
     let next = find_crlf(raw, pos, hdr_end + 2);
@@ -208,19 +245,187 @@ pub fn content_length_of(raw: &Vec[UInt8], hdr_end: Int) -> Int {
       None => { col = -1; },
     }
     if col > 0 {
-      let name = string.str_slice(line, 0, col);
-      if str_eq_ignore_case(name, "content-length") {
-        let value = string.str_trim(string.str_slice(line, col + 1, line.len()));
-        let pr = parse_int(value);
-        if pr.is_ok {
-          return pr.value;
-        }
-        return 0;
+      let hname = string.str_slice(line, 0, col);
+      if str_eq_ignore_case(hname, name) {
+        return string.str_trim(string.str_slice(line, col + 1, line.len()));
       }
     }
     pos = next + 2;
   }
-  return 0;
+  return "";
+}
+
+/// transfer_encoding_of returns the lowercased, trimmed Transfer-Encoding
+/// value from the request head, or "". Complexity: O(n). Pure.
+pub fn transfer_encoding_of(raw: &Vec[UInt8], hdr_end: Int) -> Str {
+  let v = raw_header_value(raw, hdr_end, "transfer-encoding");
+  return string.str_lower(string.str_trim(v));
+}
+
+/// te_is_chunked is true only for the exact single coding "chunked"
+/// (case-insensitive). Lists (`gzip, chunked`) and other codings are false;
+/// the route layer answers those 501. Complexity: O(n). Pure.
+pub fn te_is_chunked(te: Str) -> Bool {
+  let t = string.str_lower(string.str_trim(te));
+  return t == "chunked";
+}
+
+/// body_limit_bytes returns the max decoded request body the server accepts
+/// (keep in sync with `server.xi MAX_BODY`). Complexity: O(1). Pure.
+pub fn body_limit_bytes() -> Int {
+  return 1048576;
+}
+
+/// hex_digit returns the value of hex char at index i (lowercased), or -1.
+/// Complexity: O(1). Pure.
+fn hex_digit(s: Str, i: Int) -> Int {
+  let ch = string.str_lower(string.str_slice(s, i, i + 1));
+  match string.str_index_of("0123456789abcdef", ch) {
+    Some(v) => { return v; },
+    None => { return -1; },
+  }
+  return -1;
+}
+
+/// parse_hex_uint parses 1..8 hex digits (chunk sizes); -1 on empty,
+/// overlong, or non-hex input. Complexity: O(n). Pure.
+fn parse_hex_uint(s: Str) -> Int {
+  let n = s.len();
+  if n == 0 || n > 8 { return -1; }
+  var v: Int = 0;
+  var i: Int = 0;
+  while i < n {
+    let d = hex_digit(s, i);
+    if d < 0 { return -1; }
+    v = v * 16 + d;
+    i = i + 1;
+  }
+  return v;
+}
+
+/// chunk_size_text strips an optional chunk extension (`;...`) and trims a
+/// chunk-size line. Complexity: O(n). Pure.
+fn chunk_size_text(line: Str) -> Str {
+  var cut: Int = line.len();
+  match string.str_index_of(line, ";") {
+    Some(v) => { cut = v; },
+    None => { cut = line.len(); },
+  }
+  return string.str_trim(string.str_slice(line, 0, cut));
+}
+
+/// chunked_state scans the chunked framing after `hdr_end`:
+///   1 = terminating zero chunk + trailers fully present
+///   0 = need more bytes
+///  -1 = malformed framing (bad size line, bad chunk CRLF, bad trailer)
+/// Complexity: O(n). Pure.
+pub fn chunked_state(raw: &Vec[UInt8], hdr_end: Int) -> Int {
+  var p: Int = hdr_end + 4;
+  var guard: Int = 0;
+  while guard < 1000000 {
+    guard = guard + 1;
+    if p > raw.len() { return 0; }
+    let le = find_crlf(raw, p, raw.len());
+    if le < 0 {
+      if raw.len() - p > 1024 { return -1; }
+      return 0;
+    }
+    let sz = parse_hex_uint(chunk_size_text(bytes_to_str(raw, p, le)));
+    if sz < 0 { return -1; }
+    if sz == 0 {
+      var q: Int = le + 2;
+      var tg: Int = 0;
+      while tg < 1000 {
+        tg = tg + 1;
+        let te2 = find_crlf(raw, q, raw.len());
+        if te2 < 0 {
+          if raw.len() - q > 1024 { return -1; }
+          return 0;
+        }
+        if te2 == q { return 1; }
+        q = te2 + 2;
+      }
+      return -1;
+    }
+    let de: Int = le + 2 + sz;
+    if de + 2 > raw.len() { return 0; }
+    if raw[de] != 13u8 || raw[de + 1] != 10u8 { return -1; }
+    p = de + 2;
+  }
+  return -1;
+}
+
+/// ChunkedBody - decoded chunked-transfer body or the failure reason.
+pub type ChunkedBody = {
+  body: Vec[UInt8];
+  ok: Bool;
+  error: Str;
+}
+
+/// decode_chunked decodes the chunked framing after `hdr_end`, enforcing
+/// `max_body` on the DECODED size. Fails close on any inconsistency (the
+/// caller should have waited for chunked_state == 1 first). Trailers are
+/// validated and skipped. Complexity: O(n). Pure.
+pub fn decode_chunked(raw: &Vec[UInt8], hdr_end: Int, max_body: Int) -> ChunkedBody {
+  var out: Vec[UInt8] = Vec[UInt8].new();
+  var res: ChunkedBody = ChunkedBody{ body: out; ok: false; error: "" };
+  var p: Int = hdr_end + 4;
+  var guard: Int = 0;
+  while guard < 1000000 {
+    guard = guard + 1;
+    let le = find_crlf(raw, p, raw.len());
+    if le < 0 {
+      res.error = "incomplete chunked body";
+      return res;
+    }
+    let sz = parse_hex_uint(chunk_size_text(bytes_to_str(raw, p, le)));
+    if sz < 0 {
+      res.error = "malformed chunked body";
+      return res;
+    }
+    if sz == 0 {
+      var q: Int = le + 2;
+      var tg: Int = 0;
+      while tg < 1000 {
+        tg = tg + 1;
+        let te2 = find_crlf(raw, q, raw.len());
+        if te2 < 0 {
+          res.error = "incomplete chunked body";
+          return res;
+        }
+        if te2 == q {
+          res.body = out;
+          res.ok = true;
+          return res;
+        }
+        q = te2 + 2;
+      }
+      res.error = "malformed chunked body";
+      return res;
+    }
+    if out.len() + sz > max_body {
+      res.error = "chunked body too large";
+      return res;
+    }
+    let ds: Int = le + 2;
+    let de: Int = ds + sz;
+    if de + 2 > raw.len() {
+      res.error = "incomplete chunked body";
+      return res;
+    }
+    var i: Int = ds;
+    while i < de {
+      out.push(raw[i]);
+      i = i + 1;
+    }
+    if raw[de] != 13u8 || raw[de + 1] != 10u8 {
+      res.error = "malformed chunked body";
+      return res;
+    }
+    p = de + 2;
+  }
+  res.error = "malformed chunked body";
+  return res;
 }
 
 /// with_header_line inserts `line` (without CRLF) immediately after the

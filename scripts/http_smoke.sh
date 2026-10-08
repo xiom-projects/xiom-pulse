@@ -83,9 +83,14 @@ R=$(post_json /api/echo 'notjson')
 pulse_check "echo invalid 400" "$R" "400 Bad Request"
 pulse_check "echo invalid json" "$R" '"code":"invalid_json"'
 
-# --- 4b. Transfer-Encoding rejected (smuggling guard) -----------------------
-R=$(post_json /api/echo '{"te":1}' -H 'Transfer-Encoding: chunked')
-pulse_check "te rejected 501" "$R" "501 Not Implemented"
+# --- 4b. Transfer-Encoding: chunked decoded; gzip 501; TE+CL 400 ------------
+R=$(post_json /api/echo '{"chunked":1}' -H 'Transfer-Encoding: chunked')
+pulse_check "chunked 200" "$R" "200 OK"
+pulse_check "chunked echo body" "$R" '{"echo":{"chunked":1}}'
+R=$(post_json /api/echo '{"x":1}' -H 'Transfer-Encoding: chunked' -H 'Content-Length: 7')
+pulse_check "te+cl rejected 400" "$R" "400 Bad Request"
+R=$(post_json /api/echo '{"x":1}' -H 'Transfer-Encoding: gzip')
+pulse_check "te gzip rejected 501" "$R" "501 Not Implemented"
 
 # --- 5. 404 -----------------------------------------------------------------
 R=$(http_get /nope)

@@ -112,9 +112,14 @@ $r = Invoke-CurlPost "/api/echo" 'notjson'
 Check "echo invalid 400" $r "400 Bad Request"
 Check "echo invalid json" $r '"code":"invalid_json"'
 
-# 4b. Transfer-Encoding rejected (501; smuggling guard)
-$r = Invoke-CurlPost "/api/echo" '{"te":1}' -ExtraHeaders @("-H", "Transfer-Encoding: chunked")
-Check "te rejected 501" $r "501 Not Implemented"
+# 4b. Transfer-Encoding: chunked decoded; gzip 501; TE+CL 400
+$r = Invoke-CurlPost "/api/echo" '{"chunked":1}' -ExtraHeaders @("-H", "Transfer-Encoding: chunked")
+Check "chunked 200" $r "200 OK"
+Check "chunked echo body" $r '{"echo":{"chunked":1}}'
+$r = Invoke-CurlPost "/api/echo" '{"x":1}' -ExtraHeaders @("-H", "Transfer-Encoding: chunked", "-H", "Content-Length: 7")
+Check "te+cl rejected 400" $r "400 Bad Request"
+$r = Invoke-CurlPost "/api/echo" '{"x":1}' -ExtraHeaders @("-H", "Transfer-Encoding: gzip")
+Check "te gzip rejected 501" $r "501 Not Implemented"
 
 # 5. 404
 $r = curl.exe -s -i "$base/nope" 2>&1 | Out-String

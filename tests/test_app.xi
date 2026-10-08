@@ -51,7 +51,10 @@ fn route_req_hdr(method: Str, target: Str, headers: Str, body: Str) -> HandlerOu
   let raw = http.str_to_bytes(raw_str);
   let req = http.parse_request(&raw);
   let m = router.route_match(method, target);
-  return app.handle_route(m, &req, body);
+  // pass the PARSED body so chunked decoding is exercised (decoded == body
+  // for plain Content-Length requests).
+  let decoded = http.bytes_to_str(&req.body, 0, req.body.len());
+  return app.handle_route(m, &req, decoded);
 }
 
 pub fn main() -> Int {
@@ -201,10 +204,12 @@ pub fn main() -> Int {
   f = f + check("dispatch health", h.status == 200 && string.str_contains(h.body, "\"status\":\"ok\""));
   let h405 = route_req("POST", "/health", "");
   f = f + check("dispatch 405 allow", h405.status == 405 && h405.headers.len() == 1);
-  let te = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: chunked\r\n", "0\r\n\r\n");
-  f = f + check("te rejected 501", te.status == 501 && string.str_contains(te.body, "unsupported_transfer_encoding"));
-  let tecl = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: chunked\r\nContent-Length: 5\r\n", "hello");
-  f = f + check("te+cl rejected 501", tecl.status == 501);
+  let te = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: chunked\r\n", "7\r\n{\"a\":1}\r\n0\r\n\r\n");
+  f = f + check("te chunked accepted", te.status == 200 && string.str_contains(te.body, "\"echo\":{\"a\":1}"));
+  let tecl = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: chunked\r\nContent-Length: 5\r\n", "0\r\n\r\n");
+  f = f + check("te+cl rejected 400", tecl.status == 400 && string.str_contains(tecl.body, "ambiguous"));
+  let tegz = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: gzip\r\n", "x");
+  f = f + check("te gzip rejected 501", tegz.status == 501 && string.str_contains(tegz.body, "unsupported_transfer_encoding"));
   let nf = route_req("GET", "/nope", "");
   f = f + check("dispatch 404 envelope", nf.status == 404 && string.str_contains(nf.body, "\"code\":\"not_found\""));
   reqctx.set_rid("r-test");
