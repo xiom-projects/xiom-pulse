@@ -77,6 +77,9 @@
   **C-PULSE-14** (see bug gates); Windows v0.64.1 stays flat. Evidence:
   `probe-logs/soak-http.summary.txt` + the progress curve; runtime repro
   `tests/probes/probe_alloc_loop.xi`.
+- **Wrap 5 (config validation):** invalid values now warn at startup and
+  in `--check-config` (port/uint/TTL/bool/enum; test_app +8 checks, smoke
+  **78/78** on both platforms). Configuration 80 -> 85.
 - **Showcase/site (owner decisions 2026-10-08):** `pulse.xiom-lang.org`
   DNS is live (no staging subdomain needed); `orbitdb.`/`xvector.` pages
   later (DNS records exist). Phase 1: the **website lane** owns the
@@ -100,14 +103,15 @@
   complete on both platforms** (Linux sweep green, incl. the 20m kv soak);
   ops answered (staging parked; Linux toolchain pin v0.64.1 recorded; CI
   on greenlight).
-- **Score:** ~55.8% production grade (`docs/PROGRESS.md`).
+- **Score:** ~56.1% production grade (`docs/PROGRESS.md`).
 - **NEXT (in order):** 1) watch the lanes: compiler (C-PULSE-09 Windows
   runtime fix -> session-swap retry on both platforms; **C-PULSE-14
   Linux request-path RSS retention -- runtime investigation, repro
   filed**; C-PULSE-13 resolver unification, routed via the packages
   lane), bindings (DB/KV binding, store seam). 2) non-blocked hardening:
-  config-value validation warnings, chunked RESPONSES (with keep-alive),
-  a fresh 30-60m soak, or the repeatable RSS sampler for C-PULSE-14.
+  chunked RESPONSES (with keep-alive), a fresh 30-60m soak, the
+  repeatable RSS sampler for C-PULSE-14, or the kv-default ops-surface
+  prep (Dockerfile/backup/crash-test kv-awareness).
   3) kv default flip only after the recorded prerequisites; otherwise
   keep kv opt-in. 4) website lane Phase 1 (pulse. subdomain page; brief
   in `docs/WEBSITE-RELAY-PULSE.md`); on owner greenlight: GH Actions
@@ -562,9 +566,10 @@ TASK ORDER:
    fleet (incl. probe_pkg_http) + suites x2 + smoke 76/76 (jsonl and kv)
    on Linux; compare against probe-logs/linux-sweep-20261008T134143Z/
    before touching anything.
-2. NON-BLOCKED hardening (pick by value): config-value validation
-   warnings, chunked RESPONSES (with keep-alive), a fresh 30-60m soak,
-   or a repeatable RSS sampler for C-PULSE-14. Keep-alive
+2. NON-BLOCKED hardening (pick by value): chunked RESPONSES (with
+   keep-alive), a fresh 30-60m soak, a repeatable RSS sampler for
+   C-PULSE-14, or the kv-default ops-surface prep (kv-aware Dockerfile/
+   backup/crash-test/deployment doc). Keep-alive
    stays gated on socket timeouts, SIGTERM on the stdlib handler API,
    build stamping on a compiler define flag (all filed).
 3. WATCH the lanes: compiler (C-PULSE-09 is Windows-only now -> retry

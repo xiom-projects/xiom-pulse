@@ -55,8 +55,8 @@ rerun via the PULSE repo's `scripts/` + `out/pulse_app`).
 ## 4. Safe-to-claim fact sheet (evidence-backed)
 
 - Official XIOM web backend; single binary; MIT OR Apache-2.0.
-- Verified on **Windows and Linux**: HTTP smoke **76/76** (incl. request
-  chunked decoding), three suites x2,
+- Verified on **Windows and Linux**: HTTP smoke **78/78** (incl. request
+  chunked decoding + config validation), three suites x2,
   crash/reopen **6/6**, rate limiting, JSON access log + audit trail,
   Prometheus metrics.
 - **1h load soak on Windows: 13,198/13,198 requests, 0 errors**, flat

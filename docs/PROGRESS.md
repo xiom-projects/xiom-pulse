@@ -52,6 +52,12 @@ release-gating for the Linux demo, not for Phase-1 website work. HTTP
 core 80 -> 84 (+0.5); Reliability 45 -> 40 (-0.5, Linux soak caveat).
 Total ~55.9% -> ~55.8%._
 
+_Delta 2026-10-08 (wrap 5): **config-value validation warnings** landed --
+invalid `PULSE_PORT`/rate/TTL/audit-size values, non-0/1 booleans and
+unknown store backends now warn at startup and in `--check-config`
+instead of silently falling back (test_app +8 checks, smoke 76 -> **78**
+on both platforms). Configuration 80 -> 85. Total ~55.8% -> ~56.1%._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -64,7 +70,7 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~55.8% of production grade**
+## 1. Overall score: **~56.1% of production grade**
 
 _Delta 2026-10-08 (kv backend): 54.6% -> ~55.6% -- **`xiom.kv` adopted as
 the opt-in event-store backend** (`PULSE_STORE_BACKEND=kv`,
@@ -157,7 +163,7 @@ fallbacks._
 | 1 | HTTP core (parse/build/limits) | 12% | 84% | 10.1 | query strings, header caps, HEAD, shared stdlib parser + invalid-CL reject, **chunked request decode** + TE/CL smuggling guard, Expect: 100-continue, Date header; keep-alive + chunked responses missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
-| 4 | Configuration | 5% | 80% | 4.0 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; no per-value type validation |
+| 4 | Configuration | 5% | 85% | 4.3 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; **value validation warnings** (bad port/uint/TTL/bool/enum -> startup + check-config warnings); no schema library |
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 68% | 6.8 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+, verified on both platforms incl. a **20m kv soak** with hard-kill reopen), crash-safe append, `?limit`/`?kind`, compaction; no update/delete/index, no fsync |
@@ -166,7 +172,7 @@ fallbacks._
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 40% | 4.0 | flat-memory soaks on Windows (1h 13,198/13,198 + 6,543/6,543); **Linux RSS growth ~48 KB/req open (C-PULSE-14, 30m: 2.5 -> 146 MB)**; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **55.8** | |
+| | **Total** | **100%** | | **56.1** | |
 
 Two lenses to keep separate:
 
@@ -259,10 +265,14 @@ as C-PULSE-14 with a runtime repro (`tests/probes/probe_alloc_loop.xi`).
 - Registry `xiom.http.middleware` 0.1.0 adopted for CSRF token/validate and
   CORS header building; no composable chain, no recover-to-500.
 
-**Configuration (75%)**
+**Configuration (85%)**
 - Env-based with a JSON file (`PULSE_CONFIG`) for all eleven settings;
   environment variables win over file values.
-- No value schema/range validation beyond per-setting parsers/fallbacks.
+- **Value validation warnings landed (2026-10-08):** invalid
+  `PULSE_PORT`/rate/TTL/audit-size values, non-0/1 booleans and unknown
+  store backends are reported once at startup (`pulse: warning: ...`) and
+  in `--check-config` (`warning: ...`) instead of silently falling back.
+- No general schema library beyond these per-setting checks.
 
 **Observability (78%)**
 - On registry `xiom.metrics` 0.2.0: labeled status-class counters, the
