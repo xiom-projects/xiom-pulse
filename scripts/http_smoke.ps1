@@ -27,6 +27,12 @@ $base = "http://127.0.0.1:$Port"
 $logDir = Join-Path $repoRoot "probe-logs"
 if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 
+# --- CLI pre-flight (--version / --check-config) ----------------------------
+$verOut = (& $ServerExe --version 2>&1 | Out-String)
+$verRc = $LASTEXITCODE
+$cfgOut = (& $ServerExe --check-config 2>&1 | Out-String)
+$cfgRc = $LASTEXITCODE
+
 $env:PULSE_PORT = "$Port"
 $env:PULSE_CORS_ORIGIN = "*"
 $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -56,6 +62,11 @@ function Check {
         $script:fail++
     }
 }
+
+Check "cli version text" $verOut "xiom-pulse"
+Check "cli version rc" "rc=$verRc" "rc=0"
+Check "cli check-config text" $cfgOut "port="
+Check "cli check-config rc" "rc=$cfgRc" "rc=0"
 
 function Invoke-CurlPost {
     param([string]$Path, [string]$Body, [string]$CookieJar = "", [string[]]$ExtraHeaders = @())

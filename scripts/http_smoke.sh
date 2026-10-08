@@ -37,6 +37,16 @@ while [ $# -gt 0 ]; do
 done
 [ -x "$SERVER_EXE" ] || pulse_die "server not built: $SERVER_EXE (run scripts/build.sh src/server.xi --name pulse_app)"
 
+# --- 0. CLI pre-flight (--version / --check-config) -------------------------
+VER_OUT=$("$SERVER_EXE" --version 2>&1)
+VER_RC=$?
+pulse_check "cli version text" "$VER_OUT" "xiom-pulse"
+pulse_check_eq "cli version rc" "$VER_RC" "0"
+CFG_OUT=$("$SERVER_EXE" --check-config 2>&1)
+CFG_RC=$?
+pulse_check "cli check-config text" "$CFG_OUT" "port="
+pulse_check_eq "cli check-config rc" "$CFG_RC" "0"
+
 LOG_DIR="$PULSE_REPO_ROOT/probe-logs"
 mkdir -p "$LOG_DIR"
 SERVER_LOG="$LOG_DIR/http-smoke.out"

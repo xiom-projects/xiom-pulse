@@ -455,10 +455,38 @@ pub fn main() -> Int {
     }
     if a == "--help" || a == "-h" {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
-      io.println("usage: pulse_app [--version] [--help]");
+      io.println("usage: pulse_app [--version] [--help] [--check-config]");
       io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG");
+      return 0;
+    }
+    if a == "--check-config" {
+      // Pre-flight: load the config file (env wins) and dump effective
+      // values without binding. Exit 1 only when a configured file is
+      // unreadable/not a JSON object; the secret value is never printed.
+      if !config.cfg_load_file() {
+        io.println("config: load failed: " + config.cfg_config_path());
+        return 1;
+      }
+      let cfgpath = config.cfg_config_path();
+      if cfgpath.len() == 0 {
+        io.println("config: no config file (env only)");
+      } else {
+        io.println("config: loaded " + cfgpath);
+      }
+      io.println("port=" + config.cfg_port().to_str());
+      io.println("store=" + config.cfg_store_path());
+      io.println("audit=" + config.cfg_audit_path());
+      io.println("audit_max_bytes=" + config.cfg_audit_max_bytes().to_str());
+      io.println("rate_limit=" + config.cfg_rate_limit().to_str() + " burst=" + config.cfg_rate_burst().to_str());
+      io.println("cors=" + config.cfg_cors_origin());
+      io.println("session_ttl=" + config.cfg_session_ttl_secs().to_str());
+      io.println("static_dir=" + config.cfg_static_dir());
+      let js = env.var_or("PULSE_JWT_SECRET", "");
+      var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
+      if js.len() > 0 { secret_note = "env"; }
+      io.println("jwt_secret=" + secret_note);
       return 0;
     }
     ai = ai + 1;
