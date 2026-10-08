@@ -26,6 +26,7 @@ ENV PULSE_PORT=8080 \
     PULSE_STATIC_DIR=resources/img \
     PULSE_ASSETS_DIR=resources/public \
     PULSE_STORE_PATH=/data/pulse-events.jsonl \
+    PULSE_KV_DIR=/data/pulse-kv \
     PULSE_AUDIT_PATH=/data/pulse-audit.log
 
 EXPOSE 8080

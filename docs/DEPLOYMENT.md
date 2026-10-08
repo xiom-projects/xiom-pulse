@@ -20,18 +20,32 @@ flowchart LR
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PULSE_PORT` | `8080` | listen port (loopback) |
+| `PULSE_PORT` | `8080` | listen port |
+| `PULSE_BIND` | `127.0.0.1` | listen address (loopback by design) |
 | `PULSE_LOG` | `1` | `0` disables access-log lines |
-| `PULSE_STORE_PATH` | `pulse-events.jsonl` | event store |
+| `PULSE_STORE_BACKEND` | `jsonl` | event store backend: `jsonl` or `kv` |
+| `PULSE_STORE_PATH` | `pulse-events.jsonl` | JSONL event store |
+| `PULSE_KV_DIR` | `pulse-kv` | kv segment directory (`kv` backend) |
+| `PULSE_KV_PREFIX` | `evt-` | kv sequence-key prefix |
 | `PULSE_AUDIT_PATH` | `pulse-audit.log` | audit trail |
+| `PULSE_AUDIT_MAX_BYTES` | `5000000` | audit rotation threshold (`0` = off) |
+| `PULSE_CONFIG` | (unset) | JSON config file (env wins) |
 | `PULSE_ICON_PATH` | `resources/img/pulse-ico.ico` | `/favicon.ico` source |
+| `PULSE_ASSETS_DIR` | `resources/public` | `/assets/*` showcase root |
+| `PULSE_LANDING_PATH` | (unset) | HTML file served at `/` |
 | `PULSE_JWT_SECRET` | dev default | **set in production** (HS256) |
 | `PULSE_SESSION_TTL` | `3600` | session seconds |
 | `PULSE_RATE_LIMIT` | `0` | global req/s cap; `0` = off |
 | `PULSE_RATE_BURST` | = limit | token-bucket capacity |
+| `PULSE_CSRF` | `1` | `0` disables CSRF checks |
+| `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS origin allowlist |
 
-Run: `.\out\pulse_app_v6.exe` (or the latest `out\pulse_app_v*.exe`; rebuild
-with `.\scripts\build.ps1 src\server.xi -Name pulse_app_v7`).
+Invalid values warn at startup and in `--check-config` (they fall back to
+the defaults above).
+
+Run: `out/pulse_app` (Linux) or `out\pulse_app.exe` (Windows); rebuild
+with `scripts/build.sh src/server.xi --name pulse_app` (Linux) or
+`.\scripts\build.ps1 src\server.xi -Name pulse_app` (Windows).
 
 ## 2. Caddy (recommended)
 
@@ -103,18 +117,30 @@ timeouts -- a half-open request can hold PULSE's single-threaded loop.
 # sets the env vars above, and execs the built exe, restarting on exit.
 ```
 
-**Linux (future, once the toolchain supports a Linux target):** a systemd
-unit with `Restart=always`, `EnvironmentFile=/etc/pulse.env`,
-`ExecStart=/opt/pulse/pulse_app`, `NoNewPrivileges=true`.
+**Linux (systemd):** unit with `Restart=always`,
+`EnvironmentFile=/etc/pulse.env`, `ExecStart=/opt/pulse/pulse_app`,
+`NoNewPrivileges=true`. Until C-PULSE-14 (Linux RSS growth, see
+`docs/PROGRESS.md`) is fixed, add `MemoryMax=` and an RSS alert; the
+restart policy keeps the process fresh.
 
 ## 5. Data, backup, retention
 
-- `pulse-events.jsonl`: append-only; copy it for backup (a torn trailing
-  line is tolerated on reopen; the next append heals the newline).
-- `pulse-audit.log`: append-only audit of mutating requests.
-- No rotation yet: rotate/archive externally (logrotate / scheduled task)
-  and restart, or ship `xiom.kv` when the packages lane publishes it
-  (see `docs/PACKAGE-WISHLIST-PULSE.md`).
+- `pulse-events.jsonl` (default backend): append-only; copy it for
+  backup (a torn trailing line is tolerated on reopen; the next append
+  heals the newline).
+- `kv` backend (`PULSE_STORE_BACKEND=kv`): segment files under
+  `PULSE_KV_DIR` (`evt-seg-*.kv`); native compaction keeps a single
+  segment; sequence keys are `PULSE_KV_PREFIX` + counter.
+- `pulse-audit.log`: append-only audit of mutating requests; rotates
+  itself at `PULSE_AUDIT_MAX_BYTES` (`.1` kept).
+- Snapshots: `scripts/backup.sh [--kv-dir DIR]` /
+  `scripts/backup.ps1 [-KvDir DIR]` copy the store (file or kv dir) +
+  audit into `backups/<UTC>/` with sizes + sha256 (`MANIFEST.txt`) and
+  prune to `--keep`. With `PULSE_STORE_BACKEND=kv` the kv dir defaults
+  to `$PULSE_KV_DIR`/`pulse-kv` automatically. For kv, compact first
+  (`POST /api/events/compact`) so the snapshot is a single segment, then
+  restore by stopping the service and copying `kv-store/` back over
+  `PULSE_KV_DIR` and verifying `GET /api/events/count`.
 
 ## 6. Health, metrics, verification
 
@@ -194,12 +220,16 @@ fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
   event store and the audit log (plus its `.1` rotation) into
   `backups/<UTC timestamp>/` with `MANIFEST.txt` (sizes + sha256), and
   prune to the newest `--keep` (default 7) snapshots. Missing sources are
-  noted, not fatal.
+  noted, not fatal. With the kv backend, pass `--kv-dir`/`-KvDir` (or
+  set `PULSE_STORE_BACKEND=kv` and it picks `$PULSE_KV_DIR` up): the
+  segment directory is copied to `kv-store/` and hashed file-by-file.
 - **Restore procedure:** stop the service; copy the snapshot's
-  `store.jsonl` over `PULSE_STORE_PATH` (and `audit.log` over
-  `PULSE_AUDIT_PATH` if the audit trail matters); start the service;
+  `store.jsonl` over `PULSE_STORE_PATH` (or `kv-store/` over
+  `PULSE_KV_DIR`, after compacting before the snapshot) and `audit.log`
+  over `PULSE_AUDIT_PATH` if the audit trail matters; start the service;
   verify with `GET /api/events/count` against the pre-backup count. The
-  store tolerates a torn tail, so restoring a slightly-live file is safe.
+  JSONL store tolerates a torn tail, so restoring a slightly-live file is
+  safe.
 - **Pre-flight:** `pulse_app --check-config` dumps the effective config
   (env wins) without binding -- suitable as a deploy gate or systemd
   `ExecStartPre`; it exits non-zero only when the configured file is
