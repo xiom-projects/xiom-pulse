@@ -9,11 +9,17 @@
 // Step 2 features: router, uniform error envelope, config, structured access
 // log, metrics endpoint, audit trail, cookie sessions, JWT HS256.
 //
-// Build: .\scripts\build.ps1 src\server.xi -Name pulse_server
+// Build: .\scripts\build.ps1 src\server.xi -Name pulse_app
 // Quit:  send any request with header `X-Pulse-Quit: 1`
-module xiom.pulse.server
+//
+// Module name note (2026-10-08): renamed from xiom.pulse.server to
+// xiom.pulse.app -- a module whose last segment is `server` shadows the
+// stdlib alias `server` (xiom.net.server) in every compilation that
+// includes it, which broke src/http.xi's stdlib parser import.
+module xiom.pulse.app
 
 use xiom.net.socket;
+use xiom.net;
 use xiom.io;
 use xiom.time;
 use xiom.string;
@@ -333,31 +339,15 @@ fn read_request(client: Int) -> Vec[UInt8] {
   return raw;
 }
 
-/// send_all writes the whole buffer, chunking and looping over partial
-/// sends (raw `socket_send` may accept fewer bytes than requested -- hit
-/// when serving the 270 KB favicon). Returns false on error/short write.
+/// send_all writes the whole buffer through the stdlib TcpStream.write_all
+/// (stdlib hardening 2026-10-07): 64 KiB staging chunks with retries over
+/// partial sends -- replaces PULSE's hand-rolled chunk loop (the 270 KB
+/// favicon was the original partial-send repro). Returns false on error.
 /// Complexity: O(n) syscalls.
 fn send_all(fd: Int, data: &Vec[UInt8]) -> Bool {
-  var off: Int = 0;
-  var guard: Int = 0;
-  while off < data.len() && guard < 4096 {
-    let remaining: Int = data.len() - off;
-    var chunk_len: Int = remaining;
-    if chunk_len > 32768 { chunk_len = 32768; }
-    var chunk: Vec[UInt8] = Vec[UInt8].new();
-    var i: Int = off;
-    while i < off + chunk_len {
-      chunk.push(data[i]);
-      i = i + 1;
-    }
-    let w = socket.socket_send(fd, &chunk);
-    if w.is_err { return false; }
-    let n = w.value;
-    if n <= 0 { return false; }
-    off = off + n;
-    guard = guard + 1;
-  }
-  return off >= data.len();
+  var ts = TcpStream{ fd: fd; };
+  let r = ts.write_all(data);
+  return r.is_ok;
 }
 
 fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_ms: Int) {

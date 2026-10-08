@@ -23,7 +23,7 @@ use xiom.pulse.store;
 use xiom.pulse.ratelimit;
 use xiom.pulse.validate;
 use xiom.pulse.reqctx;
-use xiom.pulse.server;
+use xiom.pulse.app;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -43,7 +43,7 @@ fn make_req(method: Str, target: Str, body: Str) -> PulseRequest {
 fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   let req = make_req(method, target, body);
   let m = router.route_match(method, target);
-  return server.handle_route(m, &req, body);
+  return app.handle_route(m, &req, body);
 }
 
 pub fn main() -> Int {
@@ -272,7 +272,7 @@ pub fn main() -> Int {
   f = f + check("route favicon matched", m14.kind == 1 && m14.route_id == 14);
   let m15 = router.route_match("GET", "/");
   f = f + check("route landing matched", m15.kind == 1 && m15.route_id == 15);
-  f = f + check("icon load", server.load_icon("resources/img/pulse-ico.ico"));
+  f = f + check("icon load", app.load_icon("resources/img/pulse-ico.ico"));
   let fav = route_req("GET", "/favicon.ico", "");
   f = f + check("favicon 200 binary", fav.status == 200 && fav.body_bytes.len() > 1000);
   f = f + check("favicon content type", string.str_contains(fav.content_type, "image/x-icon"));

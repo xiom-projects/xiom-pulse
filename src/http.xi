@@ -11,6 +11,7 @@ use xiom.string;
 use xiom.string.slice;
 use xiom.string.compare;
 use xiom.convert.parse;
+use xiom.net.server;
 
 /// PulseRequest - a parsed HTTP/1.1 request head plus buffered body bytes.
 pub type PulseRequest = {
@@ -95,6 +96,17 @@ fn find_crlf(buf: &Vec[UInt8], from: Int, limit: Int) -> Int {  var i: Int = fro
 
 /// parse_request parses the request line, headers and Content-Length body
 /// from raw bytes. Never traps: failures set ok=false + error.
+///
+/// Since 2026-10-07 the syntax layer is the shared stdlib parser
+/// (`xiom.net.server.server_parse_request`, built for PULSE); this adapter
+/// keeps PULSE's contract:
+///   - 100-header cap (error "too many headers") in addition to the
+///     16 KiB read-loop guard (header_overflow);
+///   - header names arrive lowercased from the stdlib; `header_get` stays
+///     case-insensitive, so callers are unaffected;
+///   - header values are trimmed (stdlib strips one leading space only);
+///   - invalid Content-Length (negative/non-numeric) is now REJECTED
+///     (hardening; the differential probe pins it on both parsers).
 /// Complexity: O(n). Pure.
 pub fn parse_request(raw: &Vec[UInt8]) -> PulseRequest {
   var req: PulseRequest = PulseRequest{
@@ -114,93 +126,51 @@ pub fn parse_request(raw: &Vec[UInt8]) -> PulseRequest {
     return req;
   }
 
+  // PULSE cap: count header lines before handing the raw bytes over.
   let line_end = find_crlf(raw, 0, hdr_end + 2);
   if line_end < 0 || line_end > hdr_end {
     req.error = "malformed request line";
     return req;
   }
-  let rl = bytes_to_str(raw, 0, line_end);
-
-  var sp1: Int = -1;
-  match string.str_index_of(rl, " ") {
-    Some(v) => { sp1 = v; },
-    None => {
-      req.error = "request line: no separator";
-      return req;
-    },
-  }
-  if sp1 <= 0 {
-    req.error = "request line: empty method";
-    return req;
-  }
-  let rest = string.str_slice(rl, sp1 + 1, rl.len());
-  var sp2: Int = -1;
-  match string.str_index_of(rest, " ") {
-    Some(v) => { sp2 = v; },
-    None => {
-      req.error = "request line: no target/version separator";
-      return req;
-    },
-  }
-  if sp2 <= 0 {
-    req.error = "request line: empty target";
-    return req;
-  }
-  req.method = string.str_slice(rl, 0, sp1);
-  req.target = string.str_slice(rest, 0, sp2);
-  req.version = string.str_slice(rest, sp2 + 1, rest.len());
-  if req.version.len() == 0 {
-    req.error = "request line: empty version";
-    return req;
-  }
-
   var pos: Int = line_end + 2;
   var hcount: Int = 0;
   while pos < hdr_end {
     let next = find_crlf(raw, pos, hdr_end + 2);
     if next < 0 { break; }
-    let line = bytes_to_str(raw, pos, next);
-    if line.len() > 0 {
+    if next > pos {
       hcount = hcount + 1;
       if hcount > header_count_limit() {
         req.error = "too many headers";
         return req;
       }
-      var col: Int = -1;
-      match string.str_index_of(line, ":") {
-        Some(v) => { col = v; },
-        None => {
-          req.error = "malformed header";
-          return req;
-        },
-      }
-      if col <= 0 {
-        req.error = "malformed header: empty name";
-        return req;
-      }
-      let name = string.str_slice(line, 0, col);
-      let value = string.str_trim(string.str_slice(line, col + 1, line.len()));
-      req.header_names.push(name);
-      req.header_values.push(value);
     }
     pos = next + 2;
   }
 
-  let cl_str = header_get(&req, "content-length");
-  var body_want: Int = 0;
-  if cl_str.len() > 0 {
-    let pr = parse_int(cl_str);
-    if pr.is_ok {
-      body_want = pr.value;
-    }
+  let sr = server.server_parse_request(raw);
+  if sr.is_none {
+    req.error = "malformed request";
+    return req;
   }
-  if body_want > 0 {
-    let bstart = hdr_end + 4;
-    var i: Int = bstart;
-    while i < raw.len() && req.body.len() < body_want {
-      req.body.push(raw[i]);
-      i = i + 1;
-    }
+  let r = sr.value;
+  req.method = r.method;
+  req.target = r.target;
+  req.version = r.version;
+
+  var hi: Int = 0;
+  while hi < r.headers.len() {
+    req.header_names.push(r.headers[hi].0);
+    req.header_values.push(string.str_trim(r.headers[hi].1));
+    hi = hi + 1;
+  }
+
+  var bs: Int = r.body_start;
+  var be: Int = r.body_start + r.body_len;
+  if be > raw.len() { be = raw.len(); }
+  var bi: Int = bs;
+  while bi < be {
+    req.body.push(raw[bi]);
+    bi = bi + 1;
   }
 
   req.ok = true;

@@ -12,7 +12,7 @@ use xiom.convert;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
 use xiom.pulse.cors;
-use xiom.pulse.server;
+use xiom.pulse.app;
 
 const STEPS: Str = "/tmp/pulse-adopt-steps.txt";
 

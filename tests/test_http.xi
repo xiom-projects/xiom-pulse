@@ -10,7 +10,7 @@ use xiom.io;
 use xiom.string;
 use xiom.pulse.http;
 use xiom.pulse.router;
-use xiom.pulse.server;
+use xiom.pulse.app;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -32,7 +32,7 @@ fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   let raw = http.str_to_bytes(raw_str);
   let req = http.parse_request(&raw);
   let m = router.route_match(method, target);
-  return server.handle_route(m, &req, body);
+  return app.handle_route(m, &req, body);
 }
 
 pub fn main() -> Int {
