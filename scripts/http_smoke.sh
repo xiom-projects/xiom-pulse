@@ -46,6 +46,10 @@ CFG_OUT=$("$SERVER_EXE" --check-config 2>&1)
 CFG_RC=$?
 pulse_check "cli check-config text" "$CFG_OUT" "port="
 pulse_check_eq "cli check-config rc" "$CFG_RC" "0"
+CFG_WARN_OUT=$(PULSE_PORT=abc "$SERVER_EXE" --check-config 2>&1)
+CFG_WARN_RC=$?
+pulse_check "cli check-config warns" "$CFG_WARN_OUT" "warning:"
+pulse_check_eq "cli check-config warn rc" "$CFG_WARN_RC" "0"
 
 LOG_DIR="$PULSE_REPO_ROOT/probe-logs"
 mkdir -p "$LOG_DIR"

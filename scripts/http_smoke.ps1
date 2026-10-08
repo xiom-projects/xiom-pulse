@@ -32,6 +32,10 @@ $verOut = (& $ServerExe --version 2>&1 | Out-String)
 $verRc = $LASTEXITCODE
 $cfgOut = (& $ServerExe --check-config 2>&1 | Out-String)
 $cfgRc = $LASTEXITCODE
+$env:PULSE_PORT = "abc"
+$cfgWarnOut = (& $ServerExe --check-config 2>&1 | Out-String)
+$cfgWarnRc = $LASTEXITCODE
+Remove-Item Env:PULSE_PORT -ErrorAction SilentlyContinue
 
 $env:PULSE_PORT = "$Port"
 $env:PULSE_CORS_ORIGIN = "*"
@@ -67,6 +71,8 @@ Check "cli version text" $verOut "xiom-pulse"
 Check "cli version rc" "rc=$verRc" "rc=0"
 Check "cli check-config text" $cfgOut "port="
 Check "cli check-config rc" "rc=$cfgRc" "rc=0"
+Check "cli check-config warns" $cfgWarnOut "warning:"
+Check "cli check-config warn rc" "rc=$cfgWarnRc" "rc=0"
 
 function Invoke-CurlPost {
     param([string]$Path, [string]$Body, [string]$CookieJar = "", [string[]]$ExtraHeaders = @())

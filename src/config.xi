@@ -232,3 +232,71 @@ pub fn cfg_session_ttl_secs() -> Int {
   if v <= 0 { return 3600; }
   return v;
 }
+
+/// cfg_digit_value parses a decimal uint with an overflow guard; -1 when
+/// empty, non-numeric, or too large. Complexity: O(n). Pure.
+fn cfg_digit_value(s: Str) -> Int {
+  if s.len() == 0 { return -1; }
+  var v: Int = 0;
+  var i: Int = 0;
+  while i < s.len() {
+    let b = s.byte_at(i);
+    if b < 48u8 || b > 57u8 { return -1; }
+    v = v * 10 + ((b as Int) - 48);
+    if v > 100000000 { return -1; }
+    i = i + 1;
+  }
+  return v;
+}
+
+/// cfg_validate returns human-readable warnings for set-but-invalid
+/// values (invalid values silently fall back to defaults, so surface them
+/// once at startup and in --check-config). Empty vector = all good.
+/// Complexity: O(settings). Pure.
+pub fn cfg_validate() -> Vec[Str] {
+  var w: Vec[Str] = Vec[Str].new();
+
+  let port = env.var_or("PULSE_PORT", "");
+  if port.len() > 0 {
+    let pv = cfg_digit_value(port);
+    if pv < 1 || pv > 65535 {
+      w.push("PULSE_PORT=\"" + port + "\" is not a valid port (1-65535); using 8080");
+    }
+  }
+
+  let rl = env.var_or("PULSE_RATE_LIMIT", "");
+  if rl.len() > 0 && cfg_digit_value(rl) < 0 {
+    w.push("PULSE_RATE_LIMIT=\"" + rl + "\" is not a non-negative integer; using 0");
+  }
+  let rb = env.var_or("PULSE_RATE_BURST", "");
+  if rb.len() > 0 && cfg_digit_value(rb) < 0 {
+    w.push("PULSE_RATE_BURST=\"" + rb + "\" is not a non-negative integer; using 0");
+  }
+  let amb = env.var_or("PULSE_AUDIT_MAX_BYTES", "");
+  if amb.len() > 0 && cfg_digit_value(amb) < 0 {
+    w.push("PULSE_AUDIT_MAX_BYTES=\"" + amb + "\" is not a non-negative integer; using 5000000");
+  }
+  let ttl = env.var_or("PULSE_SESSION_TTL", "");
+  if ttl.len() > 0 {
+    let tv = cfg_digit_value(ttl);
+    if tv < 1 {
+      w.push("PULSE_SESSION_TTL=\"" + ttl + "\" is not a positive integer; using 3600");
+    }
+  }
+
+  let csrf = env.var_or("PULSE_CSRF", "");
+  if csrf.len() > 0 && csrf != "0" && csrf != "1" {
+    w.push("PULSE_CSRF=\"" + csrf + "\" is not 0 or 1; treating as enabled");
+  }
+  let logv = env.var_or("PULSE_LOG", "");
+  if logv.len() > 0 && logv != "0" && logv != "1" {
+    w.push("PULSE_LOG=\"" + logv + "\" is not 0 or 1; treating as enabled");
+  }
+
+  let backend = env.var_or("PULSE_STORE_BACKEND", "");
+  if backend.len() > 0 && backend != "jsonl" && backend != "kv" {
+    w.push("PULSE_STORE_BACKEND=\"" + backend + "\" is not jsonl or kv; using jsonl");
+  }
+
+  return w;
+}

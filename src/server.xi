@@ -565,6 +565,12 @@ pub fn main() -> Int {
       var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
       if js.len() > 0 { secret_note = "env"; }
       io.println("jwt_secret=" + secret_note);
+      let warns = config.cfg_validate();
+      var wi: Int = 0;
+      while wi < warns.len() {
+        io.println("warning: " + warns[wi]);
+        wi = wi + 1;
+      }
       return 0;
     }
     ai = ai + 1;
@@ -579,6 +585,15 @@ pub fn main() -> Int {
   let fd = sr.value;
   if !config.cfg_load_file() {
     io.println("pulse: config load failed: " + config.cfg_config_path());
+    io.flush_stdout();
+  }
+  let cfg_warns = config.cfg_validate();
+  if cfg_warns.len() > 0 {
+    var wj: Int = 0;
+    while wj < cfg_warns.len() {
+      io.println("pulse: warning: " + cfg_warns[wj]);
+      wj = wj + 1;
+    }
     io.flush_stdout();
   }
   let port = config.cfg_port();

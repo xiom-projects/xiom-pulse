@@ -107,6 +107,39 @@ pub fn main() -> Int {
   env.remove_var("PULSE_RATE_LIMIT");
   let _rmc2 = io.remove_file(cf);
 
+  // --- config validation warnings -------------------------------------------
+  env.set_var("PULSE_PORT", "abc");
+  let w1 = config.cfg_validate();
+  f = f + check("cfg warn bad port", w1.len() == 1 && string.str_contains(w1[0], "PULSE_PORT"));
+  env.set_var("PULSE_PORT", "65536");
+  let w2 = config.cfg_validate();
+  f = f + check("cfg warn port range", w2.len() == 1 && string.str_contains(w2[0], "PULSE_PORT"));
+  env.set_var("PULSE_PORT", "8080");
+  let w3 = config.cfg_validate();
+  f = f + check("cfg warn clean", w3.len() == 0);
+  env.set_var("PULSE_STORE_BACKEND", "sqlite");
+  let w4 = config.cfg_validate();
+  f = f + check("cfg warn bad backend", w4.len() == 1 && string.str_contains(w4[0], "PULSE_STORE_BACKEND"));
+  env.set_var("PULSE_STORE_BACKEND", "kv");
+  let w5 = config.cfg_validate();
+  f = f + check("cfg warn kv ok", w5.len() == 0);
+  env.set_var("PULSE_CSRF", "yes");
+  let w6 = config.cfg_validate();
+  f = f + check("cfg warn bad bool", w6.len() == 1 && string.str_contains(w6[0], "PULSE_CSRF"));
+  env.set_var("PULSE_CSRF", "1");
+  env.set_var("PULSE_SESSION_TTL", "0");
+  let w7 = config.cfg_validate();
+  f = f + check("cfg warn ttl zero", w7.len() == 1 && string.str_contains(w7[0], "PULSE_SESSION_TTL"));
+  env.set_var("PULSE_SESSION_TTL", "3600");
+  env.set_var("PULSE_RATE_LIMIT", "fast");
+  let w8 = config.cfg_validate();
+  f = f + check("cfg warn bad rate", w8.len() == 1 && string.str_contains(w8[0], "PULSE_RATE_LIMIT"));
+  env.remove_var("PULSE_PORT");
+  env.remove_var("PULSE_STORE_BACKEND");
+  env.remove_var("PULSE_CSRF");
+  env.remove_var("PULSE_SESSION_TTL");
+  env.remove_var("PULSE_RATE_LIMIT");
+
   // --- metrics -------------------------------------------------------------
   metrics.metrics_reset();
   metrics.metrics_record(200, 10);
