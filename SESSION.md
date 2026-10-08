@@ -125,6 +125,12 @@
   benchmark harness after release. Owner plan discussed this wrap; ops
   side unchanged (staging parked; one nginx site per subdomain when
   greenlit).
+- **2026-10-08 (protocol round):** `Expect: 100-continue` (interim before
+  the body; raw-socket proof) and the `Date` response header landed;
+  test_http +4, smoke 73/73 both platforms. Owner plan agreed: adopt the
+  next compiler/stdlib/package release, sweep bugs/blockers against it
+  (C-PULSE-08/09/10/11 gates ready), then coordinate ops for the three
+  showcase sites; non-blocked hardening continues until then.
 - **Next action:** on v0.64.1: re-run the probe fleet
   (`probe_stdlib_server_parse`, `probe_pkg_state_holder`,
   `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv`,

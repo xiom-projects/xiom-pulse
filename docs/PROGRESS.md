@@ -15,7 +15,15 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~54.1% of production grade**
+## 1. Overall score: **~54.6% of production grade**
+
+_Delta 2026-10-08 (protocol round): 54.1% -> ~54.6% -- **`Expect:
+100-continue`** handled (interim answered before the body read; raw-socket
+proof: first line `HTTP/1.1 100 Continue`, final 200 logged; curls large
+POSTs no longer stall 1s) and the missing **`Date`** response header
+(spliced after the status line via `http.with_header_line`, RFC 1123
+formatter reused from `xiom.static`). test_http +4 checks, smoke 73/73 on
+both platforms._
 
 _Delta 2026-10-08 (showcase round): 53.4% -> ~54.1% -- **general asset
 serving** (`/assets/<path>` from `PULSE_ASSETS_DIR`, same
@@ -88,7 +96,7 @@ fallbacks._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
-| 1 | HTTP core (parse/build/limits) | 12% | 76% | 9.1 | query strings, header caps, HEAD; shared stdlib parser + invalid-CL reject; keep-alive/chunked/Expect missing |
+| 1 | HTTP core (parse/build/limits) | 12% | 80% | 9.6 | query strings, header caps, HEAD, shared stdlib parser + invalid-CL reject, TE guard, Expect: 100-continue, Date header; keep-alive/chunked missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
 | 4 | Configuration | 5% | 80% | 4.0 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; no per-value type validation |
@@ -100,7 +108,7 @@ fallbacks._
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **54.1** | |
+| | **Total** | **100%** | | **54.6** | |
 
 Two lenses to keep separate:
 
