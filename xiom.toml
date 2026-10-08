@@ -23,12 +23,11 @@ root = "src"
 # repro bundle is the acceptance gate for the next archive.
 source-roots = [
   "src",
-  # xiom.http PRUNED 2026-10-08: unused since the stdlib parser adoption
-  # (src/http.xi now uses xiom.net.server.server_parse_request), and the
-  # published xiom.http 0.1.1 fails v0.64.1's extern-unsafe enforcement
-  # (67 T001s in its catalog body). Re-add when the package republishes
-  # compatibly; probe_pkg_http is the known-red gate.
+  # xiom.http RE-ADDED 2026-10-08: 0.1.2 (eco-v0.1.103) wraps its internals
+  # in unsafe blocks for v0.64.1 extern-unsafe confinement; probe_pkg_http
+  # flips green (the v0.64.1 67-T001 breakage in 0.1.1 is fixed).
   # Windows install tree (%LOCALAPPDATA%\xiom\packages)
+  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-0.1.2/xiom-http/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-router-0.1.0/xiom-router/src",
@@ -41,6 +40,7 @@ source-roots = [
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-static-0.1.0/xiom-static/src",
   "C:/Users/lefte/AppData/Local/xiom/packages/xiom-kv-0.1.0/xiom-kv/src",
   # WSL/Linux install tree (~/xiom/packages; dead entries are skipped)
+  "/home/lefteris/xiom/packages/xiom-http-0.1.2/xiom-http/src",
   "/home/lefteris/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
   "/home/lefteris/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
   "/home/lefteris/xiom/packages/xiom-router-0.1.0/xiom-router/src",
@@ -53,6 +53,7 @@ source-roots = [
 ]
 
 [dependencies]
+"xiom.http" = "0.1.2"
 "xiom.cookie" = "0.1.1"
 "xiom.jwt" = "0.2.0"
 "xiom.router" = "0.1.0"

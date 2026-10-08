@@ -1,13 +1,13 @@
-// probe_pkg_http -- registry-package consumption check: xiom.http v0.1.0.
+// probe_pkg_http -- registry-package consumption check: xiom.http v0.1.2.
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// **KNOWN-RED on v0.64.1 (2026-10-08):** the published xiom.http 0.1.1
-// violates v0.64.1's extern-unsafe enforcement (67 T001s in its catalog
-// body), so this probe cannot compile until the package republishes with
-// unsafe-wrapped internals. It is the acceptance gate for that republish.
-// PULSE itself no longer uses xiom.http (the stdlib parser replaced it);
-// the package was pruned from xiom.toml/package.xi.
+// **GREEN again on v0.64.1 (2026-10-08):** the 0.1.1 package violated
+// v0.64.1's extern-unsafe enforcement (67 T001s in its catalog body);
+// 0.1.2 (eco-v0.1.103) wraps its internals in unsafe blocks, so this
+// probe compiles and passes again and xiom.http is re-added to
+// xiom.toml/package.xi (C-PULSE-13 stays routed to the compiler/installer
+// lane; it was never a package defect).
 //
 // Consumes the installed registry package (no vendoring): parser + status.
 // Run: .\scripts\run.ps1 tests\probes\probe_pkg_http.xi
