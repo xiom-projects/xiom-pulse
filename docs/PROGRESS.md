@@ -15,7 +15,17 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~53.4% of production grade**
+## 1. Overall score: **~54.1% of production grade**
+
+_Delta 2026-10-08 (showcase round): 53.4% -> ~54.1% -- **general asset
+serving** (`/assets/<path>` from `PULSE_ASSETS_DIR`, same
+ETag/304/Range/traversal machinery; smoke 71/71 on both platforms) and
+**per-site landing content** (`PULSE_LANDING_PATH`); **`PULSE_BIND`**
+(default `127.0.0.1` -- ops' loopback requirement intact -- containers set
+`0.0.0.0`) and **`deploy/Dockerfile`** (ubuntu:24.04, verified: build +
+container E2E health/version/assets). These are the prerequisites for the
+`pulse.xiom-lang.org` / `orbit.` / `xvector.` showcase sites and the
+offline benchmark harness (post-release)._
 
 _Delta 2026-10-08 (pre-flight round): 53.2% -> ~53.4% -- **`--check-config`
 CLI** (effective config dump, exits 1 only on an unreadable configured
@@ -86,11 +96,11 @@ fallbacks._
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; `xiom.kv` blocked (C-PULSE-10), no fsync |
 | 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
-| 9 | Static / assets | 4% | 55% | 2.2 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon; no directory serving |
+| 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 80% | 4.0 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins; release packager (`pulse-<ver>-<os>-<arch>.zip` + sha256) and backup/restore tooling verified locally; no CI |
-| | **Total** | **100%** | | **53.4** | |
+| 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
+| | **Total** | **100%** | | **54.1** | |
 
 Two lenses to keep separate:
 
@@ -279,7 +289,7 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
 | **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~74% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD, stdlib write_all + parser, audit rotation, CLI surfaces, schema helper, TE smuggling guard; recv timeouts + signal handling blocked on stdlib) |
-| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~34% (TLS E2E on Windows **and** Linux; `.sh` twins; deployment runbook + ops answers; `--version`/`--check-config`/build-info; release packager + backup/restore tooling verified; CI pending greenlight) |
+| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~38% (TLS E2E on Windows **and** Linux; `.sh` twins; deployment runbook + ops answers; `--version`/`--check-config`/build-info; release packager + backup/restore tooling; `deploy/Dockerfile` + `PULSE_BIND`; CI pending greenlight) |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 
 ---

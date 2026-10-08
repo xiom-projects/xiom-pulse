@@ -114,6 +114,17 @@
   packages lane) now builds binding packages; PULSE files binding
   requests via the packages lane and keeps the seam map in PROGRESS
   ("Integration seams for future bindings").
+- **2026-10-08 (showcase round):** general `/assets/<path>` serving
+  (`PULSE_ASSETS_DIR`, same ETag/304/Range/traversal machinery) +
+  `PULSE_LANDING_PATH` per-site landing content + `PULSE_BIND` (loopback
+  default; containers set 0.0.0.0) + `deploy/Dockerfile` (build verified,
+  container E2E: health/version/assets). Smoke 71/71 on both platforms.
+  These are the PULSE-side prerequisites for the planned
+  `pulse.xiom-lang.org` / `orbit.` / `xvector.` showcase sites (one
+  binary + per-site env; honest beta framing) and for the offline
+  benchmark harness after release. Owner plan discussed this wrap; ops
+  side unchanged (staging parked; one nginx site per subdomain when
+  greenlit).
 - **Next action:** on v0.64.1: re-run the probe fleet
   (`probe_stdlib_server_parse`, `probe_pkg_state_holder`,
   `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv`,
@@ -122,8 +133,8 @@
   the kv backend (C-PULSE-10); adopt socket timeouts / signals / define
   flag when the stdlib exposes them; watch the bindings lane for the
   durable DB/KV binding (final stage; store seam in PROGRESS section
-  6b); when the owner greenlights: CI file + dl release flow (ops
-  mechanics in docs/OPS-REQUEST.md section D).
+  6b); when the owner greenlights: CI file + dl release flow + the
+  three showcase sites (ops mechanics in docs/OPS-REQUEST.md).
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded
 

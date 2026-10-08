@@ -166,12 +166,19 @@ fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
 3. **Supervise:** systemd unit with `Restart=on-failure`; env file as in
    section 4 (`X-Pulse-Quit` is test-only; production restarts are
    supervisor-driven).
-4. **Docker rehearsal:** for a hermetic pre-staging check, run the Linux
-   binary in a clean glibc-compatible container with nginx alongside;
-   on a Linux host this mirrors the VPS composition. Docker Desktop on
-   Windows isolates containers in their own network namespace, so proxy
-   the two sides within containers (or use host networking) when
-   rehearsing there.
+4. **Docker (benchmark harness / staging rehearsal):** `deploy/Dockerfile`
+   packages the Linux binary on ubuntu:24.04 (glibc match) with
+   `PULSE_BIND=0.0.0.0` inside the container network:
+   `docker build -f deploy/Dockerfile -t xiom-pulse:local .` then
+   `docker run --rm -p 8080:8080 xiom-pulse:local` (verified:
+   health/version/assets served from the container). On a Linux host this
+   mirrors the VPS composition; Docker Desktop on Windows isolates
+   containers in their own network namespace, so keep both sides in
+   containers when rehearsing there. Host deployments keep the default
+   `PULSE_BIND=127.0.0.1` (proxy-only exposure).
+   **Showcase sites:** one binary serves any number of sites via env --
+   `PULSE_ASSETS_DIR` (served under `/assets/`) and `PULSE_LANDING_PATH`
+   (HTML at `/`); run one process (or container) per subdomain.
 5. All scripts ship as `.ps1` and `.sh` twins; the shell twins are
    verified from WSL/Linux and enforced LF via `.gitattributes`.
 

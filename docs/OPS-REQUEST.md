@@ -160,3 +160,11 @@ right now. When greenlit, ops executes the following (already specified):
    snapshot store + audit with a sha256 manifest (restore runbook in
    `docs/DEPLOYMENT.md` section 9). The CI-at-greenlight flow above is
    unchanged; these let PULSE cut identical artifacts by hand today.
+   **Also shipped (2026-10-08, showcase round):** general `/assets/*`
+   serving + `PULSE_LANDING_PATH` (per-site showcase content) and
+   `deploy/Dockerfile` (ubuntu:24.04, container E2E verified). `PULSE_BIND`
+   defaults to `127.0.0.1` -- the hardcoded-loopback requirement for host
+   deployments stands; only containers set `0.0.0.0` inside their own
+   network. Planned use (post-greenlight): one process per subdomain
+   (`pulse.`, `orbit.`, `xvector.`) behind the same Hestia nginx pattern,
+   honestly labeled beta.
