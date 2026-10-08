@@ -80,6 +80,12 @@
 - **Wrap 5 (config validation):** invalid values now warn at startup and
   in `--check-config` (port/uint/TTL/bool/enum; test_app +8 checks, smoke
   **78/78** on both platforms). Configuration 80 -> 85.
+- **Wrap 5b (kv ops surface):** Dockerfile exports
+  `PULSE_KV_DIR=/data/pulse-kv`; `backup.{sh,ps1}` are kv-aware
+  (`--kv-dir`/`-KvDir`, env default, `kv-store/` snapshot with per-file
+  hashes; verified both platforms); `DEPLOYMENT.md` covers the kv store +
+  snapshot/restore and the current Linux systemd guidance. Flip still
+  gated on a longer kv soak (crash/reopen covered by `store_soak`).
 - **Showcase/site (owner decisions 2026-10-08):** `pulse.xiom-lang.org`
   DNS is live (no staging subdomain needed); `orbitdb.`/`xvector.` pages
   later (DNS records exist). Phase 1: the **website lane** owns the
@@ -109,9 +115,8 @@
   Linux request-path RSS retention -- runtime investigation, repro
   filed**; C-PULSE-13 resolver unification, routed via the packages
   lane), bindings (DB/KV binding, store seam). 2) non-blocked hardening:
-  chunked RESPONSES (with keep-alive), a fresh 30-60m soak, the
-  repeatable RSS sampler for C-PULSE-14, or the kv-default ops-surface
-  prep (Dockerfile/backup/crash-test kv-awareness).
+  chunked RESPONSES (with keep-alive), a fresh 30-60m soak, a repeatable
+  RSS sampler for C-PULSE-14, or the longer kv soak for the flip gate.
   3) kv default flip only after the recorded prerequisites; otherwise
   keep kv opt-in. 4) website lane Phase 1 (pulse. subdomain page; brief
   in `docs/WEBSITE-RELAY-PULSE.md`); on owner greenlight: GH Actions
@@ -568,8 +573,7 @@ TASK ORDER:
    before touching anything.
 2. NON-BLOCKED hardening (pick by value): chunked RESPONSES (with
    keep-alive), a fresh 30-60m soak, a repeatable RSS sampler for
-   C-PULSE-14, or the kv-default ops-surface prep (kv-aware Dockerfile/
-   backup/crash-test/deployment doc). Keep-alive
+   C-PULSE-14, or the longer kv soak (flip gate). Keep-alive
    stays gated on socket timeouts, SIGTERM on the stdlib handler API,
    build stamping on a compiler define flag (all filed).
 3. WATCH the lanes: compiler (C-PULSE-09 is Windows-only now -> retry

@@ -172,14 +172,18 @@ on v0.64.0 anyway.
   segment `evt-seg-0000000019.kv` 70 KB). Windows v0.64.1: kv smoke 73/73
   + 20s soak green (previous wrap).
 - **Decision (with evidence): the default stays `jsonl`; kv remains the
-  verified opt-in backend.** A default flip is gated on updating the
-  operations surface first, none of which is kv-aware today:
-  `deploy/Dockerfile` pins `PULSE_STORE_PATH=/data/pulse-events.jsonl`
-  (needs `PULSE_KV_DIR=/data/pulse-kv` or explicit backend),
-  `scripts/backup.{sh,ps1}` snapshot a single JSONL file (kv needs the
-  segment dir), `scripts/crash_test.sh` writes a torn line into the JSONL
-  path, and `docs/DEPLOYMENT.md` documents the JSONL store. Re-evaluate
-  after those land plus a longer (>= 24h aggregated) kv soak.
+  verified opt-in backend.** The flip was gated on the operations surface
+  first. **Prerequisite progress (wrap 5b):** `deploy/Dockerfile` now
+  sets `PULSE_KV_DIR=/data/pulse-kv`; `scripts/backup.{sh,ps1}` are
+  kv-aware (`--kv-dir`/`-KvDir`, env-driven default when
+  `PULSE_STORE_BACKEND=kv`, whole-dir snapshot at `kv-store/` with
+  per-file sizes+sha256 -- verified on both platforms); `DEPLOYMENT.md`
+  documents the kv store, snapshot and restore procedure. Remaining gate:
+  a longer (>= 24h aggregated) kv soak, and a decision on crash coverage
+  -- `store_soak` already provides the kv crash/reopen contract (hard
+  kill + reopen counts intact, 20m green), while `crash_test` keeps its
+  JSONL torn-tail contract and must pin `PULSE_STORE_BACKEND=jsonl` if
+  the default ever flips. Re-evaluate at the next compiler release.
 - Cosmetic consumer note: `store_soak.sh` prints a `store-soak.jsonl: No
   such file` stderr line in kv mode when computing `store_bytes` (fixed
   this wrap in the `.sh` twin to match the `.ps1` empty value).

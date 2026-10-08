@@ -58,6 +58,16 @@ unknown store backends now warn at startup and in `--check-config`
 instead of silently falling back (test_app +8 checks, smoke 76 -> **78**
 on both platforms). Configuration 80 -> 85. Total ~55.8% -> ~56.1%._
 
+_Delta 2026-10-08 (wrap 5b): **kv-default ops surface prepped** --
+`deploy/Dockerfile` exports `PULSE_KV_DIR=/data/pulse-kv`; the backup
+twins are kv-aware (`--kv-dir`/`-KvDir`, env-driven default with
+`PULSE_STORE_BACKEND=kv`, whole-dir snapshot at `kv-store/` with
+per-file sizes+sha256; verified on Windows + Linux); `DEPLOYMENT.md`
+documents the kv store, snapshots and restore, and the Linux systemd
+section now reflects the real Linux support + C-PULSE-14 mitigation.
+Remaining flip gate: a longer kv soak (crash/reopen already covered by
+`store_soak`). Score holds (~56.1%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
