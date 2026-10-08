@@ -100,6 +100,10 @@ $r = Invoke-CurlPost "/api/echo" 'notjson'
 Check "echo invalid 400" $r "400 Bad Request"
 Check "echo invalid json" $r '"code":"invalid_json"'
 
+# 4b. Transfer-Encoding rejected (501; smuggling guard)
+$r = Invoke-CurlPost "/api/echo" '{"te":1}' -ExtraHeaders @("-H", "Transfer-Encoding: chunked")
+Check "te rejected 501" $r "501 Not Implemented"
+
 # 5. 404
 $r = curl.exe -s -i "$base/nope" 2>&1 | Out-String
 Check "unknown 404" $r "404 Not Found"

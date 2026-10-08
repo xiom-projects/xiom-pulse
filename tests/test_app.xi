@@ -46,6 +46,14 @@ fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   return app.handle_route(m, &req, body);
 }
 
+fn route_req_hdr(method: Str, target: Str, headers: Str, body: Str) -> HandlerOut {
+  let raw_str = method + " " + target + " HTTP/1.1\r\nHost: t\r\n" + headers + "\r\n" + body;
+  let raw = http.str_to_bytes(raw_str);
+  let req = http.parse_request(&raw);
+  let m = router.route_match(method, target);
+  return app.handle_route(m, &req, body);
+}
+
 pub fn main() -> Int {
   var f: Int = 0;
 
@@ -193,6 +201,10 @@ pub fn main() -> Int {
   f = f + check("dispatch health", h.status == 200 && string.str_contains(h.body, "\"status\":\"ok\""));
   let h405 = route_req("POST", "/health", "");
   f = f + check("dispatch 405 allow", h405.status == 405 && h405.headers.len() == 1);
+  let te = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: chunked\r\n", "0\r\n\r\n");
+  f = f + check("te rejected 501", te.status == 501 && string.str_contains(te.body, "unsupported_transfer_encoding"));
+  let tecl = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: chunked\r\nContent-Length: 5\r\n", "hello");
+  f = f + check("te+cl rejected 501", tecl.status == 501);
   let nf = route_req("GET", "/nope", "");
   f = f + check("dispatch 404 envelope", nf.status == 404 && string.str_contains(nf.body, "\"code\":\"not_found\""));
   reqctx.set_rid("r-test");

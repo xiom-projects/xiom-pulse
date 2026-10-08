@@ -105,6 +105,13 @@ fn json_ok_field(key: Str, value: Str) -> Str {
 /// handle_route dispatches a matched route to a HandlerOut.
 /// Complexity: O(body).
 pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut {
+  // Transfer-Encoding is not implemented: reject outright. A front proxy
+  // that honors TE while PULSE honors Content-Length would desync into
+  // request smuggling (CL.TE), so TE -- alone or with CL -- never reaches
+  // a route. 501 = unsupported transfer-coding (RFC 9110).
+  if http.header_get(req, "transfer-encoding").len() > 0 {
+    return out_json(501, envelope.error_body("unsupported_transfer_encoding", "Transfer-Encoding is not supported"));
+  }
   if m.kind == 0 {
     return out_json(404, envelope.error_body("not_found", "not found"));
   }

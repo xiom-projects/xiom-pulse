@@ -72,6 +72,10 @@ R=$(post_json /api/echo 'notjson')
 pulse_check "echo invalid 400" "$R" "400 Bad Request"
 pulse_check "echo invalid json" "$R" '"code":"invalid_json"'
 
+# --- 4b. Transfer-Encoding rejected (smuggling guard) -----------------------
+R=$(post_json /api/echo '{"te":1}' -H 'Transfer-Encoding: chunked')
+pulse_check "te rejected 501" "$R" "501 Not Implemented"
+
 # --- 5. 404 -----------------------------------------------------------------
 R=$(http_get /nope)
 pulse_check "unknown 404" "$R" "404 Not Found"

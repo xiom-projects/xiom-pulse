@@ -80,6 +80,8 @@ pub fn main() -> Int {
   let resp = http.build_response(200, "{\"status\":\"ok\"}");
   let resp_str = http.bytes_to_str(&resp, 0, resp.len());
   f = f + check("status line", string.str_contains(resp_str, "HTTP/1.1 200 OK\r\n"));
+  f = f + check("status text 304", http.status_text(304) == "Not Modified");
+  f = f + check("status text 501", http.status_text(501) == "Not Implemented");
   f = f + check("content-type json", string.str_contains(resp_str, "Content-Type: application/json"));
   f = f + check("content-length 15", string.str_contains(resp_str, "Content-Length: 15\r\n"));
   f = f + check("connection close", string.str_contains(resp_str, "Connection: close\r\n"));
