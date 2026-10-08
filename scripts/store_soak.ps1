@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_app_v8.exe" }
+if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_app.exe" }
 
 $logDir = Join-Path $repoRoot "probe-logs"
 if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }

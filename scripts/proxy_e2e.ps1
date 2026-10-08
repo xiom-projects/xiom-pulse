@@ -21,7 +21,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_app_v9.exe" }
+if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_app.exe" }
 $nginxExe = Join-Path $NginxPath "nginx.exe"
 if (-not (Test-Path -LiteralPath $nginxExe)) { throw "nginx not found at $nginxExe" }
 if (-not (Test-Path -LiteralPath $OpenSsl)) { throw "openssl not found at $OpenSsl" }

@@ -21,7 +21,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_server.exe" }
+if (-not $ServerExe) { $ServerExe = Join-Path $repoRoot "out\pulse_app.exe" }
 $base = "http://127.0.0.1:$Port"
 
 $logDir = Join-Path $repoRoot "probe-logs"
