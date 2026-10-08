@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-08 (v0.64.1 sweep + registry wave adoption state)
+**Last updated:** 2026-10-08 (Linux v0.64.1 sweep + kv soak/default decision)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -13,6 +13,20 @@ breakage filed: v0.64.1 extern-unsafe enforcement rejects the published
 `xiom.http` 0.1.1 (67 T001s); PULSE pruned the already-unused package
 (`probe_pkg_http` = known-red republish gate, packages lane owns it).
 Score holds (toolchain adoption, no new capability)._
+
+_Delta 2026-10-08 (Linux sweep + kv decision): toolchain now **v0.64.1 on
+Linux/WSL too** (archive sha256 `6f6787a3...` verified, installed tree
+byte-identical to the verified extract). **Linux sweep fully GREEN**:
+probe fleet 11/11 (incl. `probe_adopt_smoke` run twice -- **C-PULSE-09
+does not reproduce on Linux**; narrowed to Windows), m212 dash+dot gate
+green (after bridging the new **C-PULSE-13** Unix pkg-home mismatch,
+filed), suites x2, smoke **73/73** (jsonl + kv), crash 6/6, rate, and a
+**20m kv store-soak** (756 writes / 0 fail; compact + hard-kill reopen
+counts intact). **kv-default decision: stays `jsonl` default / kv
+opt-in** -- flip is gated on kv-aware Dockerfile + backup tooling +
+crash test + a longer soak (prerequisites recorded in
+`docs/PACKAGE-WISHLIST-PULSE.md`). Storage 65% -> 68% for the
+cross-platform verified kv backend. 55.6% -> ~55.9%._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
@@ -26,7 +40,7 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~55.6% of production grade**
+## 1. Overall score: **~55.9% of production grade**
 
 _Delta 2026-10-08 (kv backend): 54.6% -> ~55.6% -- **`xiom.kv` adopted as
 the opt-in event-store backend** (`PULSE_STORE_BACKEND=kv`,
@@ -122,13 +136,13 @@ fallbacks._
 | 4 | Configuration | 5% | 80% | 4.0 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; no per-value type validation |
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 65% | 6.5 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+), crash-safe append, `?limit`/`?kind`, compaction, 10m soak + kv soak 20s; no update/delete/index, no fsync |
+| 7 | Storage | 10% | 68% | 6.8 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+, verified on both platforms incl. a **20m kv soak** with hard-kill reopen), crash-safe append, `?limit`/`?kind`, compaction; no update/delete/index, no fsync |
 | 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **55.6** | |
+| | **Total** | **100%** | | **55.9** | |
 
 Two lenses to keep separate:
 
@@ -143,7 +157,7 @@ Two lenses to keep separate:
 
 ## 2. What works today (evidence-backed)
 
-Run `out/` (Linux) or `out\pulse_app_v9.exe` (Windows); smoke 61/61 and
+Run `out/` (Linux) or `out\pulse_app_v9.exe` (Windows); smoke 73/73 and
 suites x2 on both platforms, these work end-to-end:
 
 | Method | Path | What it does |
@@ -236,15 +250,18 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
   no scopes/roles, no refresh tokens.
 - No RBAC/authorization layer at all.
 
-**Storage (55%)**
+**Storage (68%)**
 - Append + read last N (`?limit=1..100`) + `?kind=` field filter + count +
   compaction (temp file + atomic replace; drops torn lines); **10m soak:
   841 writes, 0 fail, compact/reopen counts intact, 0 mismatches**
-  (`scripts\store_soak.ps1`). No update/delete, migrations framework, or
-  indexes (fine at small scale).
+  (`scripts\store_soak.ps1`); **20m kv soak on Linux** (756/0, hard-kill
+  reopen + native compact intact). No update/delete, migrations framework,
+  or indexes (fine at small scale).
 - No `fsync` in the runtime: durability today = torn-tail healing, not
   power-loss safety (stdlib wishlist row added).
-- `xiom.kv` is the proposed packages-lane replacement.
+- `xiom.kv` 0.1.0 is the **verified opt-in backend** on both platforms
+  (smoke 73/73; default stays JSONL per the decision in
+  `docs/PACKAGE-WISHLIST-PULSE.md`, which lists the flip prerequisites).
 
 **Security hardening (38%)**
 - TLS: front-proxy by design (Caddy/nginx); `docs/DEPLOYMENT.md` published
@@ -288,24 +305,29 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 
 ## 4. Ecosystem blockers affecting PULSE (not PULSE's own code)
 
-| Blocker | State on v0.64.0 | PULSE impact |
+| Blocker | State (2026-10-08) | PULSE impact |
 |---|---|---|
 | C-PULSE-04 bare `&mut Int` read -> address | OPEN | keeps `*p` discipline; blocks cursor-style parsing in lane code |
 | C-PULSE-05 const-receiver `.to_str()` W005 -> abort | OPEN (worse: 0x80000003) | `convert.int_to_string` workaround stays |
 | C-PULSE-06 missing struct field -> garbage | OPEN | every struct literal must list all fields |
 | C-PULSE-07 module-scope package ctor -> undefined call/crash | OPEN | package aggregates stay caller-owned (Vec-holder pattern pinned by `probe_pkg_state_holder`) |
-| C-PULSE-08 m212 dotted-key roots (latent, lane source) | latent | `source-roots` workaround stays; gate `docs/repro/dep-roots-name-form` |
-| C-PULSE-09 xiom.session store integration crash via wrapper modules | OPEN | session store swap deferred; local store retained (`probe_adopt_smoke` vs `probe_session_inline`) |
-| C-PULSE-10 xiom.kv kv_get Str corruption + bytes truncation | OPEN (classification) | `xiom.kv` adoption blocked; JSONL fallback documented (`docs/repro/kv-get-str-corruption`) |
-| C-PULSE-11 package type alias invisible cross-module (defaults to i64) | OPEN | use wrapper structs, never `pub type X = PackageType` |
-| C-PULSE-02 deps not mapped to catalog roots | OPEN | `xiom.toml source-roots` wiring per package |
+| C-PULSE-08 m212 dotted-key roots | **CLOSED on v0.64.1** (m215) | gate dash+dot green on Windows and Linux (Linux after the C-PULSE-13 home bridge); `source-roots` kept only as belt-and-braces |
+| C-PULSE-09 xiom.session store integration crash via wrapper modules | OPEN -- **narrowed to Windows** | Linux `probe_adopt_smoke` green twice (steps 1-10, exit 0); Windows 0xC0000005 evidence stands; local session store retained |
+| C-PULSE-10 xiom.kv kv_get Str corruption + bytes truncation | **CLOSED on v0.64.1** (m217) | `probe_pkg_kv` green; kv backend verified incl. the 20m soak |
+| C-PULSE-11 package type alias invisible cross-module (defaults to i64) | **fixed in v0.64.1** (m216) | alias design compiles; swap re-tries on the C-PULSE-09 schedule |
+| C-PULSE-12 module last-segment shadows an imported alias | OPEN (design around) | PULSE renamed the app module; import-alias syntax filed in the stdlib wishlist |
+| C-PULSE-13 Unix pkg-home mismatch (`xiom pkg` -> `$HOME/xiom/packages`; compiler CRB-3c -> `~/.local/share/xiom`) | **NEW, Linux-only** | symlink bridge applied on WSL; m212 gate green after; ask: one unified resolver (`docs/PACKAGE-WISHLIST-PULSE.md`) |
+| C-PULSE-02 deps not mapped to catalog roots | **CLOSED on v0.64.1** (gate green; m212/m215) | dotted `[dependencies]` resolve to installed stores; PULSE keeps `source-roots` until a no-source-roots app build is verified |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |
 | `xiom.router` 0.1.0 | **LIVE and adopted by PULSE** (probe 8/8, suites x2) | routing hardened; wildcards/groups remain package roadmap |
-| `xiom.session`/`static`/`http.middleware` | incubating; publish gated on allowlist delta | module replacement + middleware framework |
+| `xiom.session`/`static`/`http.middleware` | static + middleware **adopted**; session single-module green, store integration gated | module replacement + middleware framework |
 | Concurrency primitives (threads/select) | absent on the pin | caps throughput; single-threaded design |
 
 Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
+Resolved on v0.64.1: C-PULSE-08, C-PULSE-10, C-PULSE-11, C-PULSE-02
+(dependency-root gate green; no-source-roots app build pending).
+`xiom.http` 0.1.1 republish remains the one known-red package gate.
 
 ---
 

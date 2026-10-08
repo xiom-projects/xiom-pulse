@@ -98,3 +98,16 @@ the pin below.
   a crashing program with block-buffered stdout prints nothing. The
   durable step-log workaround (`tests/probes/probe_adopt_smoke.xi`)
   stands until a real flush lands.
+
+## Delta 2026-10-08 (Linux/WSL v0.64.1 sweep -- verification pass)
+
+- **Adopted stdlib items verified on the Linux v0.64.1 archive**:
+  `probe_stdlib_server_parse` (12 checks) green, `TcpStream.write_all`
+  path green (smoke 73/73 incl. the 270 KB favicon), suite x2, crash 6/6,
+  rate, kv 20m soak -- all under WSL with `XIOM_STDLIB` on the lane
+  checkout `4dd8844`. No behavior delta vs Windows v0.64.1.
+- Open rows are unchanged on this archive: `socket_set_timeout` /
+  `socket_reuse_addr` still documented-Err stubs (recv deadlines remain
+  blocked, M4 slow-client shedding), `io.flush_stdout` still a no-op
+  (durable step logs used), no signal-handler install API (SIGTERM drain
+  blocked). No new asks from this sweep; the existing queue stands.

@@ -144,3 +144,50 @@ workaround until C-PULSE-08's m215 ships in an archive).
 one PULSE module behind a stable PULSE API; route code never calls a
 binding directly. The seam map is in `docs/PROGRESS.md` ("Integration
 seams for future bindings").
+
+## Delta 2026-10-08 (Linux v0.64.1 sweep) -- NEW finding C-PULSE-13 + kv soak/decision
+
+### C-PULSE-13: Unix shipped-installer layout -- `xiom pkg` and the compiler resolve different XIOM homes
+
+| Field | Detail |
+|---|---|
+| **Class** | consumer-visible install-layout defect (Linux/Unix shipped installer; Windows unaffected) |
+| **Symptom** | after `xiom pkg install xiom.rate@0.2.0` succeeds, `[dependencies]` still resolve zero catalog roots: the m212 gate (`docs/repro/dep-roots-name-form/`) fails both variants with 6x `T001 undefined variable 'rate'`, and `xiom doctor` reports `XIOM_HOME /home/lefteris/.local/share/xiom` + `[--] No packages` |
+| **Root cause (lane source, read-only)** | `xiom-pkg` (`crates/xiom-pkg/src/registry.rs::resolve_package_cache_dir`, :1103-1121) defaults to **`$HOME/xiom/packages`**, while the compiler (`crates/xiom-graph/src/paths.rs::xiom_home`, CRB-3c :184-194) picks the **first existing candidate** -- the canonical `~/.local/share/xiom` install root wins over the legacy `~/xiom` candidate -- and dependency roots resolve under `<xiom_home>/packages` (`manifest.rs::dependency_roots_under`). Windows agrees (`%LOCALAPPDATA%\xiom` for both), so this is Unix-only |
+| **Evidence** | install output: `Installed xiom.rate v0.2.0 to /home/lefteris/xiom/packages/...`; `xiom doctor` -> "No packages"; gate red in `probe-logs/linux-sweep-20261008T132937Z/` (pre-repair, kept for the record); with `XIOM_HOME=/home/lefteris/xiom` both variants `--check` PASS; after bridging (below) the full gate passes in `probe-logs/linux-sweep-20261008T134143Z/` |
+| **PULSE workaround (applied on WSL)** | `ln -s /home/lefteris/xiom/packages /home/lefteris/.local/share/xiom/packages` -- doctor then reports `[OK] packages directory`, and the m212 gate + default resolver work; setting `XIOM_HOME=~/xiom` also works but skews install-root discovery |
+| **Ask** | unify on one resolver: either `xiom-pkg` installs to `xiom_graph::paths::xiom_home().join("packages")` (preferred -- keeps the canonical layout authoritative), or the CRB-3c candidate order gains a "candidate that already contains `packages/`" tiebreak, or the Unix installer creates/points `$XIOM_HOME/packages`. Please also re-run `xiom doctor` on a fresh Unix install as the regression check |
+
+**Note:** prior Linux sessions never surfaced this because PULSE's
+`xiom.toml` lists every installed package's `src/` explicitly (the
+C-PULSE-02 workaround bypasses the resolver); only the m212 gate
+exercises dependency-root resolution for real, and it was expected-red
+on v0.64.0 anyway.
+
+### `xiom.kv` 0.1.0 -- 20m Linux soak green; default decision
+
+- Linux v0.64.1: kv-mode smoke **73/73**, store-soak **20m green** (756
+  writes / 0 fail; `count_after_compact=count_after_reopen=756`,
+  0 mismatches, native compact, hard-kill reopen intact, `server_exit=0`,
+  segment `evt-seg-0000000019.kv` 70 KB). Windows v0.64.1: kv smoke 73/73
+  + 20s soak green (previous wrap).
+- **Decision (with evidence): the default stays `jsonl`; kv remains the
+  verified opt-in backend.** A default flip is gated on updating the
+  operations surface first, none of which is kv-aware today:
+  `deploy/Dockerfile` pins `PULSE_STORE_PATH=/data/pulse-events.jsonl`
+  (needs `PULSE_KV_DIR=/data/pulse-kv` or explicit backend),
+  `scripts/backup.{sh,ps1}` snapshot a single JSONL file (kv needs the
+  segment dir), `scripts/crash_test.sh` writes a torn line into the JSONL
+  path, and `docs/DEPLOYMENT.md` documents the JSONL store. Re-evaluate
+  after those land plus a longer (>= 24h aggregated) kv soak.
+- Cosmetic consumer note: `store_soak.sh` prints a `store-soak.jsonl: No
+  such file` stderr line in kv mode when computing `store_bytes` (fixed
+  this wrap in the `.sh` twin to match the `.ps1` empty value).
+
+### Consumer-visible status on v0.64.1 (Linux, post-repair)
+
+All ten adopted packages' probes green on the Linux archive
+(state-holder, session-inline, adopt-smoke, stdlib-server-parse, schema,
+audit-rotate, kv, middleware, metrics, static, session). `xiom.http`
+0.1.1 remains the known-red republish gate on v0.64.1 (extern-unsafe
+enforcement; pruned from PULSE -- see the compiler findings doc).

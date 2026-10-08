@@ -385,3 +385,45 @@ after any compiler change.
 - dl latest is still **v0.64.0** (2026-10-05); the fixes above are in the
   lane source only. PULSE's fleet is ready to re-run the day v0.64.1 is
   published (the addenda above list the exact probes).
+
+## Delta 2026-10-08 (Linux/WSL v0.64.1 sweep -- fleet green, C-PULSE-09 narrowed to Windows)
+
+**Install (verified):** WSL compiler updated to **v0.64.1** from the
+published archive (`xiom-0.64.1-linux-x64.tar.gz`, 29,352,608 B, published
+2026-10-08, sha256 `6f6787a3...c91b5601`); `sha256sum -c SHA256SUMS` OK and
+`diff -rq` between the extracted archive and the installed tree is
+byte-identical. Compiler binary sha256 `36dd6fb5...b3b36b`; stdlib lane
+checkout `4dd8844` (0.64.2 pin prep). Pin recorded in
+`docs/OPS-REQUEST.md` section D.1.
+
+**Fleet results (logdir `probe-logs/linux-sweep-20261008T134143Z/`):**
+
+- **Probe fleet 11/11 green**, including `probe_adopt_smoke` **twice in a
+  row**: steps 1-10 all complete, `program_exit=0`, `[PASS] adopt-smoke`.
+  **C-PULSE-09 does NOT reproduce on Linux v0.64.1** -- the cross-module
+  `Vec[SessionStore]` path (`session_reset`/`session_count`/
+  `session_create`/`session_get`/`csrf_*` through wrapper modules) runs
+  clean under WSL. The Windows 0xC0000005 crash evidence stands; the open
+  question is now **Windows-specific** (or platform ABI-specific). Please
+  keep the m216/m217 class in mind; PULSE will re-run this probe on both
+  platforms when the next archive lands.
+- **m212 gate (C-PULSE-08) green on Linux**: `dash` and `dot` variants,
+  `--check` and `--run`, all exit 0 -- **after** repairing the local
+  package-home mismatch found this session (C-PULSE-13, filed in
+  `docs/PACKAGE-WISHLIST-PULSE.md`; the failure was `xiom pkg` installing
+  to `$HOME/xiom/packages` while `xiom_home()` resolves the existing
+  canonical `~/.local/share/xiom`). With `XIOM_HOME=~/xiom` both variants
+  passed pre-repair too, so **m215 dotted-key normalization is confirmed
+  on Linux**; the gate red was purely the install-layout mismatch.
+- **Regression suites x2** (`test_http`/`test_app`/`test_smoke`), **smoke
+  73/73 on jsonl and kv**, crash 6/6, rate smoke, **kv store-soak 20m
+  green** (756 writes / 0 fail, compact + hard-kill reopen counts intact,
+  `server_exit=0`) -- all on Linux v0.64.1.
+- `probe_stdlib_server_parse` (12 checks) and all package probes green:
+  m217 kv reads, m216 alias vectors, metrics/middleware/static/session
+  surfaces behave on the Linux archive.
+
+**Cross-lane note:** first sweep pass had the m212 gate red because of
+the C-PULSE-13 layout mismatch; the pre-repair evidence is kept in
+`probe-logs/linux-sweep-20261008T132937Z/` (for the record), the green
+post-repair sweep is the `...T134143Z/` logdir.
