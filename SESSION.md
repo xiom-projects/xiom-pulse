@@ -105,14 +105,25 @@
   next adoption gate; C-PULSE-09 was triaged not-reproducible from
   committed sources (PULSE will retry the session-store swap on the next
   archive using the arrangement in git history 220f814).
+- **2026-10-08 (pre-flight round):** `--check-config` CLI (effective
+  config dump; exits 1 only on an unreadable configured file; never
+  prints the secret -- flags dev-default vs env) + smoke pre-flight
+  checks (`--version`/`--check-config` before start; 66 checks). Suites
+  x2 + smoke green on both platforms. **Lane map:** a dedicated
+  **bindings lane** (`E:\xiom-packages\bindings`, worktree of the
+  packages lane) now builds binding packages; PULSE files binding
+  requests via the packages lane and keeps the seam map in PROGRESS
+  ("Integration seams for future bindings").
 - **Next action:** on v0.64.1: re-run the probe fleet
   (`probe_stdlib_server_parse`, `probe_pkg_state_holder`,
   `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv`,
   `probe_audit_rotate`, `probe_schema`) and the m212 repro gate (both
   variants must exit 0); retry the session-store swap (C-PULSE-09) and
   the kv backend (C-PULSE-10); adopt socket timeouts / signals / define
-  flag when the stdlib exposes them; when the owner greenlights: CI file
-  + dl release flow (ops mechanics in docs/OPS-REQUEST.md section D).
+  flag when the stdlib exposes them; watch the bindings lane for the
+  durable DB/KV binding (final stage; store seam in PROGRESS section
+  6b); when the owner greenlights: CI file + dl release flow (ops
+  mechanics in docs/OPS-REQUEST.md section D).
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded
 

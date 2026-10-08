@@ -15,7 +15,15 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~53.2% of production grade**
+## 1. Overall score: **~53.4% of production grade**
+
+_Delta 2026-10-08 (pre-flight round): 53.2% -> ~53.4% -- **`--check-config`
+CLI** (effective config dump, exits 1 only on an unreadable configured
+file, never prints the secret; flags the dev-default JWT secret) and the
+smoke twins invoke `--version`/`--check-config` before starting the server
+(66 checks). Design note added: **integration seams for the new bindings
+lane** (`E:\xiom-packages\bindings`; PULSE's storage/session/outbound
+replacements plug behind single modules)._
 
 _Delta 2026-10-08 (packaging round): 52.6% -> ~53.2% -- **Transfer-Encoding
 smuggling guard** (any TE gets 501; CL.TE desync closed; test_app +
@@ -73,7 +81,7 @@ fallbacks._
 | 1 | HTTP core (parse/build/limits) | 12% | 76% | 9.1 | query strings, header caps, HEAD; shared stdlib parser + invalid-CL reject; keep-alive/chunked/Expect missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
-| 4 | Configuration | 5% | 75% | 3.8 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; no schema validation of values |
+| 4 | Configuration | 5% | 80% | 4.0 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; no per-value type validation |
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; `xiom.kv` blocked (C-PULSE-10), no fsync |
@@ -82,7 +90,7 @@ fallbacks._
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 80% | 4.0 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins; release packager (`pulse-<ver>-<os>-<arch>.zip` + sha256) and backup/restore tooling verified locally; no CI |
-| | **Total** | **100%** | | **53.2** | |
+| | **Total** | **100%** | | **53.4** | |
 
 Two lenses to keep separate:
 
@@ -271,7 +279,7 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
 | **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~74% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD, stdlib write_all + parser, audit rotation, CLI surfaces, schema helper, TE smuggling guard; recv timeouts + signal handling blocked on stdlib) |
-| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~32% (TLS E2E on Windows **and** Linux; `.sh` twins; deployment runbook + ops answers; `--version`/build-info; release packager + backup/restore tooling verified; CI pending greenlight) |
+| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~34% (TLS E2E on Windows **and** Linux; `.sh` twins; deployment runbook + ops answers; `--version`/`--check-config`/build-info; release packager + backup/restore tooling verified; CI pending greenlight) |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 
 ---
@@ -302,6 +310,25 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 - [ ] Stable self-hosted toolchain (ecosystem gate)
 
 ---
+
+## 6b. Integration seams for future bindings (design note, 2026-10-08)
+
+PULSE keeps every external-system touch behind exactly one module so a
+future **bindings-lane** package (`E:\xiom-packages\bindings`, worktree of
+the packages lane) can replace the implementation without route changes:
+
+| Seam | Module | Current impl | Binding replacement path |
+|---|---|---|---|
+| Event store | `src/store.xi` | JSONL append/compact (crash-safe) | same 6-fn API backed by a DB/KV binding package |
+| Sessions | `xiom.pulse.session` | local vectors (`xiom.session` store swap deferred, C-PULSE-09) | store-backed sessions behind the same API |
+| Static assets | route 14 via `xiom.static` | registry package | unchanged |
+| CSRF/CORS | `src/cors.xi` + `xiom.http.middleware` | registry package | unchanged |
+| Outbound calls | (none today) | -- | a future `src/outbound.xi` seam |
+
+Rules: bindings arrive as registry packages (packages lane -> bindings
+lane), are wrapped once per seam, and never get linked into route code.
+Requests are tracked in `docs/PACKAGE-WISHLIST-PULSE.md` ("Bindings
+lane").
 
 ## 7. How this score is updated
 

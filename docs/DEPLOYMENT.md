@@ -193,3 +193,8 @@ fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
   `PULSE_AUDIT_PATH` if the audit trail matters); start the service;
   verify with `GET /api/events/count` against the pre-backup count. The
   store tolerates a torn tail, so restoring a slightly-live file is safe.
+- **Pre-flight:** `pulse_app --check-config` dumps the effective config
+  (env wins) without binding -- suitable as a deploy gate or systemd
+  `ExecStartPre`; it exits non-zero only when the configured file is
+  unreadable and flags the dev-default JWT secret (set `PULSE_JWT_SECRET`
+  in the unit's env file).

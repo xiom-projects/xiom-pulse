@@ -115,3 +115,32 @@ append store and files `xiom.kv` above.
 
 **Roadmap status:** items 1-3 done; of item 4, metrics/middleware/static
 are adopted, session + kv are gated on the C-PULSE-09/10 fixes.
+
+## Bindings lane (added 2026-10-08)
+
+A dedicated **bindings lane** now exists as a worktree of the packages
+lane: `E:\xiom-packages\bindings`. Its purpose is **binding packages** --
+native integration layers that hook XIOM into external systems (databases,
+queues, drivers).
+
+**Routing rule for PULSE:** binding requests are filed in this wishlist (or
+the package lane's tracker) like any other request; the packages lane
+forwards them to the bindings lane. PULSE never links native code
+directly -- bindings must arrive as registry packages consumed exactly
+like the current deps (`xiom.toml` `[dependencies]` + the `source-roots`
+workaround until C-PULSE-08's m215 ships in an archive).
+
+**Likely first PULSE binding requests (heads-up; final-stage work):**
+- A durable database/KV client binding (SQLite/Postgres or similar) to
+  back the event store and sessions beyond JSONL. Until then PULSE keeps
+  the JSONL store (the documented fallback) and the `xiom.kv` defect gate
+  (`probe_pkg_kv`).
+- Optional outbound HTTP client binding for webhooks/proxying -- PULSE is
+  inbound-only today, so this is not yet needed.
+- TLS is intentionally NOT a binding for PULSE: the front proxy terminates
+  TLS (docs/DEPLOYMENT.md); the app stays plaintext on loopback.
+
+**Consumption contract (PULSE side):** each binding is wrapped in exactly
+one PULSE module behind a stable PULSE API; route code never calls a
+binding directly. The seam map is in `docs/PROGRESS.md` ("Integration
+seams for future bindings").
