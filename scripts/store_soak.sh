@@ -132,7 +132,12 @@ wait "$SRV2" 2>/dev/null
 SRV_EXIT=$?
 
 EXPECTED_FINAL=$((BASELINE + OK))
-STORE_BYTES=$(wc -c <"$STORE" 2>/dev/null | tr -d ' ' || printf '?')
+# kv mode writes no JSONL file: report store_bytes empty (PS twin parity)
+# instead of letting the redirection fail noisily.
+STORE_BYTES=""
+if [ -f "$STORE" ]; then
+  STORE_BYTES=$(wc -c <"$STORE" | tr -d ' ')
+fi
 {
   printf 'store-soak summary (UTC %s)\n' "$(pulse_now)"
   printf 'duration: %ss, interval %sms\n' "$SECONDS_ARG" "$INTERVAL_MS"
