@@ -35,6 +35,12 @@ a.out
 # audit rotation probe files (tests/probes/probe_audit_rotate.xi)
 /pulse-audit-rotate-test.log*
 
+# release artifacts (scripts/release.*)
+/dist/
+
+# backup snapshots (scripts/backup.*)
+/backups/
+
 # Kilo / Agent Manager workspace state (never commit)
 .kilo/
 *.code-workspace
