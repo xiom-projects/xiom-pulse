@@ -94,6 +94,7 @@ function Invoke-CurlGet {
 $r = curl.exe -s -i "$base/health" 2>&1 | Out-String
 Check "health 200" $r "200 OK"
 Check "health json" $r '{"status":"ok"}'
+Check "date header" $r "Date: "
 
 # 2. GET /api/version
 $r = curl.exe -s -i "$base/api/version" 2>&1 | Out-String
@@ -128,6 +129,10 @@ Check "wrong method 405" $r "405 Method Not Allowed"
 $r = Invoke-CurlPost "/api/echo" '{"longer":"payload","n":42}'
 Check "echo longer 200" $r "200 OK"
 Check "echo longer body" $r '{"longer":"payload","n":42}'
+
+# 7b. Expect: 100-continue (interim answered before the body)
+$r = Invoke-CurlPost "/api/echo" '{"e":1}' -ExtraHeaders @("-H", "Expect: 100-continue")
+Check "expect 100-continue 200" $r "200 OK"
 
 # 8. Step 2: router param route + metrics
 $r = Invoke-CurlGet "/api/items/42"

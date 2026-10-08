@@ -223,6 +223,41 @@ pub fn content_length_of(raw: &Vec[UInt8], hdr_end: Int) -> Int {
   return 0;
 }
 
+/// with_header_line inserts `line` (without CRLF) immediately after the
+/// status line of a built response. Used by the app to add Date at the
+/// assembly point. Complexity: O(n). Pure.
+pub fn with_header_line(resp: &Vec[UInt8], line: Str) -> Vec[UInt8] {
+  var out: Vec[UInt8] = Vec[UInt8].new();
+  let first = find_crlf(resp, 0, resp.len());
+  if first < 0 { return out; }
+  var i: Int = 0;
+  while i < first + 2 {
+    out.push(resp[i]);
+    i = i + 1;
+  }
+  let line_bytes = str_to_bytes(line + "\r\n");
+  var j: Int = 0;
+  while j < line_bytes.len() {
+    out.push(line_bytes[j]);
+    j = j + 1;
+  }
+  var k: Int = first + 2;
+  while k < resp.len() {
+    out.push(resp[k]);
+    k = k + 1;
+  }
+  return out;
+}
+
+/// expects_continue reports whether the request carries
+/// `Expect: 100-continue` (case-insensitive; absent or another value is
+/// false). Complexity: O(header). Pure.
+pub fn expects_continue(req: &PulseRequest) -> Bool {
+  let v = header_get(req, "expect");
+  if v.len() == 0 { return false; }
+  return string.str_contains(string.str_lower(v), "100-continue");
+}
+
 /// status_text returns the HTTP/1.1 reason phrase. Complexity: O(1).
 pub fn status_text(code: Int) -> Str {
   if code == 200 { return "OK"; }

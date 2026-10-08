@@ -86,6 +86,14 @@ pub fn main() -> Int {
   f = f + check("content-length 15", string.str_contains(resp_str, "Content-Length: 15\r\n"));
   f = f + check("connection close", string.str_contains(resp_str, "Connection: close\r\n"));
   f = f + check("body at end", string.str_ends_with(resp_str, "{\"status\":\"ok\"}"));
+  let respd = http.with_header_line(&resp, "Date: Thu, 01 Jan 1970 00:00:00 GMT");
+  let respd_str = http.bytes_to_str(&respd, 0, respd.len());
+  f = f + check("with_header_line after status", string.str_contains(respd_str, "HTTP/1.1 200 OK\r\nDate: Thu, 01 Jan 1970 00:00:00 GMT\r\n"));
+  f = f + check("with_header_line keeps body", string.str_contains(respd_str, "{\"status\":\"ok\"}"));
+  let expl = http.parse_request(&http.str_to_bytes("POST /x HTTP/1.1\r\nHost: t\r\nExpect: 100-continue\r\nContent-Length: 1\r\n\r\nz"));
+  f = f + check("expects continue", http.expects_continue(&expl));
+  let expn = http.parse_request(&http.str_to_bytes("POST /x HTTP/1.1\r\nHost: t\r\n\r\n"));
+  f = f + check("expects continue absent", !http.expects_continue(&expn));
 
   // --- routing -------------------------------------------------------------
   let h = route_req("GET", "/health", "");

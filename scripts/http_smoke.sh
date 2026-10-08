@@ -65,6 +65,7 @@ sleep 0.2
 R=$(http_get /health)
 pulse_check "health 200" "$R" "200 OK"
 pulse_check "health json" "$R" '{"status":"ok"}'
+pulse_check "date header" "$R" "Date: "
 
 # --- 2. GET /api/version ----------------------------------------------------
 R=$(http_get /api/version)
@@ -99,6 +100,10 @@ pulse_check "wrong method 405" "$R" "405 Method Not Allowed"
 R=$(post_json /api/echo '{"longer":"payload","n":42}')
 pulse_check "echo longer 200" "$R" "200 OK"
 pulse_check "echo longer body" "$R" '{"longer":"payload","n":42}'
+
+# --- 7b. Expect: 100-continue (interim answered before the body) ------------
+R=$(post_json /api/echo '{"e":1}' -H 'Expect: 100-continue')
+pulse_check "expect 100-continue 200" "$R" "200 OK"
 
 # --- 8. router param + metrics ---------------------------------------------
 R=$(http_get /api/items/42)
