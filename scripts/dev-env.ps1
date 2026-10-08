@@ -24,8 +24,14 @@
 
 $ErrorActionPreference = "Stop"
 
-$env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
-$env:XIOM_STDLIB   = "E:\xiom-lang\stdlib"
+# An explicit XIOM_COMPILER wins (compiler A/B sweeps, e.g. a lane release
+# build); the installed toolchain is only the default. Mirrors dev-env.sh.
+if (-not $env:XIOM_COMPILER) {
+    $env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
+}
+if (-not $env:XIOM_STDLIB) {
+    $env:XIOM_STDLIB = "E:\xiom-lang\stdlib"
+}
 Remove-Item Env:XIOM_RUNTIME_DIR -ErrorAction SilentlyContinue   # retired
 
 $missing = @()

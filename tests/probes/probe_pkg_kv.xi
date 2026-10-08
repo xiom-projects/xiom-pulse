@@ -1,20 +1,13 @@
-// probe_pkg_kv -- xiom.kv 0.1.0 consumer probe (KNOWN-RED defect gate).
+// probe_pkg_kv -- xiom.kv 0.1.0 consumer probe (GREEN on v0.64.1).
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// STATUS 2026-10-07 (v0.64.0, WSL Linux): adoption is BLOCKED.
-//   Defect 1: kv_get returns an address-like decimal Str for every key.
-//   Defect 2: multi-key writes/overwrites corrupt later reads; kv_get_bytes
-//             returns truncated/misaligned values (e.g. len 6 for 9 bytes).
-//   Single-key bytes round-trips are correct (kv_get_bytes + from_utf8).
-// Repro: docs/repro/kv-get-str-corruption/. PULSE keeps the JSONL store as
-// the documented fallback until the packages lane resolves this.
-//
-// This probe intentionally exits non-zero while the defects reproduce: it is
-// the acceptance gate for the future kv adoption, not a green-gate suite
-// member yet. Prints are length/equality based (no raw corrupted bytes).
-//
-// Run from the repo root: scripts/run.sh tests\probes\probe_pkg_kv.xi
+// STATUS 2026-10-08 (v0.64.1): the v0.64.0 defects are FIXED -- kv_get
+// returns the stored text (m217 nested payload chains) and multi-key
+// reads are stable; this probe is green and the corpus still exercises
+// the bytes workaround path. History: on v0.64.0, kv_get returned an
+// address-like decimal and multi-key bytes reads truncated
+// (docs/repro/kv-get-str-corruption/).
 module pulse_probe_pkg_kv
 
 use xiom.kv;

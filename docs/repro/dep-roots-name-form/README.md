@@ -2,6 +2,14 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Repro: `[dependencies]` root matching -- dotted vs dash-form names
 
+**Status: CLOSED on v0.64.1 (2026-10-08).** With the compiler updated in
+place to v0.64.1, BOTH variants exit 0 with no `source-roots` workaround
+(verified on Windows: `run.ps1` on `dash/probe.xi` and `dot/probe.xi`,
+both `exit code: 0`). The m215 dotted-key normalization resolves the
+canonical dotted keys to `xiom-rate-0.2.0`-style directories; the
+C-PULSE-08 latent name-form gap never shipped. The v0.64.0 results below
+are kept as the historical baseline.
+
 **Filed:** 2026-10-07 by the PULSE consumer lane.
 **Class:** C-PULSE-02 follow-up (m212 `dependency_roots_under`, latent until
 the next compiler archive ships).

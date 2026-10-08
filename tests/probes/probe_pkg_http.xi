@@ -2,6 +2,13 @@
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
+// **KNOWN-RED on v0.64.1 (2026-10-08):** the published xiom.http 0.1.1
+// violates v0.64.1's extern-unsafe enforcement (67 T001s in its catalog
+// body), so this probe cannot compile until the package republishes with
+// unsafe-wrapped internals. It is the acceptance gate for that republish.
+// PULSE itself no longer uses xiom.http (the stdlib parser replaced it);
+// the package was pruned from xiom.toml/package.xi.
+//
 // Consumes the installed registry package (no vendoring): parser + status.
 // Run: .\scripts\run.ps1 tests\probes\probe_pkg_http.xi
 module pulse_probe_pkg_http
