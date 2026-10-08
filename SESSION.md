@@ -74,10 +74,21 @@
   commands return CLR/paging errors, suspect system commit pressure, not
   the build. PULSE's own footprint is small (single clang compiles, tiny
   test servers); Docker Desktop + WSL VMs dominate.
-- **Next action:** continue M4/M5 -- keep-alive, schema helper (recv
-  timeouts still blocked on `socket_set_timeout` stub); CI file + version
-  stamp when the owner greenlights going public (ops has the mechanics);
-  watch C-PULSE-08/09/10/11/12 on the next compiler archive; the
+- **2026-10-08 (later):** audit rotation landed (`src/audit.xi`,
+  `PULSE_AUDIT_MAX_BYTES` default 5 MB, probe 6/6 + app-level E2E on
+  Linux); CLI `--version`/`--help` and `/api/version` commit/build fields
+  (runtime `PULSE_BUILD_COMMIT`/`PULSE_BUILD_DATE` until a compiler
+  define flag exists -- filed). Both platforms re-verified green.
+  Blocked-work survey: `xiom.os.signal` has no handler-install API ->
+  SIGTERM graceful stop stays blocked (stdlib wishlist filed); keep-alive
+  stays gated on recv timeouts (`socket_set_timeout` stub) because one
+  idle keep-alive client would stall the single-threaded loop. Next
+  unblocked M4 item: schema helper.
+- **Next action:** M4 schema helper (JSON field rules with typed errors);
+  keep-alive + recv timeouts + signals wait on stdlib capabilities; CI
+  file + packaging + true build stamping + schema helper when the owner
+  greenlights going public (ops has the mechanics); watch
+  C-PULSE-08/09/10/11/12 on the next compiler archive; the
   `probe_pkg_kv` gate flips green when the kv defect is fixed.
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded

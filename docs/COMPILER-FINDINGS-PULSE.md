@@ -295,3 +295,17 @@ should flip to green), and both variants of
 **Bump procedure addendum 2:** add `probe_stdlib_server_parse` to the
 archive-bump fleet (it gates the parser contract) and re-run the Windows
 `xiom pkg install` + suite set after any compiler archive change.
+
+**Toolchain asks (2026-10-08 continuation):**
+
+- **Compile-time build stamping:** no `--define KEY=VAL`-style flag exists
+  (checked `xiom --help`), so `pulse --version` and `/api/version` surface
+  provenance from runtime env (`PULSE_BUILD_COMMIT` / `PULSE_BUILD_DATE`).
+  A define flag (or compile-time env capture) would let release artifacts
+  embed commit/build date truthfully.
+- **C-PULSE-12 addendum (family namespaces):** the shadowing also applies
+  to module *families*: inside `xiom.pulse.*` modules, the `pulse` alias
+  resolves to the family namespace (not the `xiom.pulse` module), so
+  `pulse.pulse_version()` is a method-call-on-expression error. PULSE
+  keeps a local `APP_VERSION` const in sync instead; an import-alias or
+  full-path call syntax would remove the trap.

@@ -126,6 +126,11 @@ right now. When greenlit, ops executes the following (already specified):
    store, bound to `127.0.0.1:8080` (keep the loopback bind hardcoded);
    public surface stays 443-only. `X-Pulse-Quit` remains a test hook;
    SIGTERM is the production stop once M4 signal handling lands.
+   **Blocker note (2026-10-08):** the stdlib currently exposes no
+   signal-handler installation API (`xiom.os.signal` has name/code/raise
+   only), so PULSE cannot install a SIGTERM drain yet; filed in the
+   stdlib wishlist. Until then the supervisor kills directly (the soak
+   fleet proves the store heals from hard kills).
 5. **Monitoring:** `/health` on UptimeRobot (keyword monitor; give it an
    honesty/state keyword), `/metrics` restricted via nginx allow/deny to
    monitoring sources.
@@ -144,3 +149,8 @@ right now. When greenlit, ops executes the following (already specified):
    version stamp surfaced in `/api/version` and `pulse --version`; keep
    the `.ps1`/`.sh` twins; when greenlit, ops re-runs the `.sh` E2E set
    against the VPS deployment as the acceptance harness.
+   **Update (2026-10-08):** `--version`/`--help` and the
+   `/api/version` `commit`/`build` fields are live and verified on both
+   platforms; values come from `PULSE_BUILD_COMMIT`/`PULSE_BUILD_DATE`
+   (deploy env). True compile-time stamping needs a toolchain define flag
+   (filed); ops can set the env vars in the systemd unit until then.

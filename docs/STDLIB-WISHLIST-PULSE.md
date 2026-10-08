@@ -76,6 +76,13 @@ the pin below.
 - `socket_set_timeout` re-checked on the current checkout: still a
   documented-Err stub, so recv deadlines remain blocked (PULSE M4
   slow-client shedding).
+- **New ask: signal handler installation.** `xiom.os.signal` offers
+  name/code/lookup/`signal_raise`, but no way to install a handler
+  (`signal_handle(num, cb)` or a poll-based `signal_pending()`). PULSE
+  consequence: SIGTERM graceful shutdown (the ops-requested production
+  stop) stays blocked; supervision relies on kill semantics.
+- Adopted this round, behaved exactly as documented: `xiom.io.file_size`
+  (audit rotation) and `xiom.env.args()` (CLI flags).
 
 ## Delta 2026-10-07 (Linux/WSL session)
 
