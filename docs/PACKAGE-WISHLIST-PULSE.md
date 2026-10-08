@@ -156,7 +156,7 @@ seams for future bindings").
 | **Root cause (lane source, read-only)** | `xiom-pkg` (`crates/xiom-pkg/src/registry.rs::resolve_package_cache_dir`, :1103-1121) defaults to **`$HOME/xiom/packages`**, while the compiler (`crates/xiom-graph/src/paths.rs::xiom_home`, CRB-3c :184-194) picks the **first existing candidate** -- the canonical `~/.local/share/xiom` install root wins over the legacy `~/xiom` candidate -- and dependency roots resolve under `<xiom_home>/packages` (`manifest.rs::dependency_roots_under`). Windows agrees (`%LOCALAPPDATA%\xiom` for both), so this is Unix-only |
 | **Evidence** | install output: `Installed xiom.rate v0.2.0 to /home/lefteris/xiom/packages/...`; `xiom doctor` -> "No packages"; gate red in `probe-logs/linux-sweep-20261008T132937Z/` (pre-repair, kept for the record); with `XIOM_HOME=/home/lefteris/xiom` both variants `--check` PASS; after bridging (below) the full gate passes in `probe-logs/linux-sweep-20261008T134143Z/` |
 | **PULSE workaround (applied on WSL)** | `ln -s /home/lefteris/xiom/packages /home/lefteris/.local/share/xiom/packages` -- doctor then reports `[OK] packages directory`, and the m212 gate + default resolver work; setting `XIOM_HOME=~/xiom` also works but skews install-root discovery |
-| **Ask** | unify on one resolver: either `xiom-pkg` installs to `xiom_graph::paths::xiom_home().join("packages")` (preferred -- keeps the canonical layout authoritative), or the CRB-3c candidate order gains a "candidate that already contains `packages/`" tiebreak, or the Unix installer creates/points `$XIOM_HOME/packages`. Please also re-run `xiom doctor` on a fresh Unix install as the regression check |
+| **Ask** | unify on one resolver: either `xiom-pkg` installs to `xiom_graph::paths::xiom_home().join("packages")` (preferred -- keeps the canonical layout authoritative), or the CRB-3c candidate order gains a "candidate that already contains `packages/`" tiebreak, or the Unix installer creates/points `$XIOM_HOME/packages`. Please also re-run `xiom doctor` on a fresh Unix install as the regression check. **(Routed to the compiler/installer lane 2026-10-08 per the packages lane.)** |
 
 **Note:** prior Linux sessions never surfaced this because PULSE's
 `xiom.toml` lists every installed package's `src/` explicitly (the
@@ -188,6 +188,20 @@ on v0.64.0 anyway.
 
 All ten adopted packages' probes green on the Linux archive
 (state-holder, session-inline, adopt-smoke, stdlib-server-parse, schema,
-audit-rotate, kv, middleware, metrics, static, session). `xiom.http`
-0.1.1 remains the known-red republish gate on v0.64.1 (extern-unsafe
-enforcement; pruned from PULSE -- see the compiler findings doc).
+audit-rotate, kv, middleware, metrics, static, session). The `xiom.http`
+0.1.1 red gate (extern-unsafe enforcement on v0.64.1) was **closed by the
+0.1.2 republish** -- see the wrap-3 subsection below (package re-added).
+
+### xiom.http 0.1.2 (eco-v0.1.103) -- republish verified, re-added (wrap 3)
+
+- 0.1.2 carries the extern-unsafe compat fix (64 wraps + unsafe-internal
+  helpers). PULSE verified on v0.64.1 **both platforms**:
+  `probe_pkg_http` GREEN (Windows + Linux), suites x2 + smoke 73/73 green
+  with the package **re-added** to `xiom.toml`/`package.xi` (sha256
+  `994271f0b6507ea2f724b745f5c881eeb021f7b1ee49bdc2c9df0565c3a8e1a6`,
+  signature verified). The `xiom.http` breakage row in the compiler
+  findings doc is closed -- clean consumer pass, no hotfix needed on the
+  PULSE side.
+- **C-PULSE-13 routing:** the packages lane routed the Unix pkg-home
+  mismatch to the **compiler/installer lane** (not a package defect);
+  recorded in `docs/COMPILER-FINDINGS-PULSE.md`.

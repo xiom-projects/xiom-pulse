@@ -427,3 +427,20 @@ checkout `4dd8844` (0.64.2 pin prep). Pin recorded in
 the C-PULSE-13 layout mismatch; the pre-repair evidence is kept in
 `probe-logs/linux-sweep-20261008T132937Z/` (for the record), the green
 post-repair sweep is the `...T134143Z/` logdir.
+
+## Delta 2026-10-08 (wrap 3) -- C-PULSE-13 routed here; xiom.http closed
+
+- **C-PULSE-13 (Unix shipped-installer layout) was routed to this lane**
+  (compiler/installer) by the packages lane: `xiom pkg install` writes
+  `$HOME/xiom/packages` while `xiom_graph::paths::xiom_home()` resolves
+  the existing canonical `~/.local/share/xiom`, so `<home>/packages`
+  misses the store. Evidence + local workaround in
+  `docs/PACKAGE-WISHLIST-PULSE.md` (row C-PULSE-13); suggested fix:
+  unify the two resolvers (preferred: `xiom-pkg` uses
+  `xiom_graph::paths::xiom_home()`), and re-run `xiom doctor` on a fresh
+  Unix install as the regression check.
+- **`xiom.http` 0.1.2 republish verified; the package was re-added:**
+  `probe_pkg_http` GREEN on Windows and Linux v0.64.1; suites x2 + smoke
+  73/73 green with `xiom.http` back in `xiom.toml`/`package.xi`. The
+  v0.64.1 67-T001 extern-unsafe breakage from 0.1.1 is closed (packages
+  lane fix eco-v0.1.103, sha256 `994271f0...`).

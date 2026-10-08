@@ -28,6 +28,17 @@ crash test + a longer soak (prerequisites recorded in
 `docs/PACKAGE-WISHLIST-PULSE.md`). Storage 65% -> 68% for the
 cross-platform verified kv backend. 55.6% -> ~55.9%._
 
+_Delta 2026-10-08 (wrap 3): **`xiom.http` 0.1.2 republish verified and the
+package re-added** (probe green on Windows + Linux; suites x2 + smoke
+73/73 with it back in the catalog) -- the last known-red package gate is
+closed. The PS twin scripts' stale exe defaults
+(`pulse_server.exe`/`pulse_app_v6/v8/v9.exe`) were aligned to
+`out\pulse_app.exe` (one hung the smoke run -- fixed; smoke + rate
+re-verified green). Website-lane brief filed
+(`docs/WEBSITE-RELAY-PULSE.md`); owner decisions recorded in
+`docs/OPS-REQUEST.md` section E (pulse. subdomain live, Phase 1 pages by
+the website lane, release sequence on greenlight). Score holds (~55.9%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -316,7 +327,7 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 | C-PULSE-10 xiom.kv kv_get Str corruption + bytes truncation | **CLOSED on v0.64.1** (m217) | `probe_pkg_kv` green; kv backend verified incl. the 20m soak |
 | C-PULSE-11 package type alias invisible cross-module (defaults to i64) | **fixed in v0.64.1** (m216) | alias design compiles; swap re-tries on the C-PULSE-09 schedule |
 | C-PULSE-12 module last-segment shadows an imported alias | OPEN (design around) | PULSE renamed the app module; import-alias syntax filed in the stdlib wishlist |
-| C-PULSE-13 Unix pkg-home mismatch (`xiom pkg` -> `$HOME/xiom/packages`; compiler CRB-3c -> `~/.local/share/xiom`) | **NEW, Linux-only** | symlink bridge applied on WSL; m212 gate green after; ask: one unified resolver (`docs/PACKAGE-WISHLIST-PULSE.md`) |
+| C-PULSE-13 Unix pkg-home mismatch (`xiom pkg` -> `$HOME/xiom/packages`; compiler CRB-3c -> `~/.local/share/xiom`) | **NEW, Linux-only -- routed to the compiler/installer lane** | symlink bridge applied on WSL; m212 gate green after; unified-resolver ask in `docs/PACKAGE-WISHLIST-PULSE.md` |
 | C-PULSE-02 deps not mapped to catalog roots | **CLOSED on v0.64.1** (gate green; m212/m215) | dotted `[dependencies]` resolve to installed stores; PULSE keeps `source-roots` until a no-source-roots app build is verified |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |
@@ -327,7 +338,9 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 Resolved on v0.64.1: C-PULSE-08, C-PULSE-10, C-PULSE-11, C-PULSE-02
 (dependency-root gate green; no-source-roots app build pending).
-`xiom.http` 0.1.1 republish remains the one known-red package gate.
+`xiom.http` 0.1.2 republished and re-added (probe green on both
+platforms) -- no known-red package gates remain; C-PULSE-13 is routed to
+the compiler/installer lane.
 
 ---
 

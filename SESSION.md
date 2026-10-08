@@ -58,15 +58,27 @@
   0xC0000005 at the first cross-module access to a module-level
   `Vec[SessionStore]` (durable steps `1,2,3,4,5,11,6,7,8,9,10`); local
   session store stands.
-- **NEW ecosystem breakage (packages lane):** v0.64.1 extern-unsafe
-  enforcement rejects the published `xiom.http` 0.1.1 (67 T001s). PULSE
-  pruned the already-unused package; `probe_pkg_http` is the known-red
-  republish gate. Release notes claim "Breaking changes: None" -- flagged.
+- **`xiom.http` CLOSED (packages lane):** the 0.1.2 republish
+  (eco-v0.1.103, unsafe-wrapped internals) fixed the v0.64.1 extern-unsafe
+  breakage; `probe_pkg_http` is GREEN on Windows + Linux and the package
+  is re-added to `xiom.toml`/`package.xi` (suites x2 + smoke 73/73 with
+  it in the catalog). No known-red package gates remain.
+- **Showcase/site (owner decisions 2026-10-08):** `pulse.xiom-lang.org`
+  DNS is live (no staging subdomain needed); `orbitdb.`/`xvector.` pages
+  later (DNS records exist). Phase 1: the **website lane** owns the
+  marketing pages (`docs/WEBSITE-RELAY-PULSE.md` = brief + paste prompt);
+  PULSE owns the product UI (`PULSE_LANDING_PATH`/`PULSE_ASSETS_DIR`) and
+  claim review; ops owns infra. On greenlight: GH Actions release -> repo
+  public + `main` rulesets -> dl publish -> ops deploys the demo. Cover
+  image lands at `resources/img/` (owner drops it; PULSE wires the
+  landing).
 - **v0.64.1 known-issue cautions (from the notes):** `from_utf8` by-ref
   (pass by value), optional-into-vector-element assignment, nested-field
   mutation copies -- designs avoid all three.
 - **Capabilities landed 2026-10-07/08:** 12 `.ps1`+`.sh` twins (all
-  verified), registry wave (metrics/static/middleware adopted), stdlib
+  verified; PS exe defaults aligned to `out\pulse_app.exe` in wrap 3 --
+  one stale default had hung a smoke run), registry wave
+  (metrics/static/middleware adopted), stdlib
   `write_all` + `server_parse_request` adopted, TE smuggling guard,
   Expect/Date protocol fix, schema helper, audit rotation,
   `--version`/`--check-config`, showcase `/assets` + `PULSE_LANDING_PATH`,
@@ -75,15 +87,18 @@
   ops answered (staging parked; Linux toolchain pin v0.64.1 recorded; CI
   on greenlight).
 - **Score:** ~55.9% production grade (`docs/PROGRESS.md`).
-- **NEXT (in order):** 1) watch the lanes: packages (`xiom.http` republish
-  -> re-add + flip probe green; C-PULSE-13 resolver unification ask),
-  bindings (DB/KV binding, store seam), compiler (C-PULSE-09 Windows
-  runtime fix -> session-swap retry on both platforms). 2) non-blocked
-  hardening: chunked request decoding, config-value validation warnings,
-  a fresh 30-60m soak, or proving a no-source-roots app build. 3) kv
-  default flip only after the recorded prerequisites; otherwise keep kv
-  opt-in. 4) on owner greenlight: CI file + dl release flow + the three
-  showcase sites.
+- **NEXT (in order):** 1) watch the lanes: compiler (C-PULSE-09 Windows
+  runtime fix -> session-swap retry on both platforms; C-PULSE-13
+  resolver unification, routed via the packages lane), bindings (DB/KV
+  binding, store seam). 2) non-blocked hardening: chunked request
+  decoding, config-value validation warnings, a fresh 30-60m soak, or
+  proving a no-source-roots app build. 3) kv default flip only after the
+  recorded prerequisites; otherwise keep kv opt-in. 4) website lane
+  Phase 1 (pulse. subdomain page; brief in
+  `docs/WEBSITE-RELAY-PULSE.md`); on owner greenlight: GH Actions release
+  + repo public + `main` rulesets -> ops deploy -> live
+  badges/downloads. 5) wire the owner's cover image (`resources/img/`)
+  into the product landing when it lands.
 - **Gotchas:** PS 5.1 strips embedded quotes in native args (use files,
   `--etag-save/--etag-compare`); when driving WSL from PS avoid inner
   quotes (write scripts to `/tmp` instead); `io.flush_stdout` is a no-op
@@ -529,25 +544,30 @@ TASK ORDER:
 1. FIRST: confirm the WSL bridge for C-PULSE-13 is intact (symlink
    ~/.local/share/xiom/packages -> ~/xiom/packages, or XIOM_HOME set),
    then run the quick regression on the existing binaries: the probe
-   fleet + suites x2 + smoke 73/73 (jsonl and kv) on Linux; compare
-   against probe-logs/linux-sweep-20261008T134143Z/ before touching
-   anything.
+   fleet (incl. probe_pkg_http) + suites x2 + smoke 73/73 (jsonl and kv)
+   on Linux; compare against probe-logs/linux-sweep-20261008T134143Z/
+   before touching anything.
 2. NON-BLOCKED hardening (pick by value): chunked request decoding,
    config-value validation warnings, a fresh 30-60m soak, or proving a
    no-source-roots app build (the C-PULSE-02 follow-up). Keep-alive
    stays gated on socket timeouts, SIGTERM on the stdlib handler API,
    build stamping on a compiler define flag (all filed).
-3. WATCH the lanes: packages (xiom.http compat republish -> probe_pkg_http
-   flips green, then re-add it to xiom.toml/package.xi; C-PULSE-13
-   resolver-unification ask), bindings (durable DB/KV binding behind the
-   store seam), compiler (C-PULSE-09 is Windows-only now -> retry the
-   session-store swap with the bridge in git history 220f814 on BOTH
-   platforms; C-PULSE-12 alias-shadowing ask).
+3. WATCH the lanes: compiler (C-PULSE-09 is Windows-only now -> retry
+   the session-store swap with the bridge in git history 220f814 on BOTH
+   platforms; C-PULSE-13 resolver unification, routed via the packages
+   lane; C-PULSE-12 alias-shadowing ask), bindings (durable DB/KV
+   binding behind the store seam). xiom.http 0.1.2 is closed -- no
+   action; keep probe_pkg_http in the fleet.
 4. kv default: keep jsonl; flip ONLY after the prerequisites in
    docs\PACKAGE-WISHLIST-PULSE.md land (kv-aware Dockerfile, backup,
    crash test, deployment doc, longer soak).
-5. On owner greenlight: CI file + dl release flow + the three showcase
-   sites (pulse./orbit./xvector.) per docs\OPS-REQUEST.md.
+5. WEBSITE/OPS: the website lane owns Phase 1 for pulse.xiom-lang.org
+   (brief + paste prompt in docs\WEBSITE-RELAY-PULSE.md; orbitdb./
+   xvector. later, same template). On owner greenlight: GH Actions
+   release workflow -> repo public + main rulesets (mirror xiom/stdlib)
+   -> dl publish -> ops deploys the demo per docs\OPS-REQUEST.md
+   section E. Wire the owner's cover image (resources\img\) into the
+   product landing when it lands.
 6. Update SESSION.md digest + the three relay docs + PROGRESS.md at every
    wrap; commit signed.
 

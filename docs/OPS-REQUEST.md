@@ -179,3 +179,31 @@ right now. When greenlit, ops executes the following (already specified):
    network. Planned use (post-greenlight): one process per subdomain
    (`pulse.`, `orbit.`, `xvector.`) behind the same Hestia nginx pattern,
    honestly labeled beta.
+
+## E. Update (2026-10-08 wrap 3) -- owner decisions: live subdomain, phase plan, release sequence
+
+1. **DNS:** the owner added **`pulse.xiom-lang.org`**; the **staging
+   subdomain is not needed** for the showcase. `orbitdb.` and `xvector.`
+   pages come later (their DNS records exist); same template, one process
+   per subdomain when deployed.
+2. **Phase 1 (now -- nothing deploys):** marketing pages are built by the
+   **website lane** (`docs/WEBSITE-RELAY-PULSE.md` carries the brief +
+   paste prompt); the **PULSE lane** owns the product UI
+   (`PULSE_LANDING_PATH`/`PULSE_ASSETS_DIR`) and reviews every technical
+   claim. Ops: no action yet.
+3. **Phase 2 (owner greenlight) -- release sequence:** GitHub Actions
+   release workflow -> repo goes **public** -> branch rulesets protect
+   `main` (mirror the xiom/stdlib repos; actions pinned to full SHAs per
+   the org rule) -> CI cuts `pulse-v<semver>` with artifacts +
+   `SHA256SUMS` -> dl publishes `releases/<tag>/` + `latest.json`
+   (existing pull-deploy flow). Tag/asset conventions per section B.
+4. **Ops deploy after 3:** the `pulse.` subdomain per sections A/D (TLS
+   via the Hestia pattern, systemd unit, loopback bind, monitoring); the
+   website lane wires live status/version + download links afterwards
+   (CORS origin = the site origin).
+5. **Cover image:** the owner drops it into the PULSE repo at
+   `resources/img/` (e.g. `pulse-cover.png`); PULSE wires it into the
+   product landing and passes a copy to the website lane.
+6. **Pin/evidence:** unchanged from D -- v0.64.1 on both platforms, Linux
+   sweep green, and the one known-red package gate is closed
+   (`xiom.http` 0.1.2 republish verified on Windows and Linux).
