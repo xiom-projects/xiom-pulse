@@ -165,6 +165,14 @@ pub fn cfg_audit_max_bytes() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_AUDIT_MAX_BYTES", "5000000"), 5000000);
 }
 
+/// cfg_store_backend returns the event-store backend: "jsonl" (default)
+/// or "kv" (xiom.kv; PULSE_STORE_BACKEND, plus PULSE_KV_DIR /
+/// PULSE_KV_PREFIX).
+/// Complexity: O(1). Pure.
+pub fn cfg_store_backend() -> Str {
+  return env.var_or("PULSE_STORE_BACKEND", "jsonl");
+}
+
 /// cfg_jwt_secret returns the HS256 secret. The default is a DEV value;
 /// set PULSE_JWT_SECRET in any real deployment.
 /// Complexity: O(1). Pure.

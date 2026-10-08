@@ -1,11 +1,19 @@
-// XIOM PULSE -- append-only JSONL event store (Step 3, zero-dependency).
+// XIOM PULSE -- append-only event store: JSONL (default) or xiom.kv (opt-in).
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// One JSON object per line. The first record is the schema marker; the
-// loader tolerates a torn trailing line (crash mid-append) by skipping any
-// line that does not parse. `xiom.kv` (package wishlist) is the intended
-// embedded replacement when the packages lane ships it.
+// Two backends behind the same functions:
+//   * jsonl (default): one JSON object per line; the loader tolerates a
+//     torn trailing line (crash mid-append) by skipping invalid lines.
+//   * kv (PULSE_STORE_BACKEND=kv, v0.64.1+): the registry xiom.kv embedded
+//     store; records live under `PULSE_KV_PREFIX` + a 10-digit sequence in
+//     `PULSE_KV_DIR` (created on demand). No torn lines; compact is native.
+//     Requires a compiler with the m217 fix (kv_get); on v0.64.0 kv_get is
+//     defective and values are read through the bytes API instead.
+//
+// The kv mode keeps the module-level store holder + direct calls in THIS
+// module only (the single-module pattern proven green in probe_pkg_kv and
+// probe_pkg_session; cross-module aggregate bridges crash -- C-PULSE-09).
 module xiom.pulse.store
 
 use xiom.io;
@@ -13,8 +21,81 @@ use xiom.string;
 use xiom.time;
 use xiom.convert;
 use xiom.serialize.json;
+use xiom.env;
+use xiom.kv;
 
 const SCHEMA_VERSION: Int = 1;
+
+// --- kv backend state -------------------------------------------------------
+
+var g_kvs: Vec[KvStore] = Vec[KvStore].new();
+var g_seq: Int = 0;
+
+fn backend_kv() -> Bool {
+  return env.var_or("PULSE_STORE_BACKEND", "jsonl") == "kv";
+}
+
+fn kv_mode_dir() -> Str {
+  return env.var_or("PULSE_KV_DIR", "pulse-kv");
+}
+
+fn kv_mode_prefix() -> Str {
+  return env.var_or("PULSE_KV_PREFIX", "evt-");
+}
+
+fn pad10(n: Int) -> Str {
+  let s = convert.int_to_string(n);
+  var zeros: Str = "";
+  var i: Int = s.len();
+  while i < 10 {
+    zeros = zeros + "0";
+    i = i + 1;
+  }
+  return zeros + s;
+}
+
+/// kv_ensure opens the embeded store on first use (dir created on demand)
+/// and seeds the sequence from the entry count. Complexity: O(1).
+fn kv_ensure() -> Bool {
+  if g_kvs.len() > 0 { return true; }
+  let _cd = io.create_dir_all(kv_mode_dir());
+  let orr = kv_open(kv_mode_dir(), kv_mode_prefix(), 4096);
+  if orr.is_err { return false; }
+  g_kvs.push(orr.value);
+  g_seq = kv_count(&g_kvs[0]);
+  return true;
+}
+
+/// kv_get_text reads a value through the bytes API (stable on every
+/// version; the vector is passed by value per the v0.64.1 notes).
+/// Complexity: O(value).
+fn kv_get_text(key: Str) -> Str {
+  let gb = kv_get_bytes(&g_kvs[0], key);
+  if gb.is_err { return ""; }
+  if gb.value.is_none { return ""; }
+  let vb = gb.value.value;
+  return Str::from_utf8(vb);
+}
+
+/// kv_records returns every live record in sequence order (our keys are
+/// prefix + zero-padded sequence, so enumeration needs no sorting).
+/// Complexity: O(n).
+fn kv_records() -> Vec[Str] {
+  var out: Vec[Str] = Vec[Str].new();
+  if !kv_ensure() { return out; }
+  var seq: Int = 1;
+  while seq <= g_seq {
+    let key = kv_mode_prefix() + pad10(seq);
+    if kv_contains(&g_kvs[0], key) {
+      let t = kv_get_text(key);
+      if t.len() > 0 { out.push(t); }
+    }
+    seq = seq + 1;
+  }
+  return out;
+}
+
+// --- shared helpers ---------------------------------------------------------
 
 fn schema_line() -> Str {
   // Workaround: `SCHEMA_VERSION.to_str()` on a module-level const receiver
@@ -23,9 +104,15 @@ fn schema_line() -> Str {
   return "{\"kind\":\"schema\",\"version\":" + convert.int_to_string(SCHEMA_VERSION) + "}";
 }
 
-/// store_init creates the file with a schema record when missing.
+// --- public API -------------------------------------------------------------
+
+/// store_init prepares the store. jsonl: creates the file with a schema
+/// record when missing. kv: creates the directory and opens the store.
 /// Complexity: O(1).
 pub fn store_init(path: Str) -> Bool {
+  if backend_kv() {
+    return kv_ensure();
+  }
   if io.file_exists(path) { return true; }
   let w = io.write_file(path, schema_line() + "\n");
   return w.is_ok;
@@ -40,10 +127,17 @@ fn file_ends_with_newline(path: Str) -> Bool {
   return b == 10u8;
 }
 
-/// store_append appends one already-valid JSON record line. If a crash left
-/// a torn trailing line (no newline), a newline is written first so the new
-/// record cannot fuse with the torn remainder. Complexity: O(n).
+/// store_append appends one already-valid JSON record. jsonl: heals a torn
+/// trailing line first. kv: puts the next sequence key. Complexity: O(n).
 pub fn store_append(path: Str, record: Str) -> Bool {
+  if backend_kv() {
+    if !kv_ensure() { return false; }
+    g_seq = g_seq + 1;
+    let key = kv_mode_prefix() + pad10(g_seq);
+    let r = kv_put(&mut g_kvs[0], key, record);
+    if r.is_err { g_seq = g_seq - 1; }
+    return r.is_ok;
+  }
   if !file_ends_with_newline(path) {
     let heal = io.append_file(path, "\n");
     if heal.is_err { return false; }
@@ -52,9 +146,26 @@ pub fn store_append(path: Str, record: Str) -> Bool {
   return r.is_ok;
 }
 
-/// store_valid_records returns valid non-schema records in file order.
-/// Torn/invalid lines (crash truncation) are skipped. Complexity: O(n).
+/// store_valid_records returns valid non-schema records in order.
+/// Torn/invalid lines (crash truncation) are skipped in jsonl mode.
+/// Complexity: O(n).
 pub fn store_valid_records(path: Str) -> Vec[Str] {
+  if backend_kv() {
+    let recs = kv_records();
+    var out: Vec[Str] = Vec[Str].new();
+    var i: Int = 0;
+    while i < recs.len() {
+      let line = recs[i];
+      if line.len() > 0 {
+        let pv = json.json_parse(line);
+        if pv.is_ok && !string.str_contains(line, "\"kind\":\"schema\"") {
+          out.push(line);
+        }
+      }
+      i = i + 1;
+    }
+    return out;
+  }
   var out: Vec[Str] = Vec[Str].new();
   let rr = io.read_file_lines(path);
   if rr.is_err { return out; }
@@ -100,10 +211,15 @@ pub fn store_append_event(path: Str, body_json: Str) -> Bool {
   return store_append(path, rec);
 }
 
-/// store_compact rewrites the file with only valid records (drops torn or
-/// corrupt lines) via a temp file + atomic replace (Windows
-/// MoveFileEx REPLACE_EXISTING). Complexity: O(n).
+/// store_compact drops invalid records. jsonl: temp file + atomic replace
+/// (Windows MoveFileEx REPLACE_EXISTING). kv: native compact.
+/// Complexity: O(n).
 pub fn store_compact(path: Str) -> Bool {
+  if backend_kv() {
+    if !kv_ensure() { return false; }
+    let r = kv_compact(&mut g_kvs[0]);
+    return r.is_ok;
+  }
   if !io.file_exists(path) { return true; }
   var content: Str = schema_line() + "\n";
   let recs = store_valid_records(path);

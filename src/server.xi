@@ -530,6 +530,7 @@ pub fn main() -> Int {
       io.println("port=" + config.cfg_port().to_str());
       io.println("bind=" + config.cfg_bind());
       io.println("store=" + config.cfg_store_path());
+      io.println("store_backend=" + config.cfg_store_backend());
       io.println("audit=" + config.cfg_audit_path());
       io.println("audit_max_bytes=" + config.cfg_audit_max_bytes().to_str());
       io.println("rate_limit=" + config.cfg_rate_limit().to_str() + " burst=" + config.cfg_rate_burst().to_str());

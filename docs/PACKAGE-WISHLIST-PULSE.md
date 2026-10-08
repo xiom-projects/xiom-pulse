@@ -98,7 +98,7 @@ append store and files `xiom.kv` above.
 | `xiom.http.middleware` 0.1.0 | `probe_pkg_middleware.xi` | CSRF token + constant-time validate (`src/session.xi`); CORS header block (`src/cors.xi`) |
 | `xiom.static` 0.1.0 | `probe_pkg_static.xi` | `/favicon.ico` through `static_serve`: mime, ETag/Last-Modified/Cache-Control, If-None-Match 304, Range 206/416, traversal guard |
 | `xiom.session` 0.1.0 | `probe_pkg_session.xi` (green) | **store integration deferred** -- C-PULSE-09 crash when driven from wrapper modules (inline green); local store retained |
-| `xiom.kv` 0.1.0 | `probe_pkg_kv.xi` (**known-red**) | **blocked** -- kv_get Str corruption + multi-key bytes truncation (C-PULSE-10); JSONL store stays the documented fallback |
+| `xiom.kv` 0.1.0 | `probe_pkg_kv.xi` (**green on v0.64.1**) | **adopted as the opt-in store backend** (`PULSE_STORE_BACKEND=kv`, `PULSE_KV_DIR`, `PULSE_KV_PREFIX`; sequence-keyed records, native compact; JSONL stays the default fallback). v0.64.0 defects (C-PULSE-10) were fixed by m217 |
 
 **API notes for the packages lane:**
 

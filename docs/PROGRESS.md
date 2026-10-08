@@ -26,7 +26,16 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~54.6% of production grade**
+## 1. Overall score: **~55.6% of production grade**
+
+_Delta 2026-10-08 (kv backend): 54.6% -> ~55.6% -- **`xiom.kv` adopted as
+the opt-in event-store backend** (`PULSE_STORE_BACKEND=kv`,
+`PULSE_KV_DIR`/`PULSE_KV_PREFIX`; same store API, sequence-keyed records,
+native compact; JSONL stays the default and documented fallback). Verified
+on v0.64.1: smoke 73/73 through kv, store-soak 20s kv (89 writes, 0 fail,
+compact + reopen counts intact), plus the default-backend smoke 73/73 and
+test_app green as regression. Cross-module session-store swap still open
+(C-PULSE-09); the kv path uses the single-module holder pattern._
 
 _Delta 2026-10-08 (protocol round): 54.1% -> ~54.6% -- **`Expect:
 100-continue`** handled (interim answered before the body read; raw-socket
@@ -113,13 +122,13 @@ fallbacks._
 | 4 | Configuration | 5% | 80% | 4.0 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; no per-value type validation |
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; `xiom.kv` blocked (C-PULSE-10), no fsync |
+| 7 | Storage | 10% | 65% | 6.5 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+), crash-safe append, `?limit`/`?kind`, compaction, 10m soak + kv soak 20s; no update/delete/index, no fsync |
 | 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **54.6** | |
+| | **Total** | **100%** | | **55.6** | |
 
 Two lenses to keep separate:
 

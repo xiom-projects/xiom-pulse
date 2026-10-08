@@ -145,8 +145,12 @@
   but still crashes (0xC0000005) at the first cross-module access to the
   module-level `Vec[SessionStore]` (C-PULSE-09 stays OPEN; durable step
   evidence in `probe_adopt_smoke` via `pulse-adopt-steps.txt`; local
-  store stands). Next: kv backend adoption (probe green), Linux-side
-  sweep when dl publishes v0.64.1, then ops on greenlight.
+  store stands). **kv backend adopted (opt-in):** `PULSE_STORE_BACKEND=kv`
+  (+ `PULSE_KV_DIR`/`PULSE_KV_PREFIX`) routes the event store through
+  `xiom.kv` behind the same API; verified on v0.64.1 (smoke 73/73 through
+  kv, store-soak 20s kv green, default jsonl smoke 73/73 regression).
+  Next: Linux-side sweep when dl publishes v0.64.1, then ops on
+  greenlight.
 - **Next action:** session-store swap retry with the alias design (m216
   fix; keep the local store until suites pass), kv backend adoption
   behind the same store API, Linux-side probe sweep + suites when dl
