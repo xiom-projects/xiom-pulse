@@ -14,7 +14,7 @@ use xiom.pulse.session;
 use xiom.pulse.cors;
 use xiom.pulse.app;
 
-const STEPS: Str = "/tmp/pulse-adopt-steps.txt";
+const STEPS: Str = "pulse-adopt-steps.txt";
 
 fn step(n: Int) {
   let _a = io.append_line(STEPS, convert_int(n));

@@ -332,6 +332,22 @@ archive-bump fleet (it gates the parser contract) and re-run the Windows
   copy -- relevant to any wrapper-struct aggregate design (the C-PULSE-09
   class); PULSE's alias-based retry avoids nested fields.
 
+**C-PULSE-09 (session store integration) -- REMAINS OPEN on v0.64.1
+(retest 2026-10-08):** the bridge arrangement now **compiles** (the alias
+and nested-payload compile fixes landed), but still **crashes at run time
+with 0xC0000005 at the first bridge access to the module-level store**:
+durable steps show 1-5 (metrics + `session_reset`) complete, then the
+crash inside `session_count()` -> `sb_ensure`/`sb_count` -> element access
+on a module-level `Vec[SessionStore]` owned by a different PULSE module.
+Single-module direct usage (`probe_pkg_session`) is green on **both**
+compiler versions, so the open question is specifically cross-module
+package-aggregate vector access. Evidence: `tests/probes/probe_adopt_smoke.xi`
+(steps now written to the portable `pulse-adopt-steps.txt`). PULSE keeps
+the local session store; the swap retries when this runtime class is
+fixed. Suggested reduction for the compiler lane: two catalog modules,
+module A pushes a `SessionStore` into a module-level `Vec`, module B
+calls `session_count(&a_vec[0])`.
+
 **Bump procedure addendum 3:** run `probe_pkg_http` too (expected red
 until the package republishes) and `probe_pkg_middleware`/`probe_pkg_*`
 after any compiler change.

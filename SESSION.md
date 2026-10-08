@@ -141,9 +141,12 @@
   v0.64.1's extern-unsafe enforcement breaks the published `xiom.http`
   0.1.1 (67 T001s) -- PULSE pruned the already-unused package
   (`probe_pkg_http` is the known-red republish gate; the packages lane
-  owns the fix). Next: session-store swap retry with the alias design
-  (m216), kv backend adoption, Linux-side sweep when dl publishes
-  v0.64.1, then ops on greenlight.
+  owns the fix). **Session-store swap retried on v0.64.1:** now compiles,
+  but still crashes (0xC0000005) at the first cross-module access to the
+  module-level `Vec[SessionStore]` (C-PULSE-09 stays OPEN; durable step
+  evidence in `probe_adopt_smoke` via `pulse-adopt-steps.txt`; local
+  store stands). Next: kv backend adoption (probe green), Linux-side
+  sweep when dl publishes v0.64.1, then ops on greenlight.
 - **Next action:** session-store swap retry with the alias design (m216
   fix; keep the local store until suites pass), kv backend adoption
   behind the same store API, Linux-side probe sweep + suites when dl
