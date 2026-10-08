@@ -15,7 +15,16 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~51.8% of production grade**
+## 1. Overall score: **~52.6% of production grade**
+
+_Delta 2026-10-08 (schema round): 51.8% -> ~52.6% -- **JSON schema helper**
+(`src/schema.xi`: typed rule list, required/optional, length + numeric
+bounds, first-failure `code`/`field`/`message`) wired into the login and
+token routes with field-specific 400s (probe 14/14); **flaky JWT tamper
+check fixed** (append instead of replacing the last base64url char -- one
+Windows run flaked on trailing-bit equivalence). Remaining M4 items
+(keep-alive, recv timeouts, signals) are all gated on stdlib capabilities
+already filed._
 
 _Delta 2026-10-08 (ops items): 51.5% -> ~51.8% -- **audit rotation**
 (`PULSE_AUDIT_MAX_BYTES`, single generation, probe + app E2E), **CLI
@@ -58,12 +67,12 @@ fallbacks._
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 55% | 5.5 | JSONL store, crash-safe append, `?limit`/`?kind`, compaction, 10m soak; `xiom.kv` blocked (C-PULSE-10), no fsync |
-| 8 | Security hardening | 12% | 38% | 4.6 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard; no schema lib |
+| 8 | Security hardening | 12% | 44% | 5.3 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper (typed field rules); no RBAC |
 | 9 | Static / assets | 4% | 55% | 2.2 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon; no directory serving |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 72% | 3.6 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins; `--version` + build-info surfaces; no CI, no packaging |
-| | **Total** | **100%** | | **51.8** | |
+| 12 | Testing / CI / release | 5% | 73% | 3.7 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins; `--version` + build-info surfaces; flake-free tamper gate; no CI, no packaging |
+| | **Total** | **100%** | | **52.6** | |
 
 Two lenses to keep separate:
 
@@ -251,7 +260,7 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M1 -- Thin slice** | plaintext HTTP/1.1, routes, JSON, 404/405, curl + 64 concurrent + soak | **DONE** (2026-10-05) |
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
-| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~68% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD, stdlib write_all + parser, audit rotation, CLI surfaces; recv timeouts + signal handling blocked on stdlib) |
+| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~72% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD, stdlib write_all + parser, audit rotation, CLI surfaces, schema helper with typed field errors; recv timeouts + signal handling blocked on stdlib) |
 | **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~22% (TLS E2E green on Windows **and** Linux; `.sh` twins; deployment runbook + ops answers with the pinned Linux toolchain; `--version`/build-info surfaces; CI/packaging pending greenlight) |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 

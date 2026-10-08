@@ -84,12 +84,22 @@
   stays gated on recv timeouts (`socket_set_timeout` stub) because one
   idle keep-alive client would stall the single-threaded loop. Next
   unblocked M4 item: schema helper.
-- **Next action:** M4 schema helper (JSON field rules with typed errors);
-  keep-alive + recv timeouts + signals wait on stdlib capabilities; CI
-  file + packaging + true build stamping + schema helper when the owner
-  greenlights going public (ops has the mechanics); watch
-  C-PULSE-08/09/10/11/12 on the next compiler archive; the
-  `probe_pkg_kv` gate flips green when the kv defect is fixed.
+- **2026-10-08 (schema close-out):** `src/schema.xi` landed (typed
+  rule-list validator: required/optional, length + numeric bounds,
+  first-failure code/field/message) and routes 4/7/8 use it with
+  field-specific 400s (probe_schema 14/14); the flaky JWT tamper check is
+  fixed (append a char -- replacing the last base64url char can decode to
+  identical bytes; one Windows run flaked). Unblocked M4/M5 work is now
+  exhausted: keep-alive / recv timeouts / signals wait on stdlib
+  capabilities (filed), CI / packaging / true build stamping wait on the
+  public greenlight (ops mechanics ready).
+- **Next action:** on the next compiler/stdlib archive, re-run the probe
+  fleet (incl. `probe_stdlib_server_parse`, `probe_pkg_state_holder`,
+  `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv`,
+  `probe_audit_rotate`, `probe_schema`) and the m212 repro gate; swap the
+  session store and kv backend when green; adopt socket timeouts, signal
+  handling, and a define flag when they land; when the owner greenlights:
+  CI file + packaging (ops mechanics in docs/OPS-REQUEST.md section D).
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded
 
