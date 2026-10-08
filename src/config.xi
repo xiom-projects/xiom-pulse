@@ -114,6 +114,7 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "log", "PULSE_LOG");
   cfg_apply_str(obj, "store_path", "PULSE_STORE_PATH");
   cfg_apply_str(obj, "audit_path", "PULSE_AUDIT_PATH");
+  cfg_apply_str(obj, "audit_max_bytes", "PULSE_AUDIT_MAX_BYTES");
   cfg_apply_str(obj, "jwt_secret", "PULSE_JWT_SECRET");
   cfg_apply_str(obj, "session_ttl", "PULSE_SESSION_TTL");
   cfg_apply_str(obj, "icon_path", "PULSE_ICON_PATH");
@@ -142,6 +143,13 @@ pub fn cfg_log_enabled() -> Bool {
 /// Complexity: O(1). Pure.
 pub fn cfg_audit_path() -> Str {
   return env.var_or("PULSE_AUDIT_PATH", "pulse-audit.log");
+}
+
+/// cfg_audit_max_bytes returns the audit-log rotation threshold in bytes
+/// (PULSE_AUDIT_MAX_BYTES, default 5000000; 0 disables rotation).
+/// Complexity: O(n). Pure.
+pub fn cfg_audit_max_bytes() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_AUDIT_MAX_BYTES", "5000000"), 5000000);
 }
 
 /// cfg_jwt_secret returns the HS256 secret. The default is a DEV value;

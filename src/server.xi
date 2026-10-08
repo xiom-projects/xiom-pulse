@@ -40,10 +40,17 @@ use xiom.pulse.validate;
 use xiom.pulse.reqctx;
 use xiom.convert.parse;
 use xiom.static;
+use xiom.env;
+use xiom.pulse.audit;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
 const CONTENT_TEXT: Str = "text/plain; charset=utf-8";
+// Keep in sync with src/pulse.xi pulse_version(). Not imported here: the
+// `pulse` alias resolves to the xiom.pulse.* family namespace inside this
+// compilation (same shadowing class as C-PULSE-12), so the alias call
+// cannot be used from a xiom.pulse.* module.
+const APP_VERSION: Str = "0.1.0";
 
 var req_counter: Int = 0;
 var icon_bytes: Vec[UInt8] = Vec[UInt8].new();
@@ -111,7 +118,9 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
   }
   if m.route_id == 2 {
     var v = json.json_set(json.json_object_new(), "name", json.json_string("xiom-pulse"));
-    v = json.json_set(v, "version", json.json_string("0.1.0"));
+    v = json.json_set(v, "version", json.json_string(APP_VERSION));
+    v = json.json_set(v, "commit", json.json_string(env.var_or("PULSE_BUILD_COMMIT", "unknown")));
+    v = json.json_set(v, "build", json.json_string(env.var_or("PULSE_BUILD_DATE", "unknown")));
     return out_json(200, json.json_stringify(v));
   }
   if m.route_id == 3 {
@@ -358,8 +367,10 @@ fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_m
 }
 
 fn audit_event(rid: Str, method: Str, target: Str, status: Int) {
+  let path = config.cfg_audit_path();
+  let _rot = audit.audit_rotate_if_needed(path, config.cfg_audit_max_bytes());
   let line = time.unix_timestamp().to_str() + " " + rid + " " + method + " " + target + " " + status.to_str();
-  let r = io.append_line(config.cfg_audit_path(), line);
+  let r = io.append_line(path, line);
   if r.is_err {
     io.println("pulse: audit append failed");
     io.flush_stdout();
@@ -412,6 +423,30 @@ fn with_cors(resp: Vec[UInt8], req: &PulseRequest) -> Vec[UInt8] {
 }
 
 pub fn main() -> Int {
+  // CLI: --version / --help. Build provenance is surfaced from the deploy
+  // environment (PULSE_BUILD_COMMIT / PULSE_BUILD_DATE); compile-time
+  // stamping needs a toolchain define flag (filed ask).
+  let av = env.args();
+  var ai: Int = 0;
+  while ai < av.len() {
+    let a = av[ai];
+    if a == "--version" || a == "-V" {
+      io.println("xiom-pulse " + APP_VERSION);
+      io.println("commit: " + env.var_or("PULSE_BUILD_COMMIT", "unknown"));
+      io.println("build:  " + env.var_or("PULSE_BUILD_DATE", "unknown"));
+      return 0;
+    }
+    if a == "--help" || a == "-h" {
+      io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
+      io.println("usage: pulse_app [--version] [--help]");
+      io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
+      io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
+      io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG");
+      return 0;
+    }
+    ai = ai + 1;
+  }
+
   let sr = socket.socket_tcp();
   if sr.is_err {
     io.println("pulse: socket create failed");
