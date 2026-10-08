@@ -197,6 +197,8 @@ right now. When greenlit, ops executes the following (already specified):
    the org rule) -> CI cuts `pulse-v<semver>` with artifacts +
    `SHA256SUMS` -> dl publishes `releases/<tag>/` + `latest.json`
    (existing pull-deploy flow). Tag/asset conventions per section B.
+   The DCO check workflow (`.github/workflows/dco.yml`) is already in
+   the tree; the release workflow is the new piece.
 4. **Ops deploy after 3:** the `pulse.` subdomain per sections A/D (TLS
    via the Hestia pattern, systemd unit, loopback bind, monitoring); the
    website lane wires live status/version + download links afterwards
@@ -207,3 +209,14 @@ right now. When greenlit, ops executes the following (already specified):
 6. **Pin/evidence:** unchanged from D -- v0.64.1 on both platforms, Linux
    sweep green, and the one known-red package gate is closed
    (`xiom.http` 0.1.2 republish verified on Windows and Linux).
+7. **Release hygiene (wrap 4):** `xiom.toml` no longer carries
+   machine-specific `source-roots` paths (dependency resolution via
+   `[dependencies]` is verified on both platforms -- C-PULSE-02 closed),
+   and the HTTP surface gained chunked request decoding (smoke 76/76 on
+   both platforms). A clean CI checkout builds with `xiom pkg install`
+   for the ten deps plus the D.1 bridge caveat on Unix layouts.
+8. **Linux demo gating (C-PULSE-14, wrap 4):** the Linux binary retains
+   ~48 KB RSS per HTTP request (30m soak 2.5 -> 146 MB linear; Windows
+   flat; repro filed). Before any unattended Linux demo, either wait for
+   the runtime fix or deploy with `MemoryMax=` + `Restart=always` in the
+   systemd unit plus an RSS alert in monitoring.

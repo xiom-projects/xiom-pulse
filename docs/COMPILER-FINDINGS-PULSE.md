@@ -444,3 +444,49 @@ post-repair sweep is the `...T134143Z/` logdir.
   73/73 green with `xiom.http` back in `xiom.toml`/`package.xi`. The
   v0.64.1 67-T001 extern-unsafe breakage from 0.1.1 is closed (packages
   lane fix eco-v0.1.103, sha256 `994271f0...`).
+
+## Delta 2026-10-08 (wrap 4) -- C-PULSE-02 fully closed; chunked decode landed
+
+- **C-PULSE-02 CLOSED (no-source-roots build verified):** with v0.64.1
+  the `[dependencies]` table alone resolves every registry package
+  (m212/m215); PULSE removed the absolute-path `source-roots` workaround
+  from `xiom.toml` and re-verified: build + suites x2 + smoke 76/76 on
+  Windows and Linux, plus `probe_pkg_http`/`probe_pkg_kv` green. The
+  manifest now carries no machine-specific paths (release hygiene).
+- **C-PULSE-13 recurrence observed:** a Unix toolchain re-extract
+  (happened locally 2026-10-08 ~17:24Z) removed the
+  `~/.local/share/xiom/packages` symlink bridge -- it must be re-created
+  after toolchain maintenance until the resolver/installer is unified.
+  Installer-side suggestion: create the canonical `packages/` entry
+  (or point it at the legacy store) as part of every install.
+- **PULSE-side feature over the stdlib parser:** `Transfer-Encoding:
+  chunked` request bodies are now decoded (chunk extensions ignored,
+  trailers validated + skipped, 1 MiB decoded cap, TE+CL -> 400, other
+  codings -> 501). The stdlib `server_parse_request` stays head +
+  Content-Length focused; no compiler/stdlib ask from this wrap.
+
+## Delta 2026-10-08 (wrap 4, continued) -- NEW C-PULSE-14: Linux request-path RSS growth
+
+- **Symptom (first Linux-server HTTP soak, 30m, 1 req/500ms, /health):**
+  RSS 2,560 KB -> 148,992 KB -- **~48 KB per request, linear** (3,097
+  requests, 0 errors, fds 5 -> 5, clean exit). Windows v0.64.1 the same
+  day: **flat** (+86 KB over 588 requests, handles flat).
+- **PULSE-side bisection:** NOT the chunked change (scratch HEAD build:
+  identical ~47.7 KB/req); NOT the recv chunk size (4 KiB vs 64 KiB
+  `socket_recv` max: identical); generic allocator reuse is fine
+  (`tests/probes/probe_alloc_loop.xi`: 524 MB Vec churn -> flat 67 MB
+  peak); an idle server is flat, so the retention is in the served
+  request path. Suspects: per-request retention in the runtime socket
+  send/recv path (stdlib `socket_recv` + `TcpStream.write_all` each use
+  64 KiB stack buffers) or another per-request structure in the v0.64.1
+  Linux runtime/allocator.
+- **Evidence:** `probe-logs/soak-http.summary.txt` + the 2026-10-08 RSS
+  curve in `probe-logs/soak-http-progress.txt`; A/B 5m scratch build at
+  the same rate; Windows 5m soak flat.
+- **Ask:** runtime/allocator investigation on Linux (RSS retention per
+  request; the minimal repro is a loop of one accept + one small
+  request/response, or valgrind/massif on `out/pulse_app`). If some
+  arena deliberately retains, a release/trim hook would work too.
+- **Impact:** Linux is the Phase-2 demo/deployment target; an unattended
+  public instance needs this fixed or a `MemoryMax` + restart cadence
+  (noted to ops). Phase-1 website work is unaffected.

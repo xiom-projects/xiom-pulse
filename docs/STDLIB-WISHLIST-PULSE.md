@@ -111,3 +111,30 @@ the pin below.
   blocked, M4 slow-client shedding), `io.flush_stdout` still a no-op
   (durable step logs used), no signal-handler install API (SIGTERM drain
   blocked). No new asks from this sweep; the existing queue stands.
+
+## Delta 2026-10-08 (wrap 4) -- chunked decode on top of server_parse_request
+
+- PULSE now decodes `Transfer-Encoding: chunked` request bodies on top of
+  the adopted `xiom.net.server.server_parse_request` (framing, trailers
+  and caps are PULSE-side; TE+CL -> 400, other codings -> 501). The
+  parity probe (`probe_stdlib_server_parse`, 12 checks) stays green. No
+  new stdlib asks from this wrap; the open rows (recv deadlines, flush,
+  signals) are unchanged.
+
+## Delta 2026-10-08 (wrap 4b) -- new asks: reusable socket buffers; /proc file reads
+
+- **Reusable socket buffers -- `socket_recv_into(fd, &mut Vec[UInt8],
+  max) -> Result[Int, Str]` (and eventually a caller-buffer send):**
+  PULSE's request path allocates a fresh receive Vec per request
+  (`socket_recv`, which also stages through a 64 KiB stack buffer) and
+  `TcpStream.write_all` stages through another 64 KiB stack buffer. With
+  C-PULSE-14 (Linux RSS growth in the request path, see the compiler
+  findings doc), a caller-owned buffer would let PULSE remove the
+  per-request allocation churn entirely -- and it is the natural shape
+  for the future keep-alive loop.
+- **`io.read_file*` on /proc (stat size 0):** `read_file_lines(
+  "/proc/self/status")` contract-trips its own `ensures: result.len() >= 1`
+  because /proc files stat as size 0. Either read until EOF for the
+  non-regular case or document that only regular files are supported
+  (PULSE's allocation probe had to move RSS sampling out-of-process
+  because of this).

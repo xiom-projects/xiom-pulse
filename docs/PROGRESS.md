@@ -39,6 +39,19 @@ re-verified green). Website-lane brief filed
 `docs/OPS-REQUEST.md` section E (pulse. subdomain live, Phase 1 pages by
 the website lane, release sequence on greenlight). Score holds (~55.9%)._
 
+_Delta 2026-10-08 (wrap 4): **chunked request decoding landed** (TE:
+chunked decoded with caps + trailers; TE+CL -> 400; other codings ->
+501; smoke 73 -> **76**, test_http +11 parse cases, route cases in
+test_app). **C-PULSE-02 fully closed:** the absolute-path `source-roots`
+workaround is removed from `xiom.toml`; build + suites x2 + smoke 76/76
+verified on Windows and Linux with `[dependencies]` alone resolving all
+ten packages. **NEW C-PULSE-14 (Linux-only):** the 30m HTTP soak grows
+RSS ~48 KB per request linearly (2.5 -> 146 MB; Windows flat, HEAD A/B
+identical, pure Vec churn flat) -- filed with a runtime repro;
+release-gating for the Linux demo, not for Phase-1 website work. HTTP
+core 80 -> 84 (+0.5); Reliability 45 -> 40 (-0.5, Linux soak caveat).
+Total ~55.9% -> ~55.8%._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -51,7 +64,7 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~55.9% of production grade**
+## 1. Overall score: **~55.8% of production grade**
 
 _Delta 2026-10-08 (kv backend): 54.6% -> ~55.6% -- **`xiom.kv` adopted as
 the opt-in event-store backend** (`PULSE_STORE_BACKEND=kv`,
@@ -141,7 +154,7 @@ fallbacks._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
-| 1 | HTTP core (parse/build/limits) | 12% | 80% | 9.6 | query strings, header caps, HEAD, shared stdlib parser + invalid-CL reject, TE guard, Expect: 100-continue, Date header; keep-alive/chunked missing |
+| 1 | HTTP core (parse/build/limits) | 12% | 84% | 10.1 | query strings, header caps, HEAD, shared stdlib parser + invalid-CL reject, **chunked request decode** + TE/CL smuggling guard, Expect: 100-continue, Date header; keep-alive + chunked responses missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
 | 4 | Configuration | 5% | 80% | 4.0 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; no per-value type validation |
@@ -151,9 +164,9 @@ fallbacks._
 | 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
-| 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
+| 11 | Reliability & concurrency | 10% | 40% | 4.0 | flat-memory soaks on Windows (1h 13,198/13,198 + 6,543/6,543); **Linux RSS growth ~48 KB/req open (C-PULSE-14, 30m: 2.5 -> 146 MB)**; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **55.9** | |
+| | **Total** | **100%** | | **55.8** | |
 
 Two lenses to keep separate:
 
@@ -168,7 +181,7 @@ Two lenses to keep separate:
 
 ## 2. What works today (evidence-backed)
 
-Run `out/` (Linux) or `out\pulse_app_v9.exe` (Windows); smoke 73/73 and
+Run `out/` (Linux) or `out\pulse_app_v9.exe` (Windows); smoke 76/76 and
 suites x2 on both platforms, these work end-to-end:
 
 | Method | Path | What it does |
@@ -199,6 +212,10 @@ shutdown (`X-Pulse-Quit`).
 **Load evidence:** 1h soak: PS driver 7,070/7,070 + WSL client 6,128, server
 served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 +48 KB, handles 113 -> 113. 64 simultaneous connections served, 64/64.
+**Linux caveat (wrap 4):** the first Linux-server HTTP soak
+(`soak_http.sh`, 30m) grows RSS ~48 KB per request linearly (2.5 -> 146
+MB over 3,097 requests, 0 errors) while Windows v0.64.1 is flat; filed
+as C-PULSE-14 with a runtime repro (`tests/probes/probe_alloc_loop.xi`).
 
 **Module inventory** (`src/`, all green in `tests/test_app.xi` x2):
 
@@ -219,11 +236,13 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 
 ## 3. What is missing, area by area (the honest list)
 
-**HTTP core (74%)**
+**HTTP core (84%)**
 - No `keep-alive` (always `Connection: close`) -- the biggest perf item.
-- No chunked transfer-encoding (request or response).
-- `HEAD` supported (GET semantics, body omitted); no `Expect: 100-continue`,
-  path not percent-decoded (query values are decoded).
+- Chunked REQUEST decoding landed (2026-10-08): caps, extensions ignored,
+  trailers validated; TE+CL -> 400, other codings -> 501. Chunked
+  RESPONSES still missing (they arrive with keep-alive/streaming).
+- `HEAD` supported (GET semantics, body omitted); `Expect: 100-continue`
+  handled; path not percent-decoded (query values are decoded).
 - Head caps landed (16 KiB head, 100 headers, 1 MiB body); no per-route or
   per-connection byte-rate limits.
 - Status is far from 100% even if all of the above land: response
@@ -271,7 +290,7 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 - No `fsync` in the runtime: durability today = torn-tail healing, not
   power-loss safety (stdlib wishlist row added).
 - `xiom.kv` 0.1.0 is the **verified opt-in backend** on both platforms
-  (smoke 73/73; default stays JSONL per the decision in
+  (smoke 76/76 in wrap 4; default stays JSONL per the decision in
   `docs/PACKAGE-WISHLIST-PULSE.md`, which lists the flip prerequisites).
 
 **Security hardening (38%)**
@@ -297,15 +316,19 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
   Registry has `xiom.websocket`/`xiom.realtime`; GraphQL stays behind an
   interface (compiler-gated item).
 
-**Reliability & concurrency (45%)**
+**Reliability & concurrency (40%)**
 - Single-threaded sequential accept (pin has no threads/select); 64
   concurrent works only because requests are short and queued by the OS.
+- **NEW C-PULSE-14 (Linux-only):** the request path retains ~48 KB RSS per
+  request on Linux v0.64.1 (30m soak 2.5 -> 146 MB, linear; Windows flat;
+  pure Vec churn flat; HEAD A/B identical). Filed with a runtime repro;
+  the Linux demo needs this fixed or a memory limit + restart cadence.
 - No transport timeouts; one stalled client blocks everyone.
 - No signal handling / graceful in-flight drain (test-only QUIT).
 - A trap anywhere kills the process (no supervisor/restart policy).
 
 **Testing/CI/release (68%)**
-- Local, both platforms: 3 suites (x2), smoke (61), crash/reopen (6),
+- Local, both platforms: 3 suites (x2), smoke (76), crash/reopen (6),
   soak drivers (PS + shell), rate/store soaks, 20+ probes, byte-level
   lint greps. Every script ships as `.ps1` + `.sh` (LF enforced); WSL
   verification of all 12 twins.
@@ -328,6 +351,7 @@ served **13,198/13,198** requests, 0 errors, clean shutdown, working set
 | C-PULSE-11 package type alias invisible cross-module (defaults to i64) | **fixed in v0.64.1** (m216) | alias design compiles; swap re-tries on the C-PULSE-09 schedule |
 | C-PULSE-12 module last-segment shadows an imported alias | OPEN (design around) | PULSE renamed the app module; import-alias syntax filed in the stdlib wishlist |
 | C-PULSE-13 Unix pkg-home mismatch (`xiom pkg` -> `$HOME/xiom/packages`; compiler CRB-3c -> `~/.local/share/xiom`) | **NEW, Linux-only -- routed to the compiler/installer lane** | symlink bridge applied on WSL; m212 gate green after; unified-resolver ask in `docs/PACKAGE-WISHLIST-PULSE.md` |
+| C-PULSE-14 Linux request-path RSS growth (~48 KB/req; runtime retention suspected) | **NEW, Linux-only** | filed with repro (`probe_alloc_loop` + the 30m soak curve); Windows flat; release-gating for the Linux demo (interim: systemd `MemoryMax` + restart cadence) |
 | C-PULSE-02 deps not mapped to catalog roots | **CLOSED on v0.64.1** (gate green; m212/m215) | dotted `[dependencies]` resolve to installed stores; PULSE keeps `source-roots` until a no-source-roots app build is verified |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |
@@ -365,11 +389,12 @@ the compiler/installer lane.
 - [x] Cookie sessions + JWT HS256
 - [x] Durable append store with crash-safe reopen
 - [x] Structured logs, metrics endpoint, audit trail
-- [x] 1h load soak with flat memory/handles
+- [x] 1h load soak with flat memory/handles (Windows; Linux RSS growth
+      open -- C-PULSE-14)
 - [x] Request/header caps + query-string parsing
 - [x] Rate limiting (global token bucket; per-client blocked on `socket_peer_addr`)
 - [x] CSRF double-submit + opt-in CORS
-- [ ] Keep-alive + chunked + Expect: 100-continue
+- [ ] Keep-alive + chunked responses (Expect: 100-continue + request-chunked decode done)
 - [ ] Schema validation library (field length caps landed)
 - [ ] Real timeouts (recv deadline) and slow-client shedding
 - [ ] Rate limiting + CORS + CSRF + security headers

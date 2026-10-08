@@ -52,17 +52,31 @@
   `docs/PACKAGE-WISHLIST-PULSE.md`). Fallback documented.
 - **Bug gates:** **C-PULSE-08 CLOSED** (m212 dash+dot both exit 0, no
   source-roots); **C-PULSE-10 CLOSED** (kv green, m217); **C-PULSE-11
-  fixed** (m216); **C-PULSE-02 gate-green** (deps resolve; no-source-roots
-  app build still to prove); **C-PULSE-09 OPEN but narrowed to Windows**
-  -- Linux `probe_adopt_smoke` is green twice, Windows still crashes
-  0xC0000005 at the first cross-module access to a module-level
-  `Vec[SessionStore]` (durable steps `1,2,3,4,5,11,6,7,8,9,10`); local
-  session store stands.
+  fixed** (m216); **C-PULSE-02 CLOSED** (no-source-roots build + suites
+  x2 + smoke 76/76 verified on both platforms); **C-PULSE-09 OPEN but
+  narrowed to Windows** -- Linux `probe_adopt_smoke` is green twice,
+  Windows still crashes 0xC0000005 at the first cross-module access to a
+  module-level `Vec[SessionStore]` (durable steps `1,2,3,4,5,11,6,7,8,9,10`);
+  local session store stands. **C-PULSE-14 NEW (Linux-only):** the
+  request path retains ~48 KB RSS per request (30m soak 2.5 -> 146 MB
+  linear; Windows flat; HEAD A/B + recv-size + Vec-churn controls all
+  exclude PULSE-side causes) -- release-gating for the Linux demo, NOT
+  for Phase-1 website work; interim ops mitigation: `MemoryMax` +
+  restart cadence.
 - **`xiom.http` CLOSED (packages lane):** the 0.1.2 republish
   (eco-v0.1.103, unsafe-wrapped internals) fixed the v0.64.1 extern-unsafe
   breakage; `probe_pkg_http` is GREEN on Windows + Linux and the package
-  is re-added to `xiom.toml`/`package.xi` (suites x2 + smoke 73/73 with
-  it in the catalog). No known-red package gates remain.
+  is re-added to `xiom.toml`/`package.xi` (suites x2 + smoke with it in
+  the catalog). No known-red package gates remain.
+- **Wrap 4 (chunked + manifest + soak):** `Transfer-Encoding: chunked`
+  REQUEST decoding landed (caps, extensions ignored, trailers validated;
+  TE+CL -> 400; other codings -> 501) with smoke **76/76** on both
+  platforms (test_http +11 parse cases, route cases in test_app);
+  `xiom.toml` `source-roots` RETIRED -- the manifest has no machine
+  paths (C-PULSE-02 closed). The fresh 30m Linux HTTP soak surfaced
+  **C-PULSE-14** (see bug gates); Windows v0.64.1 stays flat. Evidence:
+  `probe-logs/soak-http.summary.txt` + the progress curve; runtime repro
+  `tests/probes/probe_alloc_loop.xi`.
 - **Showcase/site (owner decisions 2026-10-08):** `pulse.xiom-lang.org`
   DNS is live (no staging subdomain needed); `orbitdb.`/`xvector.` pages
   later (DNS records exist). Phase 1: the **website lane** owns the
@@ -86,17 +100,18 @@
   complete on both platforms** (Linux sweep green, incl. the 20m kv soak);
   ops answered (staging parked; Linux toolchain pin v0.64.1 recorded; CI
   on greenlight).
-- **Score:** ~55.9% production grade (`docs/PROGRESS.md`).
+- **Score:** ~55.8% production grade (`docs/PROGRESS.md`).
 - **NEXT (in order):** 1) watch the lanes: compiler (C-PULSE-09 Windows
-  runtime fix -> session-swap retry on both platforms; C-PULSE-13
-  resolver unification, routed via the packages lane), bindings (DB/KV
-  binding, store seam). 2) non-blocked hardening: chunked request
-  decoding, config-value validation warnings, a fresh 30-60m soak, or
-  proving a no-source-roots app build. 3) kv default flip only after the
-  recorded prerequisites; otherwise keep kv opt-in. 4) website lane
-  Phase 1 (pulse. subdomain page; brief in
-  `docs/WEBSITE-RELAY-PULSE.md`); on owner greenlight: GH Actions release
-  + repo public + `main` rulesets -> ops deploy -> live
+  runtime fix -> session-swap retry on both platforms; **C-PULSE-14
+  Linux request-path RSS retention -- runtime investigation, repro
+  filed**; C-PULSE-13 resolver unification, routed via the packages
+  lane), bindings (DB/KV binding, store seam). 2) non-blocked hardening:
+  config-value validation warnings, chunked RESPONSES (with keep-alive),
+  a fresh 30-60m soak, or the repeatable RSS sampler for C-PULSE-14.
+  3) kv default flip only after the recorded prerequisites; otherwise
+  keep kv opt-in. 4) website lane Phase 1 (pulse. subdomain page; brief
+  in `docs/WEBSITE-RELAY-PULSE.md`); on owner greenlight: GH Actions
+  release + repo public + `main` rulesets -> ops deploy -> live
   badges/downloads. 5) wire the owner's cover image (`resources/img/`)
   into the product landing when it lands.
 - **Gotchas:** PS 5.1 strips embedded quotes in native args (use files,
@@ -544,18 +559,20 @@ TASK ORDER:
 1. FIRST: confirm the WSL bridge for C-PULSE-13 is intact (symlink
    ~/.local/share/xiom/packages -> ~/xiom/packages, or XIOM_HOME set),
    then run the quick regression on the existing binaries: the probe
-   fleet (incl. probe_pkg_http) + suites x2 + smoke 73/73 (jsonl and kv)
+   fleet (incl. probe_pkg_http) + suites x2 + smoke 76/76 (jsonl and kv)
    on Linux; compare against probe-logs/linux-sweep-20261008T134143Z/
    before touching anything.
-2. NON-BLOCKED hardening (pick by value): chunked request decoding,
-   config-value validation warnings, a fresh 30-60m soak, or proving a
-   no-source-roots app build (the C-PULSE-02 follow-up). Keep-alive
+2. NON-BLOCKED hardening (pick by value): config-value validation
+   warnings, chunked RESPONSES (with keep-alive), a fresh 30-60m soak,
+   or a repeatable RSS sampler for C-PULSE-14. Keep-alive
    stays gated on socket timeouts, SIGTERM on the stdlib handler API,
    build stamping on a compiler define flag (all filed).
 3. WATCH the lanes: compiler (C-PULSE-09 is Windows-only now -> retry
    the session-store swap with the bridge in git history 220f814 on BOTH
-   platforms; C-PULSE-13 resolver unification, routed via the packages
-   lane; C-PULSE-12 alias-shadowing ask), bindings (durable DB/KV
+   platforms; C-PULSE-14 Linux request-path RSS retention -> runtime
+   investigation, repro in tests\probes\probe_alloc_loop.xi; C-PULSE-13
+   resolver unification, routed via the packages lane; C-PULSE-12
+   alias-shadowing ask), bindings (durable DB/KV
    binding behind the store seam). xiom.http 0.1.2 is closed -- no
    action; keep probe_pkg_http in the fleet.
 4. kv default: keep jsonl; flip ONLY after the prerequisites in
