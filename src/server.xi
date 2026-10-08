@@ -102,6 +102,45 @@ fn json_ok_field(key: Str, value: Str) -> Str {
   return json.json_stringify(v);
 }
 
+/// serve_static_file serves one file from `dir` via registry xiom.static
+/// (ETag/Last-Modified/Cache-Control, 304 on If-None-Match, 206/416 on
+/// Range, traversal guard); a 404 becomes the JSON error envelope.
+/// Complexity: O(file).
+fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> HandlerOut {
+  let pol = StaticPolicy{ max_age: max_age; immutable: false; must_revalidate: false; no_store: false; };
+  let sr = static_serve(dir, rel, http.header_get(req, "if-none-match"), http.header_get(req, "range"), false, &pol);
+  if sr.status == 404 {
+    return out_json(404, envelope.error_body("not_found", "asset not found"));
+  }
+  var ct: Str = "application/octet-stream";
+  var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  var hi: Int = 0;
+  while hi < sr.headers.len() {
+    let h = sr.headers[hi];
+    if h.name == "Content-Type" {
+      ct = h.value;
+    } else {
+      hs.push((h.name, h.value));
+    }
+    hi = hi + 1;
+  }
+  return HandlerOut{ status: sr.status; content_type: ct; headers: hs; body: ""; body_bytes: sr.body; };
+}
+
+/// dispatch_one routes one request: `/assets/<path>` is served from
+/// PULSE_ASSETS_DIR (showcase sites), everything else goes through the
+/// router + handle_route. GET and HEAD only; other methods fall through.
+/// Complexity: O(request).
+fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOut {
+  if eff_method == "GET" && string.str_starts_with(req.target, "/assets/") {
+    let parts = router.split_target(req.target);
+    let rel = string.str_slice(parts.0, 8, parts.0.len());
+    return serve_static_file(config.cfg_assets_dir(), rel, req, 3600);
+  }
+  let m = router.route_match(eff_method, req.target);
+  return handle_route(m, &req, body_str);
+}
+
 /// handle_route dispatches a matched route to a HandlerOut.
 /// Complexity: O(body).
 pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut {
@@ -303,26 +342,21 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     if rel == "favicon.ico" {
       rel = "pulse-ico.ico";
     }
-    let pol = StaticPolicy{ max_age: 86400; immutable: false; must_revalidate: false; no_store: false; };
-    let sr = static_serve(config.cfg_static_dir(), rel, http.header_get(req, "if-none-match"), http.header_get(req, "range"), false, &pol);
-    if sr.status == 404 {
-      return out_json(404, envelope.error_body("not_found", "asset not found"));
-    }
-    var ct: Str = "application/octet-stream";
-    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-    var hi: Int = 0;
-    while hi < sr.headers.len() {
-      let h = sr.headers[hi];
-      if h.name == "Content-Type" {
-        ct = h.value;
-      } else {
-        hs.push((h.name, h.value));
-      }
-      hi = hi + 1;
-    }
-    return HandlerOut{ status: sr.status; content_type: ct; headers: hs; body: ""; body_bytes: sr.body; };
+    return serve_static_file(config.cfg_static_dir(), rel, req, 86400);
   }
   if m.route_id == 15 {
+    // Optional per-site landing content: PULSE_LANDING_PATH serves an HTML
+    // file (read per request; low-traffic showcase sites), else the
+    // built-in placeholder page.
+    let lp = config.cfg_landing_path();
+    if lp.len() > 0 {
+      let rf = io.read_file(lp);
+      if rf.is_ok {
+        return out_html(200, rf.value);
+      }
+      io.println("pulse: landing file unreadable: " + lp);
+      io.flush_stdout();
+    }
     let page: Str = "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>XIOM PULSE</title>\n<link rel=\"icon\" href=\"/favicon.ico\">\n</head>\n<body>\n<h1>XIOM PULSE</h1>\n<p>Plaintext HTTP/1.1 service on XIOM. Try /health, /api/version, /api/events, /metrics.</p>\n</body>\n</html>\n";
     return out_html(200, page);
   }
@@ -476,6 +510,7 @@ pub fn main() -> Int {
         io.println("config: loaded " + cfgpath);
       }
       io.println("port=" + config.cfg_port().to_str());
+      io.println("bind=" + config.cfg_bind());
       io.println("store=" + config.cfg_store_path());
       io.println("audit=" + config.cfg_audit_path());
       io.println("audit_max_bytes=" + config.cfg_audit_max_bytes().to_str());
@@ -483,6 +518,8 @@ pub fn main() -> Int {
       io.println("cors=" + config.cfg_cors_origin());
       io.println("session_ttl=" + config.cfg_session_ttl_secs().to_str());
       io.println("static_dir=" + config.cfg_static_dir());
+      io.println("assets_dir=" + config.cfg_assets_dir());
+      io.println("landing_path=" + config.cfg_landing_path());
       let js = env.var_or("PULSE_JWT_SECRET", "");
       var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
       if js.len() > 0 { secret_note = "env"; }
@@ -504,10 +541,11 @@ pub fn main() -> Int {
     io.flush_stdout();
   }
   let port = config.cfg_port();
+  let bind_addr = config.cfg_bind();
 
-  let br = socket.socket_bind(fd, "127.0.0.1", port);
+  let br = socket.socket_bind(fd, bind_addr, port);
   if br.is_err {
-    io.println("pulse: bind 127.0.0.1:" + port.to_str() + " failed");
+    io.println("pulse: bind " + bind_addr + ":" + port.to_str() + " failed");
     io.flush_stdout();
     return 1;
   }
@@ -517,7 +555,7 @@ pub fn main() -> Int {
     io.flush_stdout();
     return 1;
   }
-  io.println("pulse: listening on 127.0.0.1:" + port.to_str());
+  io.println("pulse: listening on " + bind_addr + ":" + port.to_str());
   io.flush_stdout();
   metrics.metrics_mark_start(time.monotonic_ms());
 
@@ -624,8 +662,7 @@ pub fn main() -> Int {
         let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
         var eff_method: Str = req.method;
         if req.method == "HEAD" { eff_method = "GET"; }
-        let m = router.route_match(eff_method, req.target);
-        let out = handle_route(m, &req, body_str);
+        let out = dispatch_one(eff_method, &req, body_str);
         var resp: Vec[UInt8] = Vec[UInt8].new();
         var payload_len: Int = out.body.len();
         if out.body_bytes.len() > 0 {

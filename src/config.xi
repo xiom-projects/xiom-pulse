@@ -111,6 +111,7 @@ pub fn cfg_load_file() -> Bool {
   if json.json_type(pv.value) != "object" { return false; }
   let obj = pv.value;
   cfg_apply_str(obj, "port", "PULSE_PORT");
+  cfg_apply_str(obj, "bind", "PULSE_BIND");
   cfg_apply_str(obj, "log", "PULSE_LOG");
   cfg_apply_str(obj, "store_path", "PULSE_STORE_PATH");
   cfg_apply_str(obj, "audit_path", "PULSE_AUDIT_PATH");
@@ -119,6 +120,8 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "session_ttl", "PULSE_SESSION_TTL");
   cfg_apply_str(obj, "icon_path", "PULSE_ICON_PATH");
   cfg_apply_str(obj, "static_dir", "PULSE_STATIC_DIR");
+  cfg_apply_str(obj, "assets_dir", "PULSE_ASSETS_DIR");
+  cfg_apply_str(obj, "landing_path", "PULSE_LANDING_PATH");
   cfg_apply_str(obj, "rate_limit", "PULSE_RATE_LIMIT");
   cfg_apply_str(obj, "rate_burst", "PULSE_RATE_BURST");
   cfg_apply_str(obj, "cors_origin", "PULSE_CORS_ORIGIN");
@@ -130,6 +133,16 @@ pub fn cfg_load_file() -> Bool {
 /// Complexity: O(1). Pure.
 pub fn cfg_port() -> Int {
   return cfg_parse_port(env.var_or("PULSE_PORT", "8080"));
+}
+
+/// cfg_bind returns the listen address (PULSE_BIND, default "127.0.0.1").
+/// Keep the loopback default for host deployments behind a proxy (ops
+/// requirement: the public surface stays 443-only); containers and the
+/// benchmark harness may set 0.0.0.0 because the container network is the
+/// isolation boundary there.
+/// Complexity: O(1). Pure.
+pub fn cfg_bind() -> Str {
+  return env.var_or("PULSE_BIND", "127.0.0.1");
 }
 
 /// cfg_log_enabled is false when PULSE_LOG=0.
@@ -178,6 +191,20 @@ pub fn cfg_icon_path() -> Str {
 /// Complexity: O(1). Pure.
 pub fn cfg_static_dir() -> Str {
   return env.var_or("PULSE_STATIC_DIR", "resources/img");
+}
+
+/// cfg_assets_dir returns the root served under /assets/ for showcase
+/// sites (PULSE_ASSETS_DIR, default "resources/public").
+/// Complexity: O(1). Pure.
+pub fn cfg_assets_dir() -> Str {
+  return env.var_or("PULSE_ASSETS_DIR", "resources/public");
+}
+
+/// cfg_landing_path returns an optional HTML file served at "/"
+/// (PULSE_LANDING_PATH, default "" = the built-in placeholder page).
+/// Complexity: O(1). Pure.
+pub fn cfg_landing_path() -> Str {
+  return env.var_or("PULSE_LANDING_PATH", "");
 }
 
 /// cfg_session_ttl_secs returns the session lifetime (PULSE_SESSION_TTL,

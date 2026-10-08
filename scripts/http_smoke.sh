@@ -186,7 +186,19 @@ pulse_check "landing 200" "$R" "200 OK"
 pulse_check "landing title" "$R" "XIOM PULSE"
 pulse_check "landing html" "$R" "text/html"
 
-# --- 12b. HEAD + CORS -------------------------------------------------------
+# --- 12b. showcase assets (/assets/) ----------------------------------------
+ETFILE=$(pulse_tmp)
+R=$(curl -s -i --etag-save "$ETFILE" "$(pulse_base)/assets/hello.txt")
+pulse_check "assets 200" "$R" "200 OK"
+pulse_check "assets type" "$R" "Content-Type: text/plain"
+pulse_check "assets body" "$R" "XIOM PULSE static asset demo"
+R=$(curl -s -i --etag-compare "$ETFILE" "$(pulse_base)/assets/hello.txt")
+pulse_check "assets 304" "$R" "304 Not Modified"
+rm -f "$ETFILE"
+R=$(curl -s -i --path-as-is "$(pulse_base)/assets/../xiom.toml")
+pulse_check "assets traversal 404" "$R" "404 Not Found"
+
+# --- 12c. HEAD + CORS -------------------------------------------------------
 R=$(curl -s -I "$(pulse_base)/health")
 pulse_check "head 200" "$R" "200 OK"
 pulse_check "head content-length" "$R" "Content-Length: 15"

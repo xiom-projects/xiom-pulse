@@ -1,0 +1,5 @@
+XIOM PULSE static asset demo.
+Served from resources/public via the /assets/ route (xiom.static:
+ETag, Cache-Control, Range, traversal guard).
+Replace this directory with a showcase site's assets per deployment
+(PULSE_ASSETS_DIR) and point PULSE_LANDING_PATH at its index.html.

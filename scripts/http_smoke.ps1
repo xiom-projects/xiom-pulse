@@ -211,7 +211,21 @@ Check "landing 200" $r "200 OK"
 Check "landing title" $r "XIOM PULSE"
 Check "landing html" $r "text/html"
 
-# 12b. HEAD + CORS
+# 12b. showcase assets (/assets/)
+# NOTE: --etag-save/--etag-compare keep the quoted ETag inside curl; PS 5.1
+# would strip the quotes from an -H "If-None-Match: \"...\"" argument.
+$etagFile = Join-Path $env:TEMP ("pulse-etag-" + [guid]::NewGuid().ToString("N"))
+$r = curl.exe -s -i --etag-save $etagFile "$base/assets/hello.txt" 2>&1 | Out-String
+Check "assets 200" $r "200 OK"
+Check "assets type" $r "Content-Type: text/plain"
+Check "assets body" $r "XIOM PULSE static asset demo"
+$r = curl.exe -s -i --etag-compare $etagFile "$base/assets/hello.txt" 2>&1 | Out-String
+Check "assets 304" $r "304 Not Modified"
+Remove-Item -LiteralPath $etagFile -ErrorAction SilentlyContinue
+$r = curl.exe -s -i --path-as-is "$base/assets/../xiom.toml" 2>&1 | Out-String
+Check "assets traversal 404" $r "404 Not Found"
+
+# 12c. HEAD + CORS
 $r = curl.exe -s -I "$base/health" 2>&1 | Out-String
 Check "head 200" $r "200 OK"
 Check "head content-length" $r "Content-Length: 15"
