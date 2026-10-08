@@ -5,7 +5,7 @@
 
 **Written:** 2026-10-05 (17:3xZ), by the PULSE consumer lane.
 
-## 0. STATE (2026-10-07, Linux/WSL + registry wave session)
+## 0. STATE (2026-10-08, Linux/WSL + registry wave + stdlib adoption)
 
 - **Repo:** unchanged (`E:\xiom-projects\xiom-pulse`, private, no push
   without owner approval). Commits this session: `b58f7a8` (bash twins +
@@ -46,14 +46,39 @@
   latent, repro `docs/repro/dep-roots-name-form`), C-PULSE-09 (session
   store integration crash), C-PULSE-10 (kv_get corruption; classification
   open), C-PULSE-11 (`pub type X = PackageType` invisible cross-module ->
-  "defaulting to i64" warning).
+  "defaulting to i64" warning), C-PULSE-12 (module last-segment shadows an
+  imported stdlib alias; renamed the app module).
 - **Ops relay updated:** `docs/OPS-REQUEST.md` now carries the Linux
   evidence (VPS OS question resolved: Linux is fine) and the WSL-vs-Docker
   guidance for staging rehearsal.
-- **Next action:** Windows re-verify of the wave; continue M4/M5
-  (keep-alive, schema helper, recv timeouts, CI file when public); watch
-  C-PULSE-08/09/10/11 on the next compiler archive; the `probe_pkg_kv`
-  gate flips green when kv is fixed.
+- **2026-10-08 continuation:** **Windows re-verify GREEN** -- wave
+  packages installed on Windows (`xiom pkg install xiom.metrics@0.2.0
+  xiom.http.middleware@0.1.0 xiom.static@0.1.0`), then build + suites x2
+  + smoke 61/61 + crash 6/6 + rate smoke all green on
+  `out\pulse_app.exe`. **Stdlib wishlist delivered and adopted**:
+  `TcpStream.write_all` replaces PULSE's send loop; the shared
+  `xiom.net.server.server_parse_request` backs `http.parse_request`
+  (PULSE caps preserved: 16 KiB guard, 100-header cap, trimmed values;
+  invalid Content-Length now rejected); parity pinned by
+  `tests/probes/probe_stdlib_server_parse.xi` (12 checks, both
+  platforms). **Module renamed** `xiom.pulse.server` -> `xiom.pulse.app`
+  (C-PULSE-12: a last-segment name shadows an imported stdlib alias --
+  `server.` calls broke until the rename). Ops answered the relay
+  (docs/OPS-REQUEST.md section D): staging is parked by owner decision;
+  Linux toolchain source pinned at dl (`xiom-v0.64.0-linux-x64.tar.gz`,
+  SHA256SUMS, immutable pins); CI mechanics specified for greenlight.
+- **Env note (2026-10-08):** the Windows box hit pagefile/commit
+  exhaustion mid-session (PowerShell/WSL errors: "paging file is too
+  small", "Starting the CLR failed", UTF-16 mangled interop output); a
+  `wsl --shutdown` cleared it before the RAM bump + restart. If WSL
+  commands return CLR/paging errors, suspect system commit pressure, not
+  the build. PULSE's own footprint is small (single clang compiles, tiny
+  test servers); Docker Desktop + WSL VMs dominate.
+- **Next action:** continue M4/M5 -- keep-alive, schema helper (recv
+  timeouts still blocked on `socket_set_timeout` stub); CI file + version
+  stamp when the owner greenlights going public (ops has the mechanics);
+  watch C-PULSE-08/09/10/11/12 on the next compiler archive; the
+  `probe_pkg_kv` gate flips green when the kv defect is fixed.
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded
 

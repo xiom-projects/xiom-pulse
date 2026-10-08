@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-07 (PULSE session, Linux/WSL + registry wave)
+**Last updated:** 2026-10-08 (PULSE continuation: Windows re-verify + stdlib adoption)
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -15,7 +15,18 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~51% of production grade**
+## 1. Overall score: **~51.5% of production grade**
+
+_Delta 2026-10-08 (continuation): 51.2% -> ~51.5% -- **Windows
+re-verify of the registry wave GREEN** (pkg installs + suites x2 + smoke
+61/61 + crash 6/6 + rate); **stdlib adoption**: `TcpStream.write_all`
+replaces the hand-rolled send loop, and `server_parse_request` now backs
+PULSE's HTTP parser behind the same caps with invalid-Content-Length
+hardening (differential probe pins parity on both platforms). Module
+renamed `xiom.pulse.server` -> `xiom.pulse.app` (C-PULSE-12 alias
+collision). Ops answered `docs/OPS-REQUEST.md`: staging parked by owner,
+Linux toolchain source pinned on dl (v0.64.0 archive), CI mechanics ready
+for greenlight._
 
 _Delta 2026-10-07 (Linux/registry wave): 46.9% -> ~51.2% -- the **Linux
 target verified end-to-end** (native ELF from the same v0.64.0 source:
@@ -31,7 +42,7 @@ fallbacks._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
-| 1 | HTTP core (parse/build/limits) | 12% | 74% | 8.9 | query strings, header caps, HEAD; keep-alive/chunked/Expect missing |
+| 1 | HTTP core (parse/build/limits) | 12% | 76% | 9.1 | query strings, header caps, HEAD; shared stdlib parser + invalid-CL reject; keep-alive/chunked/Expect missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
 | 4 | Configuration | 5% | 75% | 3.8 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; no schema validation of values |
@@ -42,8 +53,8 @@ fallbacks._
 | 9 | Static / assets | 4% | 55% | 2.2 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon; no directory serving |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 45% | 4.5 | 1h soak 13,198/13,198 + 30m v0.64.0 soak 6,543/6,543, flat memory; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 68% | 3.4 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins; no CI, no packaging |
-| | **Total** | **100%** | | **51.2** | |
+| 12 | Testing / CI / release | 5% | 70% | 3.5 | suites+smoke+soak+probes on **Windows and Linux** (wave re-verified on both); `.ps1`+`.sh` twins; no CI, no packaging |
+| | **Total** | **100%** | | **51.5** | |
 
 Two lenses to keep separate:
 
@@ -231,8 +242,8 @@ Resolved on v0.64.0: C-PULSE-01, runtime-link (R65), crypto-link (m195).
 | **M1 -- Thin slice** | plaintext HTTP/1.1, routes, JSON, 404/405, curl + 64 concurrent + soak | **DONE** (2026-10-05) |
 | **M2 -- App skeleton** | router, envelope, config, log, metrics, audit, sessions, JWT | **DONE** (core; hardening items above) |
 | **M3 -- Storage** | durable store, schema, crash/reopen, soak | **DONE core** (JSONL; query/migrations pending) |
-| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~60% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD landed) |
-| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~15% (TLS E2E green on Windows **and** Linux; `.sh` twins; deployment runbook + ops request; CI/packaging pending) |
+| **M4 -- Hardening** | timeouts, limits, keep-alive, rate limit, CORS/CSRF, validation, graceful shutdown, latency metrics | ~65% (registry metrics latency preset, static ETag/Range/304, CSRF via registry, caps, histogram, HEAD, stdlib write_all + parser with invalid-CL reject landed; recv timeouts still blocked on stdlib sockets) |
+| **M5 -- Production ops** | TLS (proxy integrated + tested), CI pipeline, packaging, config files, runbooks, backup/restore | ~20% (TLS E2E green on Windows **and** Linux; `.sh` twins; deployment runbook + ops answers with the pinned Linux toolchain source; CI/packaging pending greenlight) |
 | **M6 -- Public release** | self-host compiler + mature stdlib/packages, full security review, versioned API, docs site | not started (owner gate) |
 
 ---

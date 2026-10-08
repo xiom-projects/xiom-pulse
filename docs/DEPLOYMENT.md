@@ -148,8 +148,11 @@ ELF (`scripts/build.sh src/server.xi --name pulse_app`), and the whole
 fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
 `scripts/proxy_e2e.sh` 11/11 through nginx 1.24 TLS).
 
-1. **Build:** install the Unix toolchain (canonical layout
-   `~/.local/share/xiom`), install the registry deps
+1. **Build:** install the Unix toolchain -- canonical source per the ops
+   lane: `https://dl.xiom-lang.org/releases/<tag>/` (`SHA256SUMS` +
+   `xiom-<ver>-linux-x64.tar.gz`; v0.64.0 published 2026-10-05; archive
+   root `bin/` + `lib/`, verify with `sha256sum -c`), or the canonical
+   layout `~/.local/share/xiom` on a dev box. Install the registry deps
    (`xiom pkg install xiom.http@0.1.1 xiom.cookie@0.1.1
    xiom.jwt@0.2.0 xiom.router@0.1.0 xiom.rate@0.2.0
    xiom.metrics@0.2.0 xiom.http.middleware@0.1.0 xiom.static@0.1.0`),

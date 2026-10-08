@@ -98,3 +98,49 @@ Mirror the `E:\xiom-lang\xiom` release model, artifacts on
   when the owner green-lights going public.
 - `.ps1` + `.sh` twin requirement: **DONE** (2026-10-07) -- every script
   ships as both, `.sh` verified from WSL, LF enforced via `.gitattributes`.
+
+## D. Ops answers (received 2026-10-08) -- staging parked, local lane unblocked
+
+**Owner decision: PULSE stays local (WSL + Docker) for now.** The VPS
+staging package is parked until the owner greenlights the project going
+real/public; nothing on the VPS is scheduled. PULSE needs nothing from ops
+right now. When greenlit, ops executes the following (already specified):
+
+1. **Linux toolchain source (was the open question):**
+   `https://dl.xiom-lang.org/releases/<tag>/` carries `SHA256SUMS` +
+   `xiom-<ver>-linux-x64.tar.gz`. Current: **v0.64.0, 29,293,765 B,
+   published 2026-10-05** (`latest.json` names it). Archive root is
+   `bin/xiom` + `lib/`; set `XIOM_BIN=<dir>/bin/xiom` and
+   `XIOM_STDLIB=<dir>/lib`. Pinning pattern: version file + download
+   `SHA256SUMS` + asset, `sha256sum -c`, extract; dl assets are immutable
+   so old pins keep working; update = bump the pin and re-fetch.
+2. **DNS:** owner adds the A/AAAA for `staging.pulse.xiom-lang.org` ->
+   xiom VPS `5.189.139.216` (GoDaddy); ops verifies propagation. Parked.
+3. **TLS/proxy:** the VPS is Hestia-managed, nginx-only; ops adapts
+   `deploy/nginx/pulse.conf.example` into a Hestia web template
+   (`/usr/local/hestia/data/templates/web/nginx/php-fpm/`, assigned via
+   `v-change-web-domain-tpl` + `v-rebuild-web-domain`) and issues the cert
+   with Hestia LE (`v-add-letsencrypt-domain`) -- not a second nginx.
+   PULSE's local nginx rehearsal stays as-is.
+4. **Service:** systemd unit, `0600` env file, secret from the host secret
+   store, bound to `127.0.0.1:8080` (keep the loopback bind hardcoded);
+   public surface stays 443-only. `X-Pulse-Quit` remains a test hook;
+   SIGTERM is the production stop once M4 signal handling lands.
+5. **Monitoring:** `/health` on UptimeRobot (keyword monitor; give it an
+   honesty/state keyword), `/metrics` restricted via nginx allow/deny to
+   monitoring sources.
+6. **Releases/CI (on greenlight):** dl is pull-based -- no upload
+   credentials. CI creates a GitHub Release with assets + `SHA256SUMS`;
+   the VPS `dl-deploy.sh` (hourly :17) verifies checksums, publishes
+   `releases/<tag>/` + `latest.json`, prunes to 20 tags. Runners:
+   GitHub-hosted `windows-latest`/`ubuntu-latest`; **org rule: actions must
+   be pinned to full SHAs** (`sha_pinning_required=true`; ops has the
+   canonical set). Tag convention `pulse-v<semver>`. The org secret
+   `XIOM_RELEASE_TOKEN` exists (org default token is read-only); rulesets
+   reapplied from `scripts/apply-github-rulesets.ps1` when public. Staging
+   auto-deploy from `main`: default no (hourly pull-deploy cron is the
+   standard if wanted later).
+7. **PULSE to-dos before any public release (unchanged):** build-info /
+   version stamp surfaced in `/api/version` and `pulse --version`; keep
+   the `.ps1`/`.sh` twins; when greenlit, ops re-runs the `.sh` E2E set
+   against the VPS deployment as the acceptance harness.

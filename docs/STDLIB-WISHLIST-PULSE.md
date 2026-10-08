@@ -57,6 +57,26 @@ the pin below.
   server framework cannot ship without at least the timeout option; the
   runtime already links `setsockopt` on both branches except Windows bind.
 
+## Delta 2026-10-08 (write_all + server_parse_request adopted)
+
+- **`TcpStream.write_all` ADOPTED** in PULSE (`send_all`); the 270 KB
+  favicon path is green on both platforms. The hand-rolled chunk loop is
+  gone -- thank you.
+- **`xiom.net.server.server_parse_request` ADOPTED** behind PULSE's caps
+  (16 KiB read-loop guard, 100-header cap, trimmed values); invalid
+  Content-Length now rejected. Parity + hardening are pinned by
+  `tests/probes/probe_stdlib_server_parse.xi` (12 checks, both platforms).
+- **New ask (small):** import aliasing. A consumer module whose last
+  segment collides with a stdlib module's last segment shadows the alias
+  (`xiom.pulse.server` vs `xiom.net.server` broke `server.` calls until
+  PULSE renamed its module; C-PULSE-12 in the compiler findings). Either
+  `use xiom.net.server as net_server;` or accepting full-path calls
+  (`xiom.net.server.server_parse_request(...)`) removes the trap for every
+  consumer.
+- `socket_set_timeout` re-checked on the current checkout: still a
+  documented-Err stub, so recv deadlines remain blocked (PULSE M4
+  slow-client shedding).
+
 ## Delta 2026-10-07 (Linux/WSL session)
 
 - **Linux runtime + crypto fully green env-free**: native ELF build and

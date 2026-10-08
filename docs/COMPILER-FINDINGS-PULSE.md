@@ -282,3 +282,16 @@ written and verified from WSL.
 `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv` (the kv gate
 should flip to green), and both variants of
 `docs/repro/dep-roots-name-form/` on the next archive.
+
+## Delta 2026-10-08 (Windows re-verify + stdlib adoption)
+
+| Finding | Evidence | Impact |
+|---|---|---|
+| **C-PULSE-12 (module-name/alias shadowing):** a module whose last segment matches an imported module's alias shadows that alias in every compilation that includes it. `xiom.pulse.server` (the app entry) vs `use xiom.net.server;` in `src/http.xi` -> inside http.xi, `server.server_parse_request(raw)` is misread as a method call on an expression ("cannot call 'server_parse_request' on this expression"), and the unqualified name is "undefined"; a compilation that imports `xiom.pulse.server` via `use` poisons the alias the same way. | `src/http.xi` 2026-10-08 build logs; workaround: rename `xiom.pulse.server` -> `xiom.pulse.app` (done) | any consumer whose module name collides with a stdlib module's last segment; an import-alias syntax (`use xiom.net.server as net_server;`) or full-path qualification would remove this trap |
+| **POSITIVE -- stdlib write_all adopted:** `TcpStream.write_all` (stdlib 2026-10-07) replaced PULSE's hand-rolled partial-send loop; the 270 KB favicon path is green through `send_all`. | suites x2 + smoke 61/61 both platforms | retires the last C-PULSE-01-adjacent send workaround |
+| **POSITIVE -- stdlib server_parse_request adopted:** `xiom.net.server.server_parse_request` now backs `http.parse_request` behind PULSE's caps (16 KiB guard, 100-header cap, trimmed values); invalid Content-Length is now rejected (hardening). Differential parity pinned by `tests/probes/probe_stdlib_server_parse.xi` (12 checks). | probe + test_http x2 (47 checks) + smoke + suites both platforms | the stdlib lane's PULSE-hardening delivery consumed; parser duplication removed |
+| **Windows re-verify (registry wave):** `xiom pkg install` of metrics/middleware/static on Windows, then suites x2 + smoke 61/61 + crash 6/6 + rate smoke -- all green on `out\pulse_app.exe`. | 2026-10-08 run logs | both platforms now exercise the same adoption set |
+
+**Bump procedure addendum 2:** add `probe_stdlib_server_parse` to the
+archive-bump fleet (it gates the parser contract) and re-run the Windows
+`xiom pkg install` + suite set after any compiler archive change.
