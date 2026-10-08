@@ -3,9 +3,68 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05 (17:3xZ), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-08 EOD, by the PULSE consumer lane.
 
-## 0. STATE (2026-10-08, Linux/WSL + registry wave + stdlib adoption)
+## 0. STATE (2026-10-08 EOD) -- CURRENT STATE digest (supersedes the log below)
+
+- **Repo:** `E:\xiom-projects\xiom-pulse`, PRIVATE, no push without owner
+  approval; DCO `-s` commits; identity Lefteris Notas
+  <lefterisnotas@gmail.com>. Head: `b2ce91c` (kv backend), `7d0481a`,
+  `1d6d105`, `c190509`, `52f74c6`.
+- **Toolchain:** **Windows = v0.64.1** (installed in place at
+  `%LOCALAPPDATA%\xiom.new`; the update wiped the package store and all
+  TEN deps were reinstalled: http/cookie/jwt/router/rate/metrics/
+  http.middleware/static/session/kv). **Linux/WSL = v0.64.0** until dl
+  publishes v0.64.1 -- `https://dl.xiom-lang.org/latest.json` still shows
+  v0.64.0; the lane's release build sits at
+  `E:\xiom-lang\xiom\target\release\xiom.exe` (v0.64.1) with notes at
+  `release-notes\v0.64.1.md`. `dev-env.ps1` now respects an explicit
+  `XIOM_COMPILER`/`XIOM_STDLIB` (A/B); `dev-env.sh` always did.
+- **Working tree is GREEN on v0.64.1 (Windows):** build, suites x2
+  (`test_http`/`test_app`/`test_smoke`), smoke **73/73** (jsonl AND kv),
+  crash 6/6, rate smoke, store-soak 20s (kv), the probe fleet, and the
+  m212 gate.
+- **Stores:** jsonl = default; **kv = adopted opt-in**
+  (`PULSE_STORE_BACKEND=kv` + `PULSE_KV_DIR`/`PULSE_KV_PREFIX`, sequence
+  keys, native compact, single-module holder). Fallback documented.
+- **Bug gates:** **C-PULSE-08 CLOSED** (m212 dash+dot both exit 0, no
+  source-roots); **C-PULSE-10 CLOSED** (kv green, m217); **C-PULSE-11
+  fixed** (m216); **C-PULSE-09 OPEN** -- the session-store bridge now
+  COMPILES on v0.64.1 but still crashes 0xC0000005 at the first
+  cross-module access to a module-level `Vec[SessionStore]` (durable step
+  evidence in `probe_adopt_smoke`, reduction hint filed); local session
+  store stands.
+- **NEW ecosystem breakage (packages lane):** v0.64.1 extern-unsafe
+  enforcement rejects the published `xiom.http` 0.1.1 (67 T001s). PULSE
+  pruned the already-unused package; `probe_pkg_http` is the known-red
+  republish gate. Release notes claim "Breaking changes: None" -- flagged.
+- **v0.64.1 known-issue cautions (from the notes):** `from_utf8` by-ref
+  (pass by value), optional-into-vector-element assignment, nested-field
+  mutation copies -- designs avoid all three.
+- **Capabilities landed 2026-10-07/08:** 12 `.ps1`+`.sh` twins (all
+  verified), registry wave (metrics/static/middleware adopted), stdlib
+  `write_all` + `server_parse_request` adopted, TE smuggling guard,
+  Expect/Date protocol fix, schema helper, audit rotation,
+  `--version`/`--check-config`, showcase `/assets` + `PULSE_LANDING_PATH`,
+  `PULSE_BIND`, Dockerfile, release + backup tooling, ops answered
+  (staging parked; Linux toolchain source pinned; CI on greenlight).
+- **Score:** ~55.6% production grade (`docs/PROGRESS.md`).
+- **NEXT (in order):** 1) dl publishes v0.64.1 -> install on WSL + Linux
+  sweep (probe fleet, m212 gate, suites x2, smoke, crash, rate, kv smoke +
+  20m kv soak; then consider flipping the kv default). 2) watch the
+  packages lane (`xiom.http` republish -> re-add + flip probe green) and
+  the bindings lane (DB/KV binding, store seam). 3) retry the session swap
+  only when the C-PULSE-09 runtime fix lands. 4) on owner greenlight: CI
+  file + dl release flow + the three showcase sites.
+- **Gotchas:** PS 5.1 strips embedded quotes in native args (use files,
+  `--etag-save/--etag-compare`); when driving WSL from PS avoid inner
+  quotes (write scripts to `/tmp` instead); `io.flush_stdout` is a no-op
+  (durable step logs); no inline if-expressions; module last-segment
+  collisions shadow imports (C-PULSE-12); no module-scope package
+  constructors (Vec-holder pattern); `wsl --shutdown` clears CLR/paging
+  errors (system commit pressure, not the build).
+
+### Session log 2026-10-07/08 (chronological history; superseded by the digest above)
 
 - **Repo:** unchanged (`E:\xiom-projects\xiom-pulse`, private, no push
   without owner approval). Commits this session: `b58f7a8` (bash twins +
@@ -421,7 +480,56 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-07)
+## 3. Paste prompt for the next PULSE session (2026-10-08 clean handoff)
+
+```
+You are the PULSE session for E:\xiom-projects\xiom-pulse (the official
+XIOM web backend). Read SESSION.md first -- the CURRENT STATE digest at
+the top is authoritative; then docs\PROGRESS.md and the relay docs it
+lists. Consumer lane: never edit E:\xiom-lang\stdlib, E:\xiom-lang\xiom,
+E:\xiom-packages\packages (or its bindings worktree
+E:\xiom-packages\bindings). Repo stays PRIVATE; do not push without owner
+approval. Identity "Lefteris Notas <lefterisnotas@gmail.com>";
+conventional commits, DCO -s. Windows compiler v0.64.1 (installed);
+Linux/WSL compiler v0.64.0 until dl publishes v0.64.1.
+
+TASK ORDER:
+1. FIRST: check https://dl.xiom-lang.org/latest.json. If v0.64.1 assets
+   are published: install on WSL (bin/+lib/ archive, verify SHA256SUMS,
+   record the pin), then run the LINUX SWEEP -- probe fleet
+   (probe_pkg_state_holder, probe_session_inline, probe_adopt_smoke,
+   probe_stdlib_server_parse, probe_schema, probe_audit_rotate,
+   probe_pkg_kv, probe_pkg_middleware, probe_pkg_metrics, probe_pkg_static,
+   probe_pkg_session), the m212 gate (docs/repro/dep-roots-name-form: both
+   dash and dot variants exit 0), suites x2, smoke 73/73, crash 6/6, rate,
+   kv-mode smoke + a 20m store-soak with PULSE_STORE_BACKEND=kv; then
+   decide (with evidence) whether to flip the kv default. Record all
+   results in the relay docs. If dl still serves v0.64.0, do task 2 and
+   re-check next session.
+2. NON-BLOCKED hardening while waiting: chunked request decoding,
+   config-value validation warnings, or a fresh 30-60m soak on v0.64.1 --
+   pick by value. Keep-alive stays gated on socket timeouts, SIGTERM on
+   the stdlib handler API, build stamping on a compiler define flag (all
+   filed).
+3. WATCH the lanes: packages (xiom.http compat republish -> probe_pkg_http
+   flips green, then re-add it to xiom.toml/package.xi), bindings (durable
+   DB/KV binding behind the store seam), compiler (C-PULSE-09 runtime fix
+   -> retry the session-store swap with the bridge in git history 220f814;
+   C-PULSE-12 alias-shadowing ask).
+4. On owner greenlight: CI file + dl release flow + the three showcase
+   sites (pulse./orbit./xvector.) per docs/OPS-REQUEST.md.
+5. Update SESSION.md digest + the three relay docs + PROGRESS.md at every
+   wrap; commit signed.
+
+DISCIPLINE: probes in-repo; suites x2; outputs to files, never inherited
+pipes; durable step logs for crash-prone runs; every struct literal lists
+every field; no module-scope package constructors (Vec-holder pattern);
+no const-receiver .to_str(); explicit *p for &mut Int reads; quoted dotted
+TOML dep keys; PS-5.1 native-arg quoting workarounds; `wsl --shutdown` on
+CLR/paging errors (system commit pressure, not the build).
+```
+
+## 3c. Paste prompt (2026-10-07, superseded)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (official XIOM
