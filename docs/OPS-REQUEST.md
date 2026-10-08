@@ -154,3 +154,9 @@ right now. When greenlit, ops executes the following (already specified):
    platforms; values come from `PULSE_BUILD_COMMIT`/`PULSE_BUILD_DATE`
    (deploy env). True compile-time stamping needs a toolchain define flag
    (filed); ops can set the env vars in the systemd unit until then.
+   **Also shipped locally (2026-10-08):** `scripts/release.{ps1,sh}`
+   produce the exact `pulse-<ver>-<os>-<arch>.zip` + `.sha256` artifacts
+   (contents staged per section B.3), and `scripts/backup.{ps1,sh}`
+   snapshot store + audit with a sha256 manifest (restore runbook in
+   `docs/DEPLOYMENT.md` section 9). The CI-at-greenlight flow above is
+   unchanged; these let PULSE cut identical artifacts by hand today.

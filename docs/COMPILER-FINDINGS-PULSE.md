@@ -309,3 +309,23 @@ archive-bump fleet (it gates the parser contract) and re-run the Windows
   `pulse.pulse_version()` is a method-call-on-expression error. PULSE
   keeps a local `APP_VERSION` const in sync instead; an import-alias or
   full-path call syntax would remove the trap.
+
+**Lane status observed 2026-10-08 (for the v0.64.1 adoption gate):**
+
+- `9033c6b8 fix(graph): m215 dotted dependency keys resolve (C-PULSE-08)`
+  -- once archived, the `docs/repro/dep-roots-name-form/` gate (both dash
+  and dot variants exit 0) becomes runnable for real.
+- `0c5337e0 fix(codegen): m216 alias Vec elements resolve (C-PULSE-11)`
+  and `fd6ea4c6 fix(codegen): m217 nested Option/Result payload chains
+  keep inner type (C-PULSE-10)` -- m217 is the suspected kv_get
+  corruption root cause (`Result[Option[Str], Str]` chain); re-run
+  `probe_pkg_kv` plus `docs/repro/kv-get-str-corruption/` on v0.64.1.
+- `479afffe docs(relay): C-PULSE-09 triage -- wrapper-aggregate crash not
+  reproducible from committed sources` -- the committed tree no longer
+  contains the failing arrangement (the session-store swap was reverted).
+  PULSE will re-attempt the swap on v0.64.1 using the arrangement in git
+  history (`220f814`) and re-file with the exact source if it still
+  crashes; m216/m217 may have addressed it.
+- dl latest is still **v0.64.0** (2026-10-05); the fixes above are in the
+  lane source only. PULSE's fleet is ready to re-run the day v0.64.1 is
+  published (the addenda above list the exact probes).

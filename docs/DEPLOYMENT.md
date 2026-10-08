@@ -174,3 +174,22 @@ fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
    rehearsing there.
 5. All scripts ship as `.ps1` and `.sh` twins; the shell twins are
    verified from WSL/Linux and enforced LF via `.gitattributes`.
+
+## 9. Release artifacts and backups (local tooling, 2026-10-08)
+
+- **Release packaging:** `scripts/release.ps1` / `scripts/release.sh`
+  build and stage `dist/pulse-<ver>-<os>-<arch>.zip` (+ `.sha256`)
+  containing the binary, `resources/img/pulse-ico.ico`, `README.md`,
+  `LICENSE-*`, `NOTICE` -- the ops artifact convention. Version defaults
+  to `src/pulse.xi`. Both artifacts verified locally (checksum matches,
+  contents listed in the script output).
+- **Backups:** `scripts/backup.ps1` / `scripts/backup.sh` snapshot the
+  event store and the audit log (plus its `.1` rotation) into
+  `backups/<UTC timestamp>/` with `MANIFEST.txt` (sizes + sha256), and
+  prune to the newest `--keep` (default 7) snapshots. Missing sources are
+  noted, not fatal.
+- **Restore procedure:** stop the service; copy the snapshot's
+  `store.jsonl` over `PULSE_STORE_PATH` (and `audit.log` over
+  `PULSE_AUDIT_PATH` if the audit trail matters); start the service;
+  verify with `GET /api/events/count` against the pre-backup count. The
+  store tolerates a torn tail, so restoring a slightly-live file is safe.

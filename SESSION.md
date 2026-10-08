@@ -93,13 +93,26 @@
   exhausted: keep-alive / recv timeouts / signals wait on stdlib
   capabilities (filed), CI / packaging / true build stamping wait on the
   public greenlight (ops mechanics ready).
-- **Next action:** on the next compiler/stdlib archive, re-run the probe
-  fleet (incl. `probe_stdlib_server_parse`, `probe_pkg_state_holder`,
+- **2026-10-08 (packaging round):** TE/chunked smuggling guard (any
+  `Transfer-Encoding` -> 501; CL.TE desync closed; test_app 105 checks +
+  smoke 62/62), status table completed (206/304/501... had rendered
+  "Unknown"), `scripts/release.{ps1,sh}` (dist artifacts per the ops
+  naming, zip + sha256 verified on both platforms) and
+  `scripts/backup.{ps1,sh}` (timestamped store+audit snapshots with
+  sha256 manifest + prune; tested; restore runbook in DEPLOYMENT §9).
+  Compiler check: dl still v0.64.0; **m215/m216/m217 (C-PULSE-08/10/11
+  fixes) are in the lane source, not in an archive** -- v0.64.1 is the
+  next adoption gate; C-PULSE-09 was triaged not-reproducible from
+  committed sources (PULSE will retry the session-store swap on the next
+  archive using the arrangement in git history 220f814).
+- **Next action:** on v0.64.1: re-run the probe fleet
+  (`probe_stdlib_server_parse`, `probe_pkg_state_holder`,
   `probe_adopt_smoke`, `probe_session_inline`, `probe_pkg_kv`,
-  `probe_audit_rotate`, `probe_schema`) and the m212 repro gate; swap the
-  session store and kv backend when green; adopt socket timeouts, signal
-  handling, and a define flag when they land; when the owner greenlights:
-  CI file + packaging (ops mechanics in docs/OPS-REQUEST.md section D).
+  `probe_audit_rotate`, `probe_schema`) and the m212 repro gate (both
+  variants must exit 0); retry the session-store swap (C-PULSE-09) and
+  the kv backend (C-PULSE-10); adopt socket timeouts / signals / define
+  flag when the stdlib exposes them; when the owner greenlights: CI file
+  + dl release flow (ops mechanics in docs/OPS-REQUEST.md section D).
 
 ## 0b. STATE HISTORY (2026-10-05) -- superseded
 
