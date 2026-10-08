@@ -1,56 +1,21 @@
 # XIOM PULSE -- compiler project manifest (xiom.toml is the canonical
 # Phase 7 manifest; package.xi remains the registry/pkg manifest).
 #
-# NOTE (C-PULSE-02): on v0.63.1 the compiler's dependency graph only adds the
-# project's own source roots + stdlib to the module catalog. `[dependencies]`
-# entries are parsed but never mapped to source directories, and packages
-# installed under $XIOM_HOME/packages are not on the catalog path. The
-# workaround is to list the installed package's src/ dir in source-roots.
-# Revisit when the compiler maps deps -> roots.
+# Dependency resolution (2026-10-08, C-PULSE-02 CLOSED): the shipped
+# v0.64.1 compiler resolves canonical dotted `[dependencies]` keys to
+# installed package roots under $XIOM_HOME/packages (m212 + m215), so the
+# v0.63.1-era absolute-path `source-roots` workaround is RETIRED -- the
+# manifest no longer carries machine-specific paths. Verified with a
+# no-source-roots build + suites x2 + smoke 73/73 on Windows and Linux.
+#
+# Install the deps before building: `xiom pkg install` each entry below.
+# Unix shipped-installer layouts must keep the pkg store visible to
+# xiom_home() -- C-PULSE-13: symlink
+# ~/.local/share/xiom/packages -> ~/xiom/packages (or set XIOM_HOME).
 [project]
 name = "xiom.pulse"
 version = "0.1.0"
 root = "src"
-# C-PULSE-02 re-tested on v0.64.0 (2026-10-05): WITHOUT these source-roots
-# the installed deps are still invisible (13x T001 undefined). Keep until the
-# compiler maps [dependencies] to catalog roots.
-#
-# m212 follow-up (PULSE, 2026-10-07): the lane checkout has
-# dependency_roots_under now, but (a) it is NOT in the shipped v0.64.0
-# binaries (docs/repro/dep-roots-name-form: both key forms still fail), and
-# (b) its matcher uses `dep.name` verbatim, so canonical dotted keys
-# ("xiom.rate") will never match installed dirs ("xiom-rate-0.2.0"). The
-# repro bundle is the acceptance gate for the next archive.
-source-roots = [
-  "src",
-  # xiom.http RE-ADDED 2026-10-08: 0.1.2 (eco-v0.1.103) wraps its internals
-  # in unsafe blocks for v0.64.1 extern-unsafe confinement; probe_pkg_http
-  # flips green (the v0.64.1 67-T001 breakage in 0.1.1 is fixed).
-  # Windows install tree (%LOCALAPPDATA%\xiom\packages)
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-0.1.2/xiom-http/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-router-0.1.0/xiom-router/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
-  # Windows install tree -- 2026-10-07 registry wave (install first:
-  # xiom pkg install xiom.metrics@0.2.0 xiom.http.middleware@0.1.0 ...)
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-metrics-0.2.0/xiom-metrics/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-http-middleware-0.1.0/xiom-http-middleware/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-session-0.1.0/xiom-session/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-static-0.1.0/xiom-static/src",
-  "C:/Users/lefte/AppData/Local/xiom/packages/xiom-kv-0.1.0/xiom-kv/src",
-  # WSL/Linux install tree (~/xiom/packages; dead entries are skipped)
-  "/home/lefteris/xiom/packages/xiom-http-0.1.2/xiom-http/src",
-  "/home/lefteris/xiom/packages/xiom-cookie-0.1.1/xiom-cookie/src",
-  "/home/lefteris/xiom/packages/xiom-jwt-0.2.0/xiom-jwt/src",
-  "/home/lefteris/xiom/packages/xiom-router-0.1.0/xiom-router/src",
-  "/home/lefteris/xiom/packages/xiom-rate-0.2.0/xiom-rate/src",
-  "/home/lefteris/xiom/packages/xiom-metrics-0.2.0/xiom-metrics/src",
-  "/home/lefteris/xiom/packages/xiom-http-middleware-0.1.0/xiom-http-middleware/src",
-  "/home/lefteris/xiom/packages/xiom-session-0.1.0/xiom-session/src",
-  "/home/lefteris/xiom/packages/xiom-static-0.1.0/xiom-static/src",
-  "/home/lefteris/xiom/packages/xiom-kv-0.1.0/xiom-kv/src",
-]
 
 [dependencies]
 "xiom.http" = "0.1.2"
