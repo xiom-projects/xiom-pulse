@@ -42,6 +42,7 @@ use xiom.pulse.reqctx;
 use xiom.convert.parse;
 use xiom.static;
 use xiom.env;
+use xiom.encoding.percent;
 use xiom.pulse.audit;
 use xiom.pulse.openapi;
 
@@ -306,6 +307,8 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
   if m.route_id == 13 {
     var limit: Int = 10;
     var kind_filter: Str = "";
+    var before: Int = 0;
+    var bad_cursor: Bool = false;
     var qi: Int = 0;
     while qi < m.query_names.len() {
       let qn = m.query_names[qi];
@@ -324,19 +327,40 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
           kind_filter = qk;
         }
       }
+      if qn == "before" {
+        let qb = m.query_values[qi];
+        let pb = parse_int(qb);
+        if pb.is_ok && pb.value > 0 {
+          before = pb.value;
+        } else {
+          bad_cursor = true;
+        }
+      }
       qi = qi + 1;
+    }
+    if bad_cursor {
+      return out_json(400, envelope.error_body("invalid_cursor", "before must be a positive integer cursor"));
     }
     if limit < 1 { limit = 1; }
     if limit > 100 { limit = 100; }
     let path = config.cfg_store_path();
-    var recs: Vec[Str] = Vec[Str].new();
-    if kind_filter.len() > 0 {
-      recs = store.store_last_kind(path, kind_filter, limit);
-    } else {
-      recs = store.store_last(path, limit);
+    let page = store.store_page(path, kind_filter, limit, before);
+    let arr = store.store_join_array(&page.records);
+    var next_cursor: Int = 0;
+    if page.has_more { next_cursor = page.first_seq; }
+    let out_body = "{\"count\":" + store.store_count(path).to_str() + ",\"events\":" + arr + ",\"next_cursor\":" + next_cursor.to_str() + "}";
+    if next_cursor > 0 {
+      // RFC 8288 Link header for the next (older) page; the kind filter is
+      // client input, so it is percent-encoded into the URL.
+      var q: Str = "?";
+      if kind_filter.len() > 0 {
+        q = q + "kind=" + percent.percent_encode_component(kind_filter) + "&";
+      }
+      q = q + "limit=" + limit.to_str() + "&before=" + next_cursor.to_str();
+      var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+      hs.push(("Link", "</api/events" + q + ">; rel=\"next\""));
+      return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: out_body; body_bytes: Vec[UInt8].new(); };
     }
-    let arr = store.store_join_array(&recs);
-    let out_body = "{\"count\":" + store.store_count(path).to_str() + ",\"events\":" + arr + "}";
     return out_json(200, out_body);
   }
   if m.route_id == 16 {

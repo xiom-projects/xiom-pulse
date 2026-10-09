@@ -53,9 +53,11 @@
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
   error `status` in every envelope (incl. the 405 Allow path); official
-  icon adopted + embedded; smoke **89/89** on both platforms (Linux run
-  with the pinned stdlib). NEXT -- pagination `Link` (store cursor
-  decision: seq-in-record vs offset), idempotency keys on event writes,
+  icon adopted + embedded; **pagination `Link` on `GET /api/events`**
+  (seq-in-record cursor: durable `seq`, legacy fallback ordinal,
+  `next_cursor` + RFC 8288 `Link rel="next"`, `?before=` walk-back,
+  `400 invalid_cursor`); smoke **100/100** on both platforms (Linux run
+  with the pinned stdlib). NEXT -- idempotency keys on event writes,
   `/v1` on new surfaces, `xiom.http` 0.1.4 + SSRF-guarded client wrapper
   (+ probe), multipart uploads; then docs refresh + the 0.2.0 cut.
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**

@@ -203,6 +203,25 @@ pulse_check "events limit 200" "$R" "200 OK"
 R=$(http_get "/api/events?kind=smoke")
 pulse_check "events kind 200" "$R" "200 OK"
 pulse_check "events kind body" "$R" "smoke"
+
+# --- 11b. Pagination: durable seq cursor + RFC 8288 Link header (0.2) -------
+R=$(post_json /api/events '{"kind":"page","n":1}')
+pulse_check "page event 1 200" "$R" "200 OK"
+R=$(post_json /api/events '{"kind":"page","n":2}')
+pulse_check "page event 2 200" "$R" "200 OK"
+R=$(http_get "/api/events?limit=2")
+pulse_check "paginate 200" "$R" "200 OK"
+pulse_check "paginate seq field" "$R" '"seq":'
+pulse_check "paginate next cursor" "$R" '"next_cursor":'
+pulse_check "paginate link next" "$R" 'rel="next"'
+pulse_check "paginate link cursor" "$R" "before="
+R=$(http_get "/api/events?limit=2&before=1")
+pulse_check "paginate before1 empty" "$R" '"events":[]'
+pulse_check "paginate before1 no next" "$R" '"next_cursor":0'
+R=$(http_get "/api/events?before=xyz")
+pulse_check "paginate bad cursor 400" "$R" "400 Bad Request"
+pulse_check "paginate bad cursor code" "$R" '"code":"invalid_cursor"'
+
 R=$(post_empty /api/events/compact)
 pulse_check "events compact 200" "$R" "200 OK"
 pulse_check "events compact ok" "$R" '"ok":true'

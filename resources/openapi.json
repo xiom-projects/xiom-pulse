@@ -150,14 +150,22 @@
     "/api/events": {
       "get": {
         "tags": ["events"],
-        "summary": "List stored events",
+        "summary": "List stored events (newest page first; follow Link rel=next for older pages)",
         "operationId": "getEvents",
         "parameters": [
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
-          { "name": "kind", "in": "query", "schema": { "type": "string" } }
+          { "name": "kind", "in": "query", "schema": { "type": "string" } },
+          { "name": "before", "in": "query", "description": "Sequence cursor: return events strictly older than this seq (from a previous page's next_cursor or Link header).", "schema": { "type": "integer", "minimum": 1 } }
         ],
         "responses": {
-          "200": { "description": "Event list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventsList" } } } }
+          "200": {
+            "description": "Event list",
+            "headers": {
+              "Link": { "description": "RFC 8288 next-page link (rel=\"next\") when an older page exists", "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventsList" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
         }
       },
       "post": {
@@ -272,7 +280,7 @@
       "Token": { "type": "object", "properties": { "token": { "type": "string" } } },
       "TokenVerify": { "type": "object", "properties": { "valid": { "type": "boolean" }, "sub": { "type": "string" } } },
       "Event": { "type": "object", "properties": { "seq": { "type": "integer" }, "kind": { "type": "string" }, "body": {} } },
-      "EventsList": { "type": "object", "properties": { "events": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } }, "count": { "type": "integer" } } },
+      "EventsList": { "type": "object", "properties": { "events": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } }, "count": { "type": "integer" }, "next_cursor": { "type": "integer", "description": "0 when no older page exists; pass as ?before= to fetch it" } } },
       "Count": { "type": "object", "required": ["count"], "properties": { "count": { "type": "integer" } } },
       "Error": {
         "type": "object",

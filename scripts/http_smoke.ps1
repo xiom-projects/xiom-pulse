@@ -39,22 +39,31 @@ Remove-Item Env:PULSE_PORT -ErrorAction SilentlyContinue
 
 $env:PULSE_PORT = "$Port"
 $env:PULSE_CORS_ORIGIN = "*"
+# Server stdout/stderr go to FILES (never pipes): the access log exceeds
+# the ~4 KiB pipe buffer after ~40 requests, and an undrained pipe blocks
+# the single-threaded server mid-loop (standing project lesson). Launched
+# through cmd.exe because Start-Process -PassThru leaves ExitCode empty
+# when redirecting, while cmd /c propagates the server's exit code.
+$srvOutFile = Join-Path $env:TEMP ("pulse-smoke-srv-" + [guid]::NewGuid().ToString("N") + ".out")
+$srvErrFile = Join-Path $env:TEMP ("pulse-smoke-srv-" + [guid]::NewGuid().ToString("N") + ".err")
 $psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = $ServerExe
+$psi.FileName = "cmd.exe"
+# Canonical quoted form: cmd /c ""prog" args 1>"out" 2>"err"" -- a bare
+# quoted first token breaks cmd's /c parsing.
+$psi.Arguments = "/c `"`"$ServerExe`" 1>`"$srvOutFile`" 2>`"$srvErrFile`"`""
 $psi.WorkingDirectory = $repoRoot
 $psi.UseShellExecute = $false
-$psi.RedirectStandardOutput = $true
-$psi.RedirectStandardError = $true
 $psi.CreateNoWindow = $true
-$srv = New-Object System.Diagnostics.Process
-$srv.StartInfo = $psi
-$null = $srv.Start()
+$srv = [System.Diagnostics.Process]::Start($psi)
 Start-Sleep -Milliseconds 900
 
 $pass = 0; $fail = 0
 function Check {
     param([string]$Name, [string]$Haystack, [string]$Needle, [bool]$Want = $true)
-    $has = $Haystack -like "*$Needle*"
+    # Escape the needle: -like treats *, ?, [ ] as wildcards, and needles
+    # like '"events":[]' would otherwise throw an invalid-pattern error.
+    $pattern = "*" + [System.Management.Automation.WildcardPattern]::Escape($Needle) + "*"
+    $has = $Haystack -like $pattern
     if ($has -eq $Want) {
         Write-Host "[PASS] $Name"
         $script:pass++
@@ -230,6 +239,25 @@ Check "events limit 200" $r "200 OK"
 $r = Invoke-CurlGet "/api/events?kind=smoke"
 Check "events kind 200" $r "200 OK"
 Check "events kind body" $r "smoke"
+
+# 11b. Pagination: durable seq cursor + RFC 8288 Link header (0.2)
+$r = Invoke-CurlPost "/api/events" '{"kind":"page","n":1}'
+Check "page event 1 200" $r "200 OK"
+$r = Invoke-CurlPost "/api/events" '{"kind":"page","n":2}'
+Check "page event 2 200" $r "200 OK"
+$r = Invoke-CurlGet "/api/events?limit=2"
+Check "paginate 200" $r "200 OK"
+Check "paginate seq field" $r '"seq":'
+Check "paginate next cursor" $r '"next_cursor":'
+Check "paginate link next" $r 'rel="next"'
+Check "paginate link cursor" $r "before="
+$r = Invoke-CurlGet "/api/events?limit=2&before=1"
+Check "paginate before1 empty" $r '"events":[]'
+Check "paginate before1 no next" $r '"next_cursor":0'
+$r = Invoke-CurlGet "/api/events?before=xyz"
+Check "paginate bad cursor 400" $r "400 Bad Request"
+Check "paginate bad cursor code" $r '"code":"invalid_cursor"'
+
 $r = Invoke-CurlPost "/api/events/compact" ""
 Check "events compact 200" $r "200 OK"
 Check "events compact ok" $r '"ok":true'
@@ -281,7 +309,10 @@ if (-not $srv.WaitForExit(10000)) {
     $srv.WaitForExit(5000) | Out-Null
 }
 $srvExit = $srv.ExitCode
-$srvLog = $srv.StandardOutput.ReadToEnd() + $srv.StandardError.ReadToEnd()
+$srvLog = ""
+if (Test-Path -LiteralPath $srvOutFile) { $srvLog = Get-Content -LiteralPath $srvOutFile -Raw }
+if (Test-Path -LiteralPath $srvErrFile) { $srvLog = $srvLog + (Get-Content -LiteralPath $srvErrFile -Raw) }
+Remove-Item -LiteralPath $srvOutFile, $srvErrFile -Force -ErrorAction SilentlyContinue
 Set-Content -LiteralPath (Join-Path $logDir "http-smoke.out") -Value $srvLog
 
 Write-Host "--- server output ---"

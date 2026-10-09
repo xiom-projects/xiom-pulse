@@ -12,6 +12,13 @@ GitHub release body.
   (`{"error":{"status":N,"code":...,"message":...}}` on every error path,
   including 405 with its `Allow` header) -- RFC 9457-friendly without
   changing the stable code/message contract.
+- **Pagination on `GET /api/events`**: every event written by 0.2+ carries
+  a durable `seq` cursor; pre-0.2 records fall back to their valid-record
+  ordinal. Responses gain `next_cursor` and, while an older page exists,
+  an RFC 8288 `Link: </api/events?limit=N&before=K>; rel="next"` header
+  (the `kind` filter is preserved, percent-encoded). `?before=K` walks
+  backwards; a malformed cursor is `400 invalid_cursor`. Identical
+  behavior on the JSONL and kv backends.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).
@@ -30,6 +37,11 @@ GitHub release body.
 - `PULSE_OPENAPI_PATH` (default `resources/openapi.json`).
 - Smoke suite grew to 89 checks (contract route, CLI subcommands, error
   status field).
+- Smoke suite now **100 checks** on both platforms: pagination page walk,
+  `Link` cursor syntax, empty-page and `invalid_cursor` cases. The PS
+  smoke twin also hardens its harness: server output goes to files (a full
+  ~4 KiB pipe deadlocked the server mid-suite) and exit codes are read
+  through a cmd wrapper (`Start-Process` left `ExitCode` empty).
 
 ## [0.1.2] - 2026-10-09
 

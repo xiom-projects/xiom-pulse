@@ -39,9 +39,26 @@ mirrored additively:
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/api/events` | append an event (audited) |
-| GET | `/api/events` | list; `?limit=1..100`, `?kind=` |
+| GET | `/api/events` | list; `?limit=1..100`, `?kind=`, `?before=` (pagination) |
 | GET | `/api/events/count` | `{"count":N}` |
 | POST | `/api/events/compact` | rewrite without torn lines |
+
+### Pagination
+
+Events page newest-first. Every stored event carries a durable sequence
+cursor (`seq`, written since 0.2; older records fall back to their
+position among valid records). `GET /api/events` returns the newest page
+(`{"count":N,"events":[...],"next_cursor":K}`). When an older page
+exists, `next_cursor` is the cursor of the page's oldest event and the
+response carries an RFC 8288 header:
+
+```
+Link: </api/events?limit=10&before=42>; rel="next"
+```
+
+Follow it (or call `?before=<next_cursor>` yourself; `kind` is preserved
+in the link) until `next_cursor` is `0`. A malformed cursor is rejected
+`400` with code `invalid_cursor`. Both store backends page identically.
 
 ## Request limits and semantics
 

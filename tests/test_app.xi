@@ -342,6 +342,32 @@ pub fn main() -> Int {
   f = f + check("dispatch events 405 allow", e405.status == 405 && e405.headers.len() == 1);
   let evbad = route_req("POST", "/api/events", "notjson");
   f = f + check("dispatch events 400", evbad.status == 400);
+
+  // --- pagination (0.2): durable seq cursor + RFC 8288 Link -----------------
+  // The compact above left the two seq-carrying records (1, 2); a raw
+  // pre-0.2-style line (no seq) falls back to its ordinal cursor (3).
+  let legacy = io.append_line(sp, "{\"kind\":\"event\",\"ts\":0,\"data\":{\"legacy\":true}}");
+  f = f + check("paginate legacy append", legacy.is_ok);
+  let pg1 = route_req("GET", "/api/events?limit=2", "");
+  f = f + check("paginate page1 200", pg1.status == 200);
+  f = f + check("paginate page1 cursor", string.str_contains(pg1.body, "\"next_cursor\":2"));
+  f = f + check("paginate page1 seq field", string.str_contains(pg1.body, "\"seq\":"));
+  f = f + check("paginate page1 legacy in page", string.str_contains(pg1.body, "legacy"));
+  f = f + check("paginate page1 excludes older", !string.str_contains(pg1.body, "\"a\":1"));
+  f = f + check("paginate page1 link", pg1.headers.len() == 1 && string.str_contains(pg1.headers[0].1, "rel=\"next\""));
+  f = f + check("paginate page1 link cursor", pg1.headers.len() == 1 && string.str_contains(pg1.headers[0].1, "before=2"));
+  let pg2 = route_req("GET", "/api/events?limit=2&before=2", "");
+  f = f + check("paginate page2 200", pg2.status == 200);
+  f = f + check("paginate page2 no next", string.str_contains(pg2.body, "\"next_cursor\":0"));
+  f = f + check("paginate page2 no link", pg2.headers.len() == 0);
+  f = f + check("paginate page2 oldest", string.str_contains(pg2.body, "\"seq\":1"));
+  let pgk = route_req("GET", "/api/events?kind=click&limit=1", "");
+  f = f + check("paginate kind no next", pgk.status == 200 && string.str_contains(pgk.body, "\"next_cursor\":0"));
+  f = f + check("paginate kind content", string.str_contains(pgk.body, "click") && !string.str_contains(pgk.body, "legacy"));
+  let pgbad = route_req("GET", "/api/events?before=abc", "");
+  f = f + check("paginate bad cursor 400", pgbad.status == 400 && string.str_contains(pgbad.body, "\"code\":\"invalid_cursor\""));
+  let pg0 = route_req("GET", "/api/events?before=1", "");
+  f = f + check("paginate oldest cursor empty", pg0.status == 200 && string.str_contains(pg0.body, "\"events\":[]"));
   env.remove_var("PULSE_STORE_PATH");
   let rm1 = io.remove_file(sp);
   f = f + check("store cleanup", rm1.is_ok);

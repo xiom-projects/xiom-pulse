@@ -26,6 +26,16 @@ use xiom.kv;
 
 const SCHEMA_VERSION: Int = 1;
 
+/// StorePage - one timeline page of event records: records oldest-first
+/// within the page, `first_seq` = cursor of the oldest record (0 when the
+/// page is empty; pass it as `before` to fetch the next older page), and
+/// `has_more` = an older eligible record exists beyond this page.
+pub type StorePage = {
+  records: Vec[Str];
+  first_seq: Int;
+  has_more: Bool;
+}
+
 // --- kv backend state -------------------------------------------------------
 
 var g_kvs: Vec[KvStore] = Vec[KvStore].new();
@@ -189,25 +199,62 @@ pub fn store_count(path: Str) -> Int {
   return store_valid_records(path).len();
 }
 
-/// store_last returns up to `n` most recent records (oldest first).
-/// Complexity: O(n).
-pub fn store_last(path: Str, n: Int) -> Vec[Str] {
-  let all = store_valid_records(path);
-  var out: Vec[Str] = Vec[Str].new();
-  var start: Int = all.len() - n;
-  if start < 0 { start = 0; }
-  var i: Int = start;
-  while i < all.len() {
-    out.push(all[i]);
-    i = i + 1;
+/// store_record_seq returns the record's embedded sequence cursor (the
+/// `seq` field written by 0.2+ builds); 0 when absent (pre-0.2 records).
+/// Complexity: O(record).
+pub fn store_record_seq(rec: Str) -> Int {
+  let pv = json.json_parse(rec);
+  if pv.is_err { return 0; }
+  let sopt = json.json_get(pv.value, "seq");
+  if sopt.is_none { return 0; }
+  let sv = sopt.value;
+  match sv {
+    JsonValue.Number(f) => {
+      let n = convert.float_to_int(f);
+      if n > 0 { return n; }
+      return 0;
+    },
+    _ => { return 0; },
   }
-  return out;
 }
 
-/// store_append_event appends `{"kind":"event","ts":<unix>,"data":<body>}`.
-/// `body_json` must already be valid JSON. Complexity: O(1).
+/// effective_seq is the record's explicit seq; pre-0.2 records fall back to
+/// their 1-based ordinal among valid records (stable under compaction,
+/// which only drops invalid lines). Complexity: O(record).
+fn effective_seq(rec: Str, ordinal: Int) -> Int {
+  let s = store_record_seq(rec);
+  if s > 0 { return s; }
+  return ordinal;
+}
+
+/// store_max_seq returns the highest effective sequence in the store (0
+/// when empty). Complexity: O(n).
+fn store_max_seq(path: Str) -> Int {
+  let all = store_valid_records(path);
+  var m: Int = 0;
+  var i: Int = 0;
+  while i < all.len() {
+    let s = effective_seq(all[i], i + 1);
+    if s > m { m = s; }
+    i = i + 1;
+  }
+  return m;
+}
+
+/// store_append_event appends
+/// `{"kind":"event","seq":N,"ts":<unix>,"data":<body>}`; the sequence cursor
+/// is durable in the record (kv keys mirror it; JSONL derives N from the
+/// current maximum). `body_json` must already be valid JSON. Complexity:
+/// O(n) jsonl / O(1) kv.
 pub fn store_append_event(path: Str, body_json: Str) -> Bool {
-  let rec = "{\"kind\":\"event\",\"ts\":" + time.unix_timestamp().to_str() + ",\"data\":" + body_json + "}";
+  var seq: Int = 0;
+  if backend_kv() {
+    if !kv_ensure() { return false; }
+    seq = g_seq + 1;
+  } else {
+    seq = store_max_seq(path) + 1;
+  }
+  let rec = "{\"kind\":\"event\",\"seq\":" + convert.int_to_string(seq) + ",\"ts\":" + time.unix_timestamp().to_str() + ",\"data\":" + body_json + "}";
   return store_append(path, rec);
 }
 
@@ -261,27 +308,54 @@ fn record_kind(rec: Str) -> Str {
   return ks;
 }
 
-/// store_last_kind returns up to `n` newest records whose `data.kind`
-/// equals `kind`, oldest-first. Complexity: O(n).
-pub fn store_last_kind(path: Str, kind: Str, n: Int) -> Vec[Str] {
+/// store_page returns up to `limit` records older than the `before` cursor
+/// (0 = newest page), oldest-first within the page; a non-empty `kind`
+/// filters on `data.kind`. Complexity: O(n).
+pub fn store_page(path: Str, kind: Str, limit: Int, before: Int) -> StorePage {
+  var lim: Int = limit;
+  if lim < 1 { lim = 1; }
   let all = store_valid_records(path);
-  var picked: Vec[Str] = Vec[Str].new();
+  var picked_rev: Vec[Str] = Vec[Str].new();
+  var first_seq: Int = 0;
+  var has_more: Bool = false;
   var i: Int = all.len() - 1;
-  while i >= 0 && picked.len() < n {
-    let r = all[i];
-    let k = record_kind(r);
-    if k == kind {
-      picked.push(r);
+  while i >= 0 {
+    let rec = all[i];
+    let s = effective_seq(rec, i + 1);
+    var eligible: Bool = (before == 0) || (s < before);
+    if eligible && kind.len() > 0 {
+      eligible = record_kind(rec) == kind;
+    }
+    if eligible {
+      if picked_rev.len() < lim {
+        picked_rev.push(rec);
+        first_seq = s;
+      } else {
+        has_more = true;
+        break;
+      }
     }
     i = i - 1;
   }
-  var rev: Vec[Str] = Vec[Str].new();
-  var j: Int = picked.len() - 1;
+  var records: Vec[Str] = Vec[Str].new();
+  var j: Int = picked_rev.len() - 1;
   while j >= 0 {
-    rev.push(picked[j]);
+    records.push(picked_rev[j]);
     j = j - 1;
   }
-  return rev;
+  return StorePage{ records: records; first_seq: first_seq; has_more: has_more; };
+}
+
+/// store_last returns up to `n` most recent records (oldest first).
+/// Complexity: O(n).
+pub fn store_last(path: Str, n: Int) -> Vec[Str] {
+  return store_page(path, "", n, 0).records;
+}
+
+/// store_last_kind returns up to `n` newest records whose `data.kind`
+/// equals `kind`, oldest-first. Complexity: O(n).
+pub fn store_last_kind(path: Str, kind: Str, n: Int) -> Vec[Str] {
+  return store_page(path, kind, n, 0).records;
 }
 
 /// store_join_array renders records as a JSON array text.

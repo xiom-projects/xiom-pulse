@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-09 (v0.64.2 adoption: C-PULSE-09/13 closed; memory: Windows fixed, Linux worse)
+**Last updated:** 2026-10-10 (0.2 pagination: `Link` + seq-in-record cursor; smoke 100/100 both platforms)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -138,6 +138,25 @@ additively** (`{"error":{"status":N,...}}`; shared helper also covers the
 platforms (Linux pinned-stdlib). Roadmap 0.2: item 2 done, item 1
 partially -- pagination `Link`, idempotency keys, `/v1`, the
 SSRF-guarded HTTP client and multipart next. Score holds (~55.4%)._
+
+_Delta 2026-10-10 (0.2 pagination): **`Link` pagination on
+`GET /api/events`** -- cursor decision: **seq-in-record**. Every event
+written by 0.2+ carries a durable `seq`; pre-0.2 records fall back to
+their 1-based ordinal among valid records (stable under compaction,
+which only drops invalid lines). Responses gain `next_cursor` and, while
+an older page exists, an RFC 8288
+`Link: </api/events?limit=N&before=K>; rel="next"` header (kind filter
+preserved, percent-encoded); `?before=K` walks backwards; malformed
+cursors get `400 invalid_cursor`. One `store_page` API serves both
+backends (`store_last`/`store_last_kind` are thin wrappers now).
+test_app +16 checks; smoke 89 -> **100/100** on both platforms (Linux
+with the pinned stdlib `4dd8844`). Harness fixes found while extending
+the smoke: the PS twin now file-redirects server output (a full ~4 KiB
+pipe deadlocked the single-threaded server mid-suite) and reads exit
+codes through a cmd wrapper (`Start-Process -PassThru` leaves `ExitCode`
+empty with redirection); `check` needles are wildcard-escaped.
+Roadmap 0.2 item 1: pagination done -- idempotency keys and `/v1` next.
+Score holds (~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
