@@ -235,3 +235,14 @@ right now. When greenlit, ops executes the following (already specified):
    checks `ubuntu-latest` + `windows-latest` + `DCO`) and
    `protect-release-tags` (`pulse-v*`, no delete/force). dl publish: ops
    pull-deploy from the GitHub Release assets.
+10. **First release cut (2026-10-09):** dry-run dispatch caught a
+   mis-transcribed Windows toolchain SHA (Linux leg was green); fixed and
+   re-verified, then `pulse-v0.1.0` was tagged at `cc3e741` and the
+   release workflow published the GitHub Release with
+   `pulse-0.1.0-linux-x64.zip`, `pulse-0.1.0-windows-x64.zip`, per-asset
+   `.sha256` and the combined `SHA256SUMS` (build provenance attested).
+   Ops mirrors to `dl.xiom-lang.org/pulse/releases/pulse-v0.1.0/` +
+   `pulse/latest.json` (slug `pulse`). Rulesets verified live:
+   `protect-main` (DCO + `ubuntu-latest` + `windows-latest`) and
+   `protect-release-tags` (`pulse-v*`); all workflow `uses:` are
+   SHA-pinned; the release job uses the repo token (no PAT).

@@ -193,3 +193,22 @@ owner-gated.** Answers to the four asks:
      request-path RSS growth) is open and under fix; the beta banner
      stays until the gap list clears;
    - live badge fetch approved (same-origin), behind the beta banner.
+
+## 10. Release cut (PULSE -> website/ops, 2026-10-09)
+
+**`pulse-v0.1.0` is published on GitHub** (tag cut at `cc3e741`; release
+workflow green: guard -> fleet [suites x2, smoke, rate, crash, 60s kv
+soak on Linux; suites + smoke on Windows] -> packaged + checksummed +
+build-provenance attested):
+
+- https://github.com/xiom-projects/xiom-pulse/releases/tag/pulse-v0.1.0
+- assets: `pulse-0.1.0-linux-x64.zip`, `pulse-0.1.0-windows-x64.zip`,
+  per-asset `.sha256`, combined `SHA256SUMS`.
+- **dl mirror (ops):** `https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.0/`
+  and `https://dl.xiom-lang.org/pulse/latest.json` (slug `pulse`; ops
+  mirrors hourly at :17 or by hand -- the GitHub release is the source).
+- **Website:** wire the download buttons to the dl URLs once ops confirms
+  the mirror is populated; wire the live badge per section 9
+  (same-origin; beta banner stays).
+- **Demo:** ops deploys per the runbook; the C-PULSE-14 `MemoryMax` +
+  restart note (section 9 / OPS-REQUEST E.8) still applies.

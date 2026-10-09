@@ -106,10 +106,16 @@
   pinned deps), `ci.yml` (PR tier: suites x2 + smoke on both OS),
   `release.yml` (guard -> fleet -> `pulse-<ver>-<os>-<arch>.zip` +
   `.sha256` + `SHA256SUMS` -> GitHub Release on `pulse-v*`), `heavy.yml`
-  (weekly 30m HTTP + kv soaks + RSS probe). Local packaging dry-runs
-  green both OS; YAML validated; `dev-env` explicit-env path pinned in
-  the setup action. Next: push main, apply the xiom-mirrored rulesets,
-  dry-run dispatch, tag `pulse-v0.1.0`, relay to ops for dl.
+  (weekly 30m HTTP + kv soaks + RSS probe). Sequence executed: main
+  pushed; rulesets verified live (owner-applied protect-main +
+  protect-release-tags; CI contexts `DCO`/`ubuntu-latest`/`windows-latest`
+  added to protect-main); dry run green on the Linux leg and it **caught
+  a mis-transcribed Windows toolchain SHA** (fixed, re-run fully green);
+  tag `pulse-v0.1.0` cut at `cc3e741`; **GitHub Release published** with
+  `pulse-0.1.0-{linux,windows}-x64.zip` + per-asset `.sha256` + combined
+  `SHA256SUMS`, build provenance attested. Ops mirrors to
+  `dl.xiom-lang.org/pulse/...` (slug `pulse`, hourly at :17); the
+  website then wires downloads + the live badge; demo deploy per runbook.
 - **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
   filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
   facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),
@@ -149,11 +155,10 @@
   chunked RESPONSES (with keep-alive), a fresh 30-60m soak, a repeatable
   RSS sampler for C-PULSE-14, or the longer kv soak for the flip gate.
   3) kv default flip only after the recorded prerequisites; otherwise
-  keep kv opt-in. 4) website lane Phase 1 (pulse. subdomain page; brief
-  in `docs/WEBSITE-RELAY-PULSE.md`); on owner greenlight: GH Actions
-  release + repo public + `main` rulesets -> ops deploy -> live
-  badges/downloads. 5) wire the owner's cover image (`resources/img/`)
-  into the product landing when it lands.
+  keep kv opt-in. 4) release: DONE -- pulse-v0.1.0 on GitHub; ops
+  mirrors dl at :17, then the website wires downloads + badge and ops
+  deploys the demo (watch those steps). 5) wire the owner's cover image
+  (`resources/img/`) into the product landing when it lands.
 - **Gotchas:** PS 5.1 strips embedded quotes in native args (use files,
   `--etag-save/--etag-compare`); when driving WSL from PS avoid inner
   quotes (write scripts to `/tmp` instead); `io.flush_stdout` is a no-op
