@@ -24,6 +24,7 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_AUDIT_MAX_BYTES` | `5000000` | audit rotation threshold (`0` = off) |
 | `PULSE_CONFIG` | (unset) | JSON config file (env wins) |
 | `PULSE_ICON_PATH` | `resources/img/pulse-ico.ico` | `/favicon.ico` source |
+| `PULSE_OPENAPI_PATH` | `resources/openapi.json` | served OpenAPI contract |
 | `PULSE_ASSETS_DIR` | `resources/public` | `/assets/*` showcase root |
 | `PULSE_LANDING_PATH` | (unset) | HTML file served at `/` (read per request) |
 | `PULSE_JWT_SECRET` | dev default | **set in production** (HS256) |

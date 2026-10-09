@@ -112,9 +112,11 @@ When a compiler/stdlib pairing carries all three: set
 1. **API contract**: OpenAPI 3 document served at `/openapi.json` +
    `pulse openapi` export; additive problem+json fields on the error
    envelope; pagination `Link` headers; idempotency keys on event
-   writes; `/v1` prefix on new surfaces.
+   writes; `/v1` prefix on new surfaces. **(OpenAPI served + CLI export
+   DONE 2026-10-09; the rest next.)**
 2. **CLI**: subcommands `openapi`, `routes`, `version`,
-   `check-config` (promoting the current flags).
+   `check-config` (promoting the current flags). **(`openapi` +
+   `routes` DONE 2026-10-09; flag promotions next.)**
 3. **HTTP client base**: bump `xiom.http` to 0.1.4, add the
    SSRF-guarded outbound wrapper + probe (foundation for all
    integrations).

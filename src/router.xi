@@ -11,7 +11,8 @@
 // 4 POST /api/session/login, 5 GET /api/me, 6 POST /api/session/logout,
 // 7 POST /api/token, 8 POST /api/token/verify, 9 GET /metrics,
 // 10 GET /api/items/:id, 11 POST /api/events, 12 GET /api/events/count,
-// 13 GET /api/events, 14 GET /favicon.ico, 15 GET /, 16 POST /api/events/compact.
+// 13 GET /api/events, 14 GET /favicon.ico, 15 GET /, 16 POST /api/events/compact,
+// 17 GET /openapi.json.
 module xiom.pulse.router
 
 use xiom.string;
@@ -113,9 +114,34 @@ fn join_methods(ms: &Vec[Str]) -> Str {
   return out;
 }
 
+/// routes_list returns the app route table as (method, path) pairs in
+/// registration order (the `routes` CLI and the openapi contract test use
+/// it). Complexity: O(1).
+pub fn routes_list() -> Vec[(Str, Str)] {
+  var out: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  out.push(("GET", "/health"));
+  out.push(("GET", "/api/version"));
+  out.push(("POST", "/api/echo"));
+  out.push(("POST", "/api/session/login"));
+  out.push(("GET", "/api/me"));
+  out.push(("POST", "/api/session/logout"));
+  out.push(("POST", "/api/token"));
+  out.push(("POST", "/api/token/verify"));
+  out.push(("GET", "/metrics"));
+  out.push(("GET", "/api/items/:id"));
+  out.push(("POST", "/api/events"));
+  out.push(("GET", "/api/events/count"));
+  out.push(("GET", "/api/events"));
+  out.push(("GET", "/favicon.ico"));
+  out.push(("GET", "/"));
+  out.push(("POST", "/api/events/compact"));
+  out.push(("GET", "/openapi.json"));
+  return out;
+}
+
 /// route_match builds the app table, matches (method, target) via the
 /// registry router and maps the registration index to the app route id.
-/// The table is rebuilt per call (15 registrations; negligible at current
+/// The table is rebuilt per call (16 registrations; negligible at current
 /// load and avoids module-global mutable struct state).
 /// Complexity: O(routes).
 pub fn route_match(method: Str, target: Str) -> PulseRoute {
@@ -152,6 +178,7 @@ pub fn route_match(method: Str, target: Str) -> PulseRoute {
   let _r14 = router.router_add(&mut t, "GET", "/favicon.ico");      ids.push(14);
   let _r15 = router.router_add(&mut t, "GET", "/");                 ids.push(15);
   let _r16 = router.router_add(&mut t, "POST", "/api/events/compact"); ids.push(16);
+  let _r17 = router.router_add(&mut t, "GET", "/openapi.json");    ids.push(17);
 
   let rm = router.router_match(&t, method, path);
   if rm.code == 404 {

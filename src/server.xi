@@ -43,6 +43,7 @@ use xiom.convert.parse;
 use xiom.static;
 use xiom.env;
 use xiom.pulse.audit;
+use xiom.pulse.openapi;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -334,6 +335,15 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     }
     return out_json(200, envelope.ok_bool(true));
   }
+  if m.route_id == 17 {
+    // Served API contract: the repo document with the running version
+    // substituted (same source as the `openapi` CLI subcommand).
+    let doc = openapi.openapi_document(APP_VERSION);
+    if doc.len() == 0 {
+      return out_json(500, envelope.error_body("internal", "openapi document unavailable"));
+    }
+    return out_json(200, doc);
+  }
   if m.route_id == 14 {
     // Static assets via registry xiom.static 0.1.0: ETag/Last-Modified/
     // Cache-Control, If-None-Match -> 304, Range -> 206/416, traversal guard.
@@ -518,6 +528,33 @@ pub fn main() -> Int {
   // environment (PULSE_BUILD_COMMIT / PULSE_BUILD_DATE); compile-time
   // stamping needs a toolchain define flag (filed ask).
   let av = env.args();
+  // CLI subcommands (0.2 contract slate): `routes` prints the route table,
+  // `openapi` prints the served contract with the running version.
+  // env.args() includes argv[0] (the exe path), so scan all arguments --
+  // same shape as the flag loop below.
+  var sj: Int = 0;
+  while sj < av.len() {
+    let sc = av[sj];
+    if sc == "routes" {
+      let rs = router.routes_list();
+      var ri: Int = 0;
+      while ri < rs.len() {
+        io.println(rs[ri].0 + " " + rs[ri].1);
+        ri = ri + 1;
+      }
+      return 0;
+    }
+    if sc == "openapi" {
+      let doc = openapi.openapi_document(APP_VERSION);
+      if doc.len() == 0 {
+        io.println("openapi: document not readable at " + config.cfg_openapi_path());
+        return 1;
+      }
+      io.println(doc);
+      return 0;
+    }
+    sj = sj + 1;
+  }
   var ai: Int = 0;
   while ai < av.len() {
     let a = av[ai];
@@ -529,10 +566,10 @@ pub fn main() -> Int {
     }
     if a == "--help" || a == "-h" {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
-      io.println("usage: pulse_app [--version] [--help] [--check-config]");
+      io.println("usage: pulse_app [--version] [--help] [--check-config] | routes | openapi");
       io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
-      io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG");
+      io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       return 0;
     }
     if a == "--check-config" {
@@ -559,6 +596,7 @@ pub fn main() -> Int {
       io.println("cors=" + config.cfg_cors_origin());
       io.println("session_ttl=" + config.cfg_session_ttl_secs().to_str());
       io.println("static_dir=" + config.cfg_static_dir());
+      io.println("openapi=" + config.cfg_openapi_path());
       io.println("assets_dir=" + config.cfg_assets_dir());
       io.println("landing_path=" + config.cfg_landing_path());
       let js = env.var_or("PULSE_JWT_SECRET", "");

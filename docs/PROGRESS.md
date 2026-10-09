@@ -123,6 +123,14 @@ test_smoke, test_http, smoke twins), re-verified with the pinned stdlib
 before tagging. Also filed: the `@llvm.memset.p0i8.i64` IR warning
 reproduces on Linux CI (llvm-16), not just darwin._
 
+_Delta 2026-10-09 (wrap 13, 0.2 first unit): **OpenAPI contract live** --
+`GET /openapi.json` serves the repo document with the running version
+substituted at request time; the first CLI subcommands (`openapi`,
+`routes`); config `PULSE_OPENAPI_PATH`; test_app +7 checks; smoke
+**84/84** on both platforms (Linux pinned-stdlib). Roadmap 0.2 items 1/2
+partially done -- problem+json, pagination, idempotency, `/v1`, flag
+promotions next. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

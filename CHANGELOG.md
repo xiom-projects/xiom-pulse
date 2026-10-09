@@ -4,6 +4,19 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
+## [Unreleased]
+
+### Added
+
+- `GET /openapi.json` serves the OpenAPI 3.1 API contract; the version
+  is substituted at request time from the running build, so the contract
+  and `/api/version` can never drift apart.
+- First CLI subcommands of the 0.2 contract slate: `pulse_app openapi`
+  prints the contract document and `pulse_app routes` prints the route
+  table (`METHOD PATH` per line).
+- `PULSE_OPENAPI_PATH` (default `resources/openapi.json`).
+- Smoke suite grew to 84 checks (contract route + CLI subcommands).
+
 ## [0.1.2] - 2026-10-09
 
 Maintenance release: rebuilt on XIOM v0.64.2 and completes the registry

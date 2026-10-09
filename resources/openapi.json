@@ -1,0 +1,316 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "XIOM PULSE",
+    "summary": "Official XIOM web backend: HTTP/1.1 service with sessions, tokens, an events store, and metrics.",
+    "description": "PULSE is the official XIOM web backend. This document is the served API contract; the version placeholder is replaced with the running build version at request time. Beta: see the project documentation for the current gap list.",
+    "version": "__PULSE_VERSION__",
+    "license": { "name": "MIT OR Apache-2.0", "identifier": "MIT OR Apache-2.0" }
+  },
+  "servers": [
+    { "url": "https://pulse.xiom-lang.org", "description": "live demo (beta)" },
+    { "url": "http://127.0.0.1:8080", "description": "local default (loopback)" }
+  ],
+  "tags": [
+    { "name": "meta", "description": "liveness and version" },
+    { "name": "demo", "description": "echo and parameter demos" },
+    { "name": "sessions", "description": "cookie sessions and CSRF" },
+    { "name": "tokens", "description": "JWT issue and verify" },
+    { "name": "events", "description": "event store" },
+    { "name": "ops", "description": "metrics and contract" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["meta"],
+        "summary": "Liveness probe",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is up",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } }
+          }
+        }
+      }
+    },
+    "/api/version": {
+      "get": {
+        "tags": ["meta"],
+        "summary": "Running version and build provenance",
+        "operationId": "getVersion",
+        "responses": {
+          "200": {
+            "description": "Name, version, and optional build provenance",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Version" } } }
+          }
+        }
+      }
+    },
+    "/api/echo": {
+      "post": {
+        "tags": ["demo"],
+        "summary": "Echo a JSON body",
+        "operationId": "postEcho",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The request body under an echo key",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Echo" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/items/{id}": {
+      "get": {
+        "tags": ["demo"],
+        "summary": "Path-parameter demo route",
+        "operationId": "getItem",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "The route id", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/api/session/login": {
+      "post": {
+        "tags": ["sessions"],
+        "summary": "Demo login; sets sid and csrf cookies",
+        "operationId": "postSessionLogin",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "type": "string" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Session and CSRF cookies set", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionLogin" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/session/logout": {
+      "post": {
+        "tags": ["sessions"],
+        "summary": "Log out; requires the CSRF token",
+        "operationId": "postSessionLogout",
+        "security": [{ "sessionCookie": [] }, { "csrfCookie": [] }],
+        "responses": {
+          "200": { "description": "Session cleared", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": ["sessions"],
+        "summary": "Current session profile",
+        "operationId": "getMe",
+        "security": [{ "sessionCookie": [] }],
+        "responses": {
+          "200": { "description": "Session user", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Me" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/token": {
+      "post": {
+        "tags": ["tokens"],
+        "summary": "Issue an HS256 JWT",
+        "operationId": "postToken",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "sub": { "type": "string" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Issued token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Token" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/token/verify": {
+      "post": {
+        "tags": ["tokens"],
+        "summary": "Verify a JWT",
+        "operationId": "postTokenVerify",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "token": { "type": "string" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Token accepted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenVerify" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "tags": ["events"],
+        "summary": "List stored events",
+        "operationId": "getEvents",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
+          { "name": "kind", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Event list", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventsList" } } } }
+        }
+      },
+      "post": {
+        "tags": ["events"],
+        "summary": "Append an event (audited)",
+        "operationId": "postEvents",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "kind": { "type": "string" }, "body": {} } } } }
+        },
+        "responses": {
+          "200": { "description": "Stored event", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Event" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" }
+        }
+      }
+    },
+    "/api/events/count": {
+      "get": {
+        "tags": ["events"],
+        "summary": "Count stored events",
+        "operationId": "getEventsCount",
+        "responses": {
+          "200": { "description": "Event count", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Count" } } } }
+        }
+      }
+    },
+    "/api/events/compact": {
+      "post": {
+        "tags": ["events"],
+        "summary": "Rewrite the store; drops torn lines",
+        "operationId": "postEventsCompact",
+        "responses": {
+          "200": { "description": "Compaction result", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": ["ops"],
+        "summary": "Prometheus text exposition",
+        "operationId": "getMetrics",
+        "responses": {
+          "200": { "description": "Prometheus text", "content": { "text/plain": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": ["ops"],
+        "summary": "This document",
+        "operationId": "getOpenapi",
+        "responses": {
+          "200": { "description": "OpenAPI 3.1 document", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/favicon.ico": {
+      "get": {
+        "tags": ["ops"],
+        "summary": "Application icon",
+        "operationId": "getFavicon",
+        "responses": { "200": { "description": "ICO bytes", "content": { "image/x-icon": { "schema": { "type": "string", "format": "binary" } } } } }
+      }
+    },
+    "/assets/{path}": {
+      "get": {
+        "tags": ["ops"],
+        "summary": "Static showcase assets (ETag, 304, Range)",
+        "operationId": "getAsset",
+        "parameters": [
+          { "name": "path", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "File bytes", "content": { "application/octet-stream": { "schema": { "type": "string", "format": "binary" } } } },
+          "304": { "description": "Not modified" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": ["ops"],
+        "summary": "Landing page (PULSE_LANDING_PATH when configured)",
+        "operationId": "getLanding",
+        "responses": { "200": { "description": "HTML landing", "content": { "text/html": { "schema": { "type": "string" } } } } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "sid" },
+      "csrfCookie": { "type": "apiKey", "in": "cookie", "name": "csrf" },
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "Health": { "type": "object", "required": ["status"], "properties": { "status": { "type": "string", "const": "ok" } } },
+      "Version": {
+        "type": "object",
+        "required": ["name", "version"],
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "commit": { "type": "string" },
+          "build": { "type": "string" }
+        }
+      },
+      "Echo": { "type": "object", "properties": { "echo": {} } },
+      "SessionLogin": { "type": "object", "properties": { "user": { "type": "string" }, "csrf": { "type": "string" } } },
+      "Me": { "type": "object", "properties": { "user": { "type": "string" } } },
+      "Token": { "type": "object", "properties": { "token": { "type": "string" } } },
+      "TokenVerify": { "type": "object", "properties": { "valid": { "type": "boolean" }, "sub": { "type": "string" } } },
+      "Event": { "type": "object", "properties": { "seq": { "type": "integer" }, "kind": { "type": "string" }, "body": {} } },
+      "EventsList": { "type": "object", "properties": { "events": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } }, "count": { "type": "integer" } } },
+      "Count": { "type": "object", "required": ["count"], "properties": { "count": { "type": "integer" } } },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": { "code": { "type": "string" }, "message": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid credentials",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Forbidden": {
+        "description": "CSRF or policy rejection",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "NotFound": {
+        "description": "Unknown route or resource",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "PayloadTooLarge": {
+        "description": "Body over the 1 MiB cap",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Internal": {
+        "description": "Server-side failure",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  }
+}

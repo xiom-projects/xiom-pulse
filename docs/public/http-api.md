@@ -18,6 +18,7 @@ All responses are JSON unless noted. `GET /health` returns
 | POST | `/api/echo` | echoes the JSON body |
 | GET | `/api/items/:id` | path-parameter demo route |
 | GET | `/metrics` | Prometheus text (restrict at the proxy) |
+| GET | `/openapi.json` | OpenAPI 3.1 contract (version substituted at serve time) |
 | GET | `/favicon.ico` | from `PULSE_ICON_PATH` |
 | GET | `/assets/*` | static files from `PULSE_ASSETS_DIR` (ETag, 304, Range) |
 | GET | `/` | `PULSE_LANDING_PATH` HTML (read per request) |
@@ -57,3 +58,9 @@ All responses are JSON unless noted. `GET /health` returns
 
 Statuses: `200`, `204`, `400`, `401`, `403`, `404`, `405`, `413`, `500`,
 `501`.
+
+## CLI
+
+`pulse_app openapi` prints the same contract document to stdout;
+`pulse_app routes` prints the route table (`METHOD PATH` per line). Both
+exit 0; `openapi` exits 1 when the document cannot be read.

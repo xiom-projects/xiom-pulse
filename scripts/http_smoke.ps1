@@ -73,6 +73,14 @@ Check "cli check-config text" $cfgOut "port="
 Check "cli check-config rc" "rc=$cfgRc" "rc=0"
 Check "cli check-config warns" $cfgWarnOut "warning:"
 Check "cli check-config warn rc" "rc=$cfgWarnRc" "rc=0"
+$oaOut = (& $ServerExe openapi 2>&1 | Out-String)
+$oaRc = $LASTEXITCODE
+Check "cli openapi text" $oaOut "3.1.0"
+Check "cli openapi rc" "rc=$oaRc" "rc=0"
+$rtOut = (& $ServerExe routes 2>&1 | Out-String)
+$rtRc = $LASTEXITCODE
+Check "cli routes text" $rtOut "GET /health"
+Check "cli routes rc" "rc=$rtRc" "rc=0"
 
 function Invoke-CurlPost {
     param([string]$Path, [string]$Body, [string]$CookieJar = "", [string[]]$ExtraHeaders = @())
@@ -250,6 +258,11 @@ Check "cors allow origin" $r "Access-Control-Allow-Origin: *"
 $r = curl.exe -s -i -X OPTIONS -H "Origin: http://example.test" -H "Access-Control-Request-Method: POST" "$base/api/events" 2>&1 | Out-String
 Check "cors preflight 204" $r "204 No Content"
 Check "cors preflight methods" $r "Access-Control-Allow-Methods:"
+
+# 13b. OpenAPI contract served
+$r = Invoke-CurlGet "/openapi.json"
+Check "openapi 200" $r "200 OK"
+Check "openapi title" $r "XIOM PULSE"
 
 # 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1

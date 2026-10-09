@@ -223,6 +223,16 @@
   + pagination + idempotency, CLI subcommands, `xiom.http` 0.1.4 + the
   SSRF-guarded client wrapper, multipart uploads, docs refresh. 0.1.2
   remains the shipped release.
+- **Wrap 13 (0.2 starts: OpenAPI contract):** `GET /openapi.json` serves
+  the OpenAPI 3.1 document (`resources/openapi.json`; the version token
+  is substituted at serve time from the running build, so the contract
+  and `/api/version` cannot drift); CLI gains its first subcommands --
+  `pulse_app openapi` and `pulse_app routes` (17 routes, argv[0] note:
+  args scan includes the exe path); config gains
+  `PULSE_OPENAPI_PATH`; test_app +7 checks; smoke 78 -> **84/84** on
+  BOTH platforms (Linux run with the pinned stdlib). Roadmap 0.2 items
+  1/2 partially ticked; problem+json, pagination, idempotency, `/v1`,
+  flag promotions next.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
@@ -292,7 +302,8 @@
   header (x2), `tests/test_smoke.xi`, `tests/test_http.xi`,
   `scripts/http_smoke.{sh,ps1}` -- and run the suites with the pinned
   stdlib before tagging (CI parity; a stale literal cost the 0.1.1
-  tag).**
+  tag).** The openapi version assertion in `tests/test_app.xi` is part
+  of that set.
 
 ### Session log 2026-10-07/08 (chronological history; superseded by the digest above)
 

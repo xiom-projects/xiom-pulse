@@ -194,6 +194,13 @@ pub fn cfg_icon_path() -> Str {
   return env.var_or("PULSE_ICON_PATH", "resources/img/pulse-ico.ico");
 }
 
+/// cfg_openapi_path returns the served OpenAPI document path
+/// (PULSE_OPENAPI_PATH, default "resources/openapi.json").
+/// Complexity: O(1). Pure.
+pub fn cfg_openapi_path() -> Str {
+  return env.var_or("PULSE_OPENAPI_PATH", "resources/openapi.json");
+}
+
 /// cfg_static_dir returns the static-assets root served by the /favicon.ico
 /// route (PULSE_STATIC_DIR, default "resources/img").
 /// Complexity: O(1). Pure.

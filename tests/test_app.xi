@@ -359,6 +359,23 @@ pub fn main() -> Int {
   f = f + check("landing 200", landing.status == 200 && string.str_contains(landing.body, "XIOM PULSE"));
   f = f + check("landing html type", string.str_contains(landing.content_type, "text/html"));
 
+  // --- openapi contract (0.2) ------------------------------------------------
+  let oa = route_req("GET", "/openapi.json", "");
+  f = f + check("openapi 200", oa.status == 200);
+  f = f + check("openapi marker", string.str_contains(oa.body, "\"3.1.0\""));
+  f = f + check("openapi title", string.str_contains(oa.body, "XIOM PULSE"));
+  f = f + check("openapi version", string.str_contains(oa.body, "\"version\": \"0.1.2\""));
+  f = f + check("route openapi matched", router.route_match("GET", "/openapi.json").route_id == 17);
+  let rl = router.routes_list();
+  var has_openapi: Bool = false;
+  var rli: Int = 0;
+  while rli < rl.len() {
+    if rl[rli].0 == "GET" && rl[rli].1 == "/openapi.json" { has_openapi = true; }
+    rli = rli + 1;
+  }
+  f = f + check("routes list has openapi", has_openapi);
+  f = f + check("routes list size", rl.len() == 17);
+
   if f == 0 {
     io.println("pulse-app: GREEN");
   } else {

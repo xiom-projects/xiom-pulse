@@ -50,6 +50,14 @@ CFG_WARN_OUT=$(PULSE_PORT=abc "$SERVER_EXE" --check-config 2>&1)
 CFG_WARN_RC=$?
 pulse_check "cli check-config warns" "$CFG_WARN_OUT" "warning:"
 pulse_check_eq "cli check-config warn rc" "$CFG_WARN_RC" "0"
+OA_OUT=$("$SERVER_EXE" openapi 2>&1)
+OA_RC=$?
+pulse_check "cli openapi text" "$OA_OUT" "3.1.0"
+pulse_check_eq "cli openapi rc" "$OA_RC" "0"
+RT_OUT=$("$SERVER_EXE" routes 2>&1)
+RT_RC=$?
+pulse_check "cli routes text" "$RT_OUT" "GET /health"
+pulse_check_eq "cli routes rc" "$RT_RC" "0"
 
 LOG_DIR="$PULSE_REPO_ROOT/probe-logs"
 mkdir -p "$LOG_DIR"
@@ -222,6 +230,11 @@ R=$(curl -s -i -X OPTIONS -H 'Origin: http://example.test' \
   -H 'Access-Control-Request-Method: POST' "$(pulse_base)/api/events")
 pulse_check "cors preflight 204" "$R" "204 No Content"
 pulse_check "cors preflight methods" "$R" "Access-Control-Allow-Methods:"
+
+# --- 13b. OpenAPI contract served -------------------------------------------
+R=$(http_get /openapi.json)
+pulse_check "openapi 200" "$R" "200 OK"
+pulse_check "openapi title" "$R" "XIOM PULSE"
 
 # --- 13. QUIT ---------------------------------------------------------------
 pulse_quit
