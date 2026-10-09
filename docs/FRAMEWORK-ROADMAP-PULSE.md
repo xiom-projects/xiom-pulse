@@ -112,15 +112,18 @@ When a compiler/stdlib pairing carries all three: set
 1. **API contract**: OpenAPI 3 document served at `/openapi.json` +
    `pulse openapi` export; additive problem+json fields on the error
    envelope; pagination `Link` headers; idempotency keys on event
-   writes; `/v1` prefix on new surfaces. **(OpenAPI served + CLI export
-   + additive error `status` DONE 2026-10-09; pagination, idempotency
-   and `/v1` next.)**
+   writes; `/v1` prefix on new surfaces. **(DONE 2026-10-09/10: OpenAPI
+   served + CLI export + additive error `status`; pagination Link
+   (seq-in-record cursor); idempotency keys; `/v1` alias.)**
 2. **CLI**: subcommands `openapi`, `routes`, `version`,
    `check-config` (promoting the current flags). **(All four DONE
    2026-10-09.)**
 3. **HTTP client base**: bump `xiom.http` to 0.1.4, add the
    SSRF-guarded outbound wrapper + probe (foundation for all
-   integrations).
+   integrations). **(DONE 2026-10-10: pin bumped; `xiom.pulse.outbound`
+   guard + `probe_outbound_guard` in the fleet; the libcurl transport
+   seam (`src/outbound_transport.xi`) adopts once the package
+   `--c-source` build hook is ergonomic.)**
 4. **Multipart uploads** (PULSE-side parsing + caps).
 5. Docs/public-set refresh; version-bump checklist run (SESSION
    gotchas) with the pinned stdlib before tagging.

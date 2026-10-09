@@ -23,6 +23,16 @@ the known gaps; do not deploy it as a hard production service yet.
 - Request parsing is defensive: bounded header block (16 KiB guard, 100
   headers), 1 MiB decoded body cap, `Transfer-Encoding` + `Content-Length`
   refused, other transfer codings `501`.
+- Outbound HTTP (the 0.2 client seam) is SSRF-guarded: http/https only,
+  userinfo refused, `localhost`/`.local`/`.internal`/`.home.arpa`
+  families refused, numeric IPv4 in every inet_aton form (dotted, short,
+  octal, hex, decimal) refused when loopback/private/CGNAT/link-local/
+  multicast/reserved, and IPv6 loopback/unique-local/link-local plus
+  v4-mapped forms refused. `PULSE_HTTP_ALLOWLIST` flips to a strict
+  allowlist (and is the only way to opt private hosts in);
+  `PULSE_HTTP_MAX_BYTES` caps responses. Caveat: the guard checks the
+  literal host -- a public name that resolves to a private address (DNS
+  rebinding) is stopped by the allowlist, not the blocklist.
 - Mutating requests are written to the audit log (with rotation).
 
 ## Known limits (the gap list)
@@ -32,10 +42,10 @@ the known gaps; do not deploy it as a hard production service yet.
   deadlines.
 - No graceful shutdown drain on SIGTERM; restarts drop in-flight
   requests.
-- A memory-growth issue in the request path is under investigation:
-  RSS increases with served requests (about 32-48 KB per request on the
-  tested platforms). Run with a memory limit and a restart policy, and
-  alert on RSS growth (see [Operations](./operations.md)).
+- A memory-growth issue in the Linux request path is under investigation
+  (upstream, C-PULSE-14; Windows is flat on v0.64.2). Run with a memory
+  limit and a restart policy, and alert on RSS growth (see
+  [Operations](./operations.md)).
 - No credential/RBAC store: the login route is a demo; token issuance is
   not an identity system.
 - No macOS artifacts yet; Windows and Linux are the tested platforms.

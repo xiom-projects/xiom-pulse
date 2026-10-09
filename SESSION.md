@@ -60,10 +60,13 @@
   (`Idempotency-Key` header, durable `idem` marker in the record, replay
   with `deduplicated:true`, `400 invalid_idempotency_key`); **`/v1`
   versioned alias** (every route resolves under both forms; new surfaces
-  go `/v1` first; `Link` preserves the client's prefix); smoke
-  **113/113** on both platforms (Linux run with the pinned stdlib).
-  NEXT -- `xiom.http` 0.1.4 + SSRF-guarded client wrapper (+ probe),
-  multipart uploads; then docs refresh + the 0.2.0 cut.
+  go `/v1` first; `Link` preserves the client's prefix); **outbound
+  client base** (`xiom.http` **0.1.4**, SSRF guard
+  `xiom.pulse.outbound` + `probe_outbound_guard` in the fleet;
+  libcurl transport seam isolated pending the `--c-source` build hook);
+  fleet **12/12**, smoke **113/113** on both platforms (Linux run with
+  the pinned stdlib). NEXT -- multipart uploads; then docs refresh + the
+  0.2.0 cut.
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
   (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
   (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14

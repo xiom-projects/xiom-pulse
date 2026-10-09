@@ -229,9 +229,17 @@ signed):
   runtime lib is absent), signed.
 - **`xiom.odbc` 0.2.0** -- ODBC via dynamic loader (Windows-first),
   signed.
-- **`xiom.http` 0.1.4** -- ships the real-libcurl GET/POST client, so
-  PULSE's outbound HTTP needs no new binding; PULSE pins 0.1.2 today and
-  will bump with the 0.2 cycle (client + SSRF guard work).
+- **`xiom.http` 0.1.4** -- ships the real-libcurl GET/POST client. PULSE
+  bumped the pin in 0.2 (manifest + CI) and added the SSRF guard in a
+  dependency-free module (`xiom.pulse.outbound`, probe
+  `probe_outbound_guard` green on the fleet both platforms). Consumer
+  finding (2026-10-10, verified): importing the root module links clean,
+  but **calling** the client (`http_get`/`http_post`) fails at link with
+  `undefined symbol: curl_easy_*` plus `xiom_read_byte` until the build
+  uses the bridge C file (`--c-source`) + `--link curl --link-path ..` --
+  the same `--c-source` family as sqlite. PULSE keeps the libcurl
+  transport isolated in `src/outbound_transport.xi` and adopts it once
+  the hook is ergonomic/documented for consumers.
 
 **Consumer caveat filed by the packages lane:** the vendored-C sqlite
 package needs a `--c-source` build-hook story for registry consumers

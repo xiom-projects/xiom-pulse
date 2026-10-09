@@ -110,7 +110,7 @@ runs:
         else
           XIOM="$HOME/.local/share/xiom/bin/xiom"
         fi
-        for p in "xiom.http@0.1.2" "xiom.cookie@0.1.1" "xiom.jwt@0.2.0" \
+        for p in "xiom.http@0.1.4" "xiom.cookie@0.1.1" "xiom.jwt@0.2.0" \
                  "xiom.router@0.1.0" "xiom.rate@0.2.0" "xiom.metrics@0.2.0" \
                  "xiom.http.middleware@0.1.0" "xiom.session@0.1.0" \
                  "xiom.static@0.1.0" "xiom.kv@0.1.0"; do

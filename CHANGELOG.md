@@ -29,6 +29,17 @@ GitHub release body.
   (`/v1/api/events` == `/api/events`, query preserved); new surfaces are
   introduced under `/v1` first, and pagination `Link` headers preserve
   whichever prefix the client used.
+- **Outbound HTTP client base**: `xiom.http` pin bumped to **0.1.4**
+  (manifest + CI). New `xiom.pulse.outbound` SSRF guard -- http/https
+  only, userinfo refused, `localhost`/`.local`/`.internal`/`.home.arpa`
+  refused, every inet_aton numeric IPv4 form refused when loopback/
+  private/CGNAT/link-local/multicast/reserved, IPv6 loopback/ULA/
+  link-local/v4-mapped refused; `PULSE_HTTP_ALLOWLIST` switches to a
+  strict allowlist and `PULSE_HTTP_MAX_BYTES` caps responses.
+  `probe_outbound_guard` (42 checks) runs in the fleet on both
+  platforms. The libcurl transport seam (`src/outbound_transport.xi`)
+  lands behind the package `--c-source` build hook (same family as
+  sqlite), so the server binary stays libcurl-free.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).

@@ -180,6 +180,24 @@ test_app +9 checks; smoke 107 -> **113/113** on both platforms (Linux
 pinned-stdlib). Roadmap 0.2 item 1 complete -- the SSRF-guarded HTTP
 client and multipart uploads remain. Score holds (~55.4%)._
 
+_Delta 2026-10-10 (0.2 outbound): **outbound HTTP client base** --
+`xiom.http` pin bumped to **0.1.4** (manifest + CI action; installed on
+both platforms). The **SSRF guard** lives in the new dependency-free
+`xiom.pulse.outbound` module: http/https only, userinfo refused,
+localhost/.local/.internal/.home.arpa families refused, every numeric
+IPv4 inet_aton form (dotted/short/octal/hex/decimal) refused when
+loopback/private/CGNAT/link-local/multicast/reserved, IPv6
+loopback/ULA/link-local/v4-mapped refused; `PULSE_HTTP_ALLOWLIST` flips
+to a strict allowlist (private opt-in) and `PULSE_HTTP_MAX_BYTES` caps
+responses. `probe_outbound_guard` joins the fleet (**12/12** green,
+42 checks, both platforms; suites x2 + smoke 113/113 re-verified on
+0.1.4). Transport finding: importing `xiom.http` links clean, but
+calling the client fails at link (`curl_easy_*` + `xiom_read_byte`)
+until the `--c-source` build hook -- so the libcurl half is isolated in
+`src/outbound_transport.xi` (not imported by the server) and the ask is
+refreshed in the package wishlist. Roadmap 0.2: multipart uploads
+remain. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
