@@ -49,6 +49,30 @@ runs:
         echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
         "$HOME/.local/share/xiom/bin/xiom" --version
 
+    - name: Install XIOM toolchain (macOS, pinned + SHA256)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        ver="${XIOM_TOOLCHAIN_VERSION}"
+        if [ "$RUNNER_ARCH" = "ARM64" ]; then
+          plat="macos-arm64"
+          sha="${XIOM_MACOS_ARM64_SHA256}"
+        else
+          plat="macos-x64"
+          sha="${XIOM_MACOS_X64_SHA256}"
+        fi
+        url="https://dl.xiom-lang.org/releases/${ver}/xiom-${ver#v}-${plat}.tar.gz"
+        curl -sSL "$url" -o /tmp/xiom-toolchain.tar.gz
+        echo "${sha}  /tmp/xiom-toolchain.tar.gz" | shasum -a 256 -c -
+        mkdir -p "$HOME/.local/share/xiom"
+        tar -xzf /tmp/xiom-toolchain.tar.gz -C "$HOME/.local/share/xiom"
+        # C-PULSE-13 bridge (same as the Linux branch).
+        mkdir -p "$HOME/xiom/packages"
+        ln -sfn "$HOME/xiom/packages" "$HOME/.local/share/xiom/packages"
+        echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
+        "$HOME/.local/share/xiom/bin/xiom" --version
+
     - name: Install XIOM toolchain (Windows, pinned + SHA256)
       if: runner.os == 'Windows'
       shell: pwsh

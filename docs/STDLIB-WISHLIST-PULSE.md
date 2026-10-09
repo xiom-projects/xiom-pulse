@@ -138,3 +138,22 @@ the pin below.
   non-regular case or document that only regular files are supported
   (PULSE's allocation probe had to move RSS sampling out-of-process
   because of this).
+
+## Delta 2026-10-09 (wrap 8) -- NEW ASK: address-aware socket bind (`PULSE_BIND` not honored)
+
+- **Finding (ops, live demo; reproduced locally):** `PULSE_BIND=127.0.0.1`
+  does not restrict the listen address -- `ss -ltn` shows
+  `0.0.0.0:<port>`. Root cause: `xiom.net.socket.socket_bind(fd, addr,
+  port)` is documented wildcard-only ("the runtime binds to the given
+  port on the wildcard address; the addr string is validated for
+  non-emptiness"), and the runtime primitive `xiom_socket_bind(sock,
+  port)` has no address parameter.
+- **Impact:** PULSE's loopback-by-design control cannot be enforced at
+  the app level on any platform until the primitive lands; the demo is
+  mitigated by the host firewall (ops verified).
+- **Ask:** extend the runtime primitive + this module to bind the
+  parsed address (e.g. `xiom_socket_bind_addr(sock, host: *UInt8,
+  port)` or an extended `socket_bind` that parses IPv4/IPv6). PULSE will
+  then enforce loopback and add a smoke check that the LISTEN socket's
+  local address matches `PULSE_BIND`; `PULSE_BIND` already validates the
+  address-only shape (config warning) and stays advisory until then.

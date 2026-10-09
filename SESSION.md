@@ -132,6 +132,17 @@
   address-only. Verified both platforms (suites x2, smoke 78/78).
   Side-finding filed: the compiler silently accepted a stray `}` that
   left code outside the function body (COMPILER-FINDINGS wrap 7c).
+- **Wrap 8 (macOS prep + bind finding):** macOS release support prepared
+  (setup-xiom macOS branch, SHA-pinned x64/arm64 toolchains; release
+  matrix macos-x64/macos-arm64 with suites x2 + smoke; portability: lsof
+  `wait_listen` fallback, `timeout`/`gtimeout` watchdog fallback,
+  `pulse_sha256` sha256sum/shasum helper, `release.sh` OS detection ->
+  `pulse-<ver>-macos-<arch>.zip`; dry-run validates before any tag).
+  **C-PULSE-16 filed:** ops verified `PULSE_BIND` is not enforced (stdlib
+  wildcard bind; local repro LISTEN `0.0.0.0`); demo firewalled;
+  address-aware bind filed upstream; fix + LISTEN-address smoke check
+  with the next release (owner: next cut = compiler fixes + macOS).
+  Score: Security 46 -> 42, Testing 80 -> 88 -> ~55.4%.
 - **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
   filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
   facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),

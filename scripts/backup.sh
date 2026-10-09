@@ -79,7 +79,7 @@ copy_one() { # SRC DEST_NAME
     cp "$src" "$DEST/$name"
     local size hash
     size=$(wc -c <"$DEST/$name" | tr -d ' ')
-    hash=$(sha256sum "$DEST/$name" | cut -d' ' -f1)
+    hash=$(pulse_sha256 "$DEST/$name")
     printf '%s: copied size=%s sha256=%s\n' "$name" "$size" "$hash" >>"$MANIFEST"
     pulse_log "backup: $name size=$size"
   else
@@ -101,7 +101,7 @@ copy_kv_dir() { # DIR
       n=$((n + 1))
       rel=${f#"$DEST/kv-store/"}
       size=$(wc -c <"$f" | tr -d ' ')
-      hash=$(sha256sum "$f" | cut -d' ' -f1)
+      hash=$(pulse_sha256 "$f")
       printf 'kv-store/%s: copied size=%s sha256=%s\n' "$rel" "$size" "$hash" >>"$MANIFEST"
     done < <(find "$DEST/kv-store" -type f | sort)
     pulse_log "backup: kv-store $n files"

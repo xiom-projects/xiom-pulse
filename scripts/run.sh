@@ -54,7 +54,13 @@ fi
 
 FILE_ABS=$(realpath "$FILE")
 OUT=$(pulse_tmp)
-( cd "$PULSE_REPO_ROOT" && exec timeout "$TIMEOUT_SEC" "$XIOM_COMPILER" --run "$FILE_ABS" ) >"$OUT" 2>&1
+TIMEOUT_BIN=$(pulse_timeout_bin)
+if [ -n "$TIMEOUT_BIN" ]; then
+  ( cd "$PULSE_REPO_ROOT" && exec "$TIMEOUT_BIN" "$TIMEOUT_SEC" "$XIOM_COMPILER" --run "$FILE_ABS" ) >"$OUT" 2>&1
+else
+  pulse_log "run: no timeout/gtimeout available; running without a watchdog (job timeout applies)"
+  ( cd "$PULSE_REPO_ROOT" && exec "$XIOM_COMPILER" --run "$FILE_ABS" ) >"$OUT" 2>&1
+fi
 RC=$?
 
 if [ "$RC" -eq 124 ]; then

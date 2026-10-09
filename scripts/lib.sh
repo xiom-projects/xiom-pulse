@@ -52,19 +52,51 @@ pulse_tmp() {
 
 # --- process helpers --------------------------------------------------------
 
+# pulse_sha256 FILE -- SHA256 hex digest, portable across GNU (sha256sum)
+# and macOS/BSD (shasum -a 256).
+pulse_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  else
+    shasum -a 256 "$1" | cut -d' ' -f1
+  fi
+}
+
+# pulse_timeout_bin -- watchdog binary name (GNU `timeout`, then macOS
+# `gtimeout`), or "" when neither exists (callers run without a watchdog;
+# CI job timeouts apply).
+pulse_timeout_bin() {
+  if command -v timeout >/dev/null 2>&1; then
+    printf 'timeout'
+  elif command -v gtimeout >/dev/null 2>&1; then
+    printf 'gtimeout'
+  fi
+}
+
 # wait_listen PORT [TIMEOUT_S] -- bounded readiness poll that opens NO
-# connection (checks the LISTEN state in /proc/net/tcp). A connect-based
-# probe would be counted as a served request by the raw probe servers and
-# break their served= gates.
+# connection (checks the LISTEN state in /proc/net/tcp, or lsof on
+# macOS/BSD). A connect-based probe would be counted as a served request
+# by the raw probe servers and break their served= gates.
 wait_listen() {
   local port=$1 timeout_s=${2:-10} i=0 max hex files
   max=$(( timeout_s * 5 ))
-  hex=$(printf '%04X' "$port")
-  files="/proc/net/tcp"
-  [ -r /proc/net/tcp6 ] && files="$files /proc/net/tcp6"
+  if [ -r /proc/net/tcp ] || [ -r /proc/net/tcp6 ]; then
+    hex=$(printf '%04X' "$port")
+    files="/proc/net/tcp"
+    [ -r /proc/net/tcp6 ] && files="$files /proc/net/tcp6"
+    while [ "$i" -lt "$max" ]; do
+      # shellcheck disable=SC2086
+      if awk -v p="$hex" '$4 == "0A" && toupper($2) ~ (":" p "$") { f=1 } END { exit f ? 0 : 1 }' $files 2>/dev/null; then
+        return 0
+      fi
+      sleep 0.2
+      i=$((i + 1))
+    done
+    return 1
+  fi
+  # macOS/BSD fallback: lsof LISTEN probe (opens no connection).
   while [ "$i" -lt "$max" ]; do
-    # shellcheck disable=SC2086
-    if awk -v p="$hex" '$4 == "0A" && toupper($2) ~ (":" p "$") { f=1 } END { exit f ? 0 : 1 }' $files 2>/dev/null; then
+    if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
       return 0
     fi
     sleep 0.2

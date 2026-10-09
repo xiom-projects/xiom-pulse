@@ -248,3 +248,11 @@ right now. When greenlit, ops executes the following (already specified):
    `protect-main` (DCO + `ubuntu-latest` + `windows-latest`) and
    `protect-release-tags` (`pulse-v*`); all workflow `uses:` are
    SHA-pinned; the release job uses the repo token (no PAT).
+11. **C-PULSE-16 (ops finding, wrap 8):** `PULSE_BIND` is **not
+   enforced** in 0.1.x -- the app binds the wildcard (stdlib
+   `socket_bind` is wildcard-only; address-aware bind is filed with the
+   compiler/stdlib lane). Keep the host firewall + proxy-only exposure,
+   as verified on the demo. PULSE will enforce loopback and add a
+   LISTEN-address smoke check once the primitive lands; per the owner,
+   no re-cut of 0.1.0 -- the fix ships with the next release (together
+   with macOS x64/arm64 artifacts, which are prepared in the workflow).

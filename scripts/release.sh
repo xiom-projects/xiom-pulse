@@ -52,7 +52,10 @@ case "$(uname -m)" in
   aarch64|arm64) ARCH=arm64 ;;
   *) ARCH=$(uname -m) ;;
 esac
-OS=linux
+case "$(uname -s)" in
+  Darwin) OS=macos ;;
+  *) OS=linux ;;
+esac
 
 if [ "$DO_BUILD" -eq 1 ]; then
   "$PULSE_SCRIPTS_DIR/build.sh" "$PULSE_REPO_ROOT/src/server.xi" --name pulse_app || pulse_die "build failed"
@@ -84,7 +87,7 @@ shutil.make_archive(base, "zip", root_dir=stage)
 PYEOF
 [ -f "$ZIP" ] || pulse_die "zip creation failed"
 
-( cd "$OUT_DIR" && sha256sum "$NAME.zip" > "$NAME.zip.sha256" )
+( cd "$OUT_DIR" && printf '%s  %s\n' "$(pulse_sha256 "$NAME.zip")" "$NAME.zip" > "$NAME.zip.sha256" )
 pulse_log "release: artifact $ZIP"
 pulse_log "release: checksum $ZIP.sha256"
 pulse_log "release: contents:"

@@ -69,7 +69,10 @@ rerun via the PULSE repo's `scripts/` + `out/pulse_app`).
   `xiom.kv` backend (20m soak green, hard-kill reopen intact).
 - TLS verified **through nginx** (11/11 E2E on Windows and Linux); Docker
   image verified (`deploy/Dockerfile`).
-- Runs behind the proxy on loopback by design (`PULSE_BIND`).
+- Runs behind the proxy by design; **loopback is enforced by the host
+  firewall/proxy in 0.1.x** -- `PULSE_BIND` is advisory at the app level
+  until C-PULSE-16 lands (the next release enforces it and verifies the
+  LISTEN address).
 
 ## 5. What NOT to claim (honest beta -- gaps that exist today)
 
@@ -242,6 +245,19 @@ the tag; put `PULSE_BUILD_COMMIT`/`PULSE_BUILD_DATE` in the unit).
 `CHANGELOG.md` added and the GitHub release body now carries the 0.1.0
 highlights.
 
-**Demo status:** pending ops deploy (runbook shape confirmed by this
-thread). Once ops confirms the mirror + deployment, wire the download
-buttons + live badge (same-origin) and keep the beta banner.
+**Demo status:** LIVE (ops confirmed; mirror + proxy verified for
+0.1.0). Wire the download buttons + live badge (same-origin) and keep
+the beta banner.
+
+## 12. macOS + bind note (PULSE -> website/ops, 2026-10-09)
+
+- **macOS ships with the next release** (owner decision; not a re-cut of
+  0.1.0): `pulse-<ver>-macos-x64.zip` (Intel) and
+  `pulse-<ver>-macos-arm64.zip` (Apple silicon), same gates (suites x2 +
+  smoke) and the same dl layout; the macOS button can light up when
+  `latest.json` lists the assets. Do not enable it before they exist.
+- **Bind note (C-PULSE-16):** `PULSE_BIND` is advisory in 0.1.x (the
+  stdlib binds the wildcard; ops firewalled the demo -- verified safe).
+  The next release enforces loopback at the app level once the
+  compiler/stdlib primitive lands. The fact-sheet loopback bullet above
+  carries the qualifier; no other page change needed now.

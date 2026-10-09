@@ -77,6 +77,18 @@ server: every historical "flat memory" Windows number is invalid. Fixed
 fix spotted: m235 (loop-body static allocas) -- retest on the next
 archive. Reliability 40 -> 35, Testing 82 -> 80. Total ~56.1% -> ~55.5%._
 
+_Delta 2026-10-09 (wraps 7-8): **CI + release pipeline landed** (setup
+action, PR gates, tag releases that cut pulse-v0.1.0 end-to-end with
+provenance, weekly heavy soaks; macOS x64/arm64 legs prepared for the
+next release with the portability fixes: lsof wait_listen fallback,
+timeout/gtimeout watchdog fallback, sha256sum/shasum helper,
+`pulse-<ver>-macos-<arch>.zip`). **C-PULSE-16 filed:** the ops-verified
+`PULSE_BIND` gap (stdlib `socket_bind` wildcard-only; repro LISTEN
+`0.0.0.0`); address-aware bind filed upstream, firewall mitigation
+verified on the demo; fix + LISTEN-address smoke check ship with the
+next release. Security 46 -> 42 (-0.5); Testing 80 -> 88 (+0.4) now that
+CI exists and cut a release. Total ~55.5% -> ~55.4%._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -89,7 +101,7 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~55.5% of production grade**
+## 1. Overall score: **~55.4% of production grade**
 
 _Delta 2026-10-08 (kv backend): 54.6% -> ~55.6% -- **`xiom.kv` adopted as
 the opt-in event-store backend** (`PULSE_STORE_BACKEND=kv`,
@@ -112,8 +124,8 @@ _Delta 2026-10-08 (showcase round): 53.4% -> ~54.1% -- **general asset
 serving** (`/assets/<path>` from `PULSE_ASSETS_DIR`, same
 ETag/304/Range/traversal machinery; smoke 71/71 on both platforms) and
 **per-site landing content** (`PULSE_LANDING_PATH`); **`PULSE_BIND`**
-(default `127.0.0.1` -- ops' loopback requirement intact -- containers set
-`0.0.0.0`) and **`deploy/Dockerfile`** (ubuntu:24.04, verified: build +
+(default `127.0.0.1` -- **correction, wrap 8: not enforced in 0.1.x; see
+C-PULSE-16** -- containers set `0.0.0.0`) and **`deploy/Dockerfile`** (ubuntu:24.04, verified: build +
 container E2E health/version/assets). These are the prerequisites for the
 `pulse.xiom-lang.org` / `orbit.` / `xvector.` showcase sites and the
 offline benchmark harness (post-release)._
@@ -186,12 +198,12 @@ fallbacks._
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
 | 7 | Storage | 10% | 68% | 6.8 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+, verified on both platforms incl. a **45m kv soak** -- 977/0, compact + hard-kill reopen intact), crash-safe append, `?limit`/`?kind`, compaction; no update/delete/index, no fsync |
-| 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
+| 8 | Security hardening | 12% | 42% | 5.0 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; **C-PULSE-16: `PULSE_BIND` advisory (wildcard bind below the app; host firewall mitigates) -- fix queued with the next release**; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14 cross-platform request-path RSS growth (~32 KB/req Windows, ~48 KB/req Linux) -- all "flat memory" soak numbers invalidated by the cmd-wrapper sampling bug (fixed, wrap 6)**; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 80% | 4.0 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 78); **soak memory sampler bug fixed + `rss_probe` twins added (wrap 6)**; release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **55.5** | |
+| 12 | Testing / CI / release | 5% | 88% | 4.4 | suites+smoke (78) on **Windows and Linux**; twins everywhere; **CI live (wrap 7): PR gates + SHA-pinned release workflow cut 0.1.0 end-to-end + weekly heavy soaks; macOS legs prepared (next release)**; soak sampler fix + rss_probe twins; release packager + backup tooling; Dockerfile verified |
+| | **Total** | **100%** | | **55.4** | |
 
 Two lenses to keep separate:
 
@@ -325,10 +337,16 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
   (smoke 76/76 in wrap 4; default stays JSONL per the decision in
   `docs/PACKAGE-WISHLIST-PULSE.md`, which lists the flip prerequisites).
 
-**Security hardening (38%)**
+**Security hardening (42%)**
 - TLS: front-proxy by design (Caddy/nginx); `docs/DEPLOYMENT.md` published
   with configs, supervision and a through-proxy verification checklist;
   the actual proxy E2E run is pending a proxy install.
+- **C-PULSE-16 (wrap 8):** `PULSE_BIND` is advisory -- the stdlib
+  `socket_bind` binds the wildcard (its address parameter is documented
+  as ignored); repro: `PULSE_BIND=127.0.0.1` -> LISTEN `0.0.0.0`.
+  Ops firewalled the demo (verified safe). Address-aware bind is filed
+  with the compiler/stdlib lane; PULSE then enforces loopback and adds a
+  smoke check on the LISTEN address.
 - Global rate limiting landed (`xiom.rate` 0.2.0, `PULSE_RATE_LIMIT`,
   429 + Retry-After, `scripts/rate_smoke.ps1` green); per-client keys wait
   on `socket_peer_addr` (stdlib stub).
@@ -361,13 +379,18 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
 - No signal handling / graceful in-flight drain (test-only QUIT).
 - A trap anywhere kills the process (no supervisor/restart policy).
 
-**Testing/CI/release (68%)**
-- Local, both platforms: 3 suites (x2), smoke (76), crash/reopen (6),
+**Testing/CI/release (88%)**
+- Local, both platforms: 3 suites (x2), smoke (78), crash/reopen (6),
   soak drivers (PS + shell), rate/store soaks, 20+ probes, byte-level
-  lint greps. Every script ships as `.ps1` + `.sh` (LF enforced); WSL
-  verification of all 12 twins.
-- No CI pipeline, no coverage number, no fuzzing, no packaging/release
-  process, DCO-only workflow.
+  lint greps. Every script ships as `.ps1` + `.sh` (LF enforced).
+- **CI live (wrap 7):** `.github/actions/setup-xiom` (SHA-pinned
+  toolchain + stdlib pin + store bridge + pinned deps), `ci.yml` PR
+  gates (suites x2 + smoke, ubuntu/windows), `release.yml` (guard ->
+  fleet -> packages -> GitHub Release on `pulse-v*`, provenance
+  attested; cut 0.1.0 end-to-end), `heavy.yml` weekly 30m + kv soaks.
+- **macOS legs prepared (wrap 8):** macos-x64 / macos-arm64 (suites +
+  smoke + packaging); ship with the next release.
+- No coverage number, no fuzzing; DCO + the suites are the PR gates.
 
 ---
 
@@ -385,7 +408,8 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
 | C-PULSE-11 package type alias invisible cross-module (defaults to i64) | **fixed in v0.64.1** (m216) | alias design compiles; swap re-tries on the C-PULSE-09 schedule |
 | C-PULSE-12 module last-segment shadows an imported alias | OPEN (design around) | PULSE renamed the app module; import-alias syntax filed in the stdlib wishlist |
 | C-PULSE-13 Unix pkg-home mismatch (`xiom pkg` -> `$HOME/xiom/packages`; compiler CRB-3c -> `~/.local/share/xiom`) | **NEW, Linux-only -- routed to the compiler/installer lane** | symlink bridge applied on WSL; m212 gate green after; unified-resolver ask in `docs/PACKAGE-WISHLIST-PULSE.md` |
-| C-PULSE-14 Linux request-path RSS growth (~48 KB/req; runtime retention suspected) | **NEW, Linux-only** | filed with repro (`probe_alloc_loop` + the 30m soak curve); Windows flat; release-gating for the Linux demo (interim: systemd `MemoryMax` + restart cadence) |
+| C-PULSE-14 cross-platform request-path RSS growth (~32 KB/req Windows, ~48 KB/req Linux) | **fixed scope (wrap 6)** | filed with repros (`probe_alloc_loop`, `rss_probe` twins, soak curves); candidate lane fix m235; gating for any unattended demo (interim: `MemoryMax` + restart) |
+| C-PULSE-16 `PULSE_BIND` not enforced (stdlib `socket_bind` wildcard-only) | **NEW, all platforms** | ops mitigated with the host firewall (demo verified); address-aware bind filed upstream; fix + LISTEN-address smoke check with the next release |
 | C-PULSE-02 deps not mapped to catalog roots | **CLOSED on v0.64.1** (gate green; m212/m215) | dotted `[dependencies]` resolve to installed stores; PULSE keeps `source-roots` until a no-source-roots app build is verified |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |

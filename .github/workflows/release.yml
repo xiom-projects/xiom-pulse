@@ -30,6 +30,8 @@ env:
   XIOM_TOOLCHAIN_VERSION: "v0.64.1"
   XIOM_LINUX_SHA256: "6f6787a3ff068929593270d849c21b1f597036f2152bc830e357b980c91b5601"
   XIOM_WINDOWS_SHA256: "4023114a2458786bf32afaabdd774e63b23068fe3e474dcd49960f4af96a15e1"
+  XIOM_MACOS_X64_SHA256: "44ef96af179f476d30288b48173238f7a866ab3c446e7ab30f15771aaa1cc6fb"
+  XIOM_MACOS_ARM64_SHA256: "ff1924b3a94c42b82023a2e72ce5baa82ca4ae1a1944822d7c2f6efeee5c0293"
 
 jobs:
   guard:
@@ -89,6 +91,10 @@ jobs:
             os: ubuntu-latest
           - platform: windows-x64
             os: windows-latest
+          - platform: macos-x64
+            os: macos-15-intel
+          - platform: macos-arm64
+            os: macos-14
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -107,6 +113,23 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
+
+      - name: "Fleet (macOS: suites x2 + smoke)"
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for r in 1 2; do
+            for s in test_http test_app test_smoke; do
+              bash scripts/run.sh "tests/$s.xi" --quiet --timeout-sec 300
+            done
+          done
+          bash scripts/http_smoke.sh --port 18090
 
       - name: "Fleet (Linux: suites x2, smoke, rate, crash, kv store soak)"
         if: runner.os == 'Linux'
@@ -139,6 +162,16 @@ jobs:
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && inputs.version || needs.guard.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash scripts/release.sh --no-build --version "${RELEASE_VERSION}"
+          ls -l dist/
+
+      - name: "Package (macOS)"
+        if: runner.os == 'macOS'
         shell: bash
         env:
           RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && inputs.version || needs.guard.outputs.version }}

@@ -544,3 +544,18 @@ plus `return w`) outside the function -- and the build still succeeded
 cycle. If module-scope statements are intentional (script mode), please
 confirm; otherwise a parse error (or at least a warning) for statements
 outside a function body would be safer for consumers.
+
+## Delta 2026-10-09 (wrap 8) -- C-PULSE-16: PULSE_BIND not enforced (wildcard bind)
+
+- **Repro:** `PULSE_BIND=127.0.0.1 PULSE_PORT=18099 ./out/pulse_app` ->
+  `ss -ltn` shows LISTEN on `0.0.0.0:18099`: the configured address is
+  ignored. Root cause is in the runtime/stdlib boundary:
+  `xiom.net.socket.socket_bind` is documented wildcard-only and
+  `xiom_socket_bind(sock, port)` takes no address.
+- **Found by ops on the live demo** (verified: port blocked by the host
+  firewall, so exposure is mitigated); PULSE 0.1.x leaves `PULSE_BIND`
+  advisory and documents the proxy/firewall expectation.
+- **Ask:** address-aware bind in the runtime + stdlib (details and the
+  PULSE verification plan in `docs/STDLIB-WISHLIST-PULSE.md`, wrap-8
+  row). PULSE adds a smoke check asserting the LISTEN socket's local
+  address once the primitive lands (next release).

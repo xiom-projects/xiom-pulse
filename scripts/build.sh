@@ -57,7 +57,13 @@ OUT_BIN="$OUT_DIR/$NAME"
 FILE_ABS=$(realpath "$FILE")
 pulse_log "build: $FILE -> $OUT_BIN"
 TMP=$(pulse_tmp)
-( cd "$PULSE_REPO_ROOT" && exec timeout "$TIMEOUT_SEC" "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ) >"$TMP" 2>&1
+TIMEOUT_BIN=$(pulse_timeout_bin)
+if [ -n "$TIMEOUT_BIN" ]; then
+  ( cd "$PULSE_REPO_ROOT" && exec "$TIMEOUT_BIN" "$TIMEOUT_SEC" "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ) >"$TMP" 2>&1
+else
+  pulse_log "build: no timeout/gtimeout available; building without a watchdog (job timeout applies)"
+  ( cd "$PULSE_REPO_ROOT" && exec "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ) >"$TMP" 2>&1
+fi
 RC=$?
 sed -n '1,400p' "$TMP"
 rm -f "$TMP"
