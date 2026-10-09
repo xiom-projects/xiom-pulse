@@ -220,6 +220,11 @@ fallbacks._
 | 12 | Testing / CI / release | 5% | 88% | 4.4 | suites+smoke (78) on **Windows and Linux**; twins everywhere; **CI live (wrap 7): PR gates + SHA-pinned release workflow cut 0.1.0 end-to-end + weekly heavy soaks; macOS legs prepared, gated on upstream darwin fixes**; soak sampler fix + rss_probe twins; release packager + backup tooling; Dockerfile verified |
 | | **Total** | **100%** | | **55.4** | |
 
+**Framework roadmap:** `docs/FRAMEWORK-ROADMAP-PULSE.md` -- the 0.2-1.0
+production-grade contract (driver seam, auth core, OpenAPI, CLI
+subcommands, integrations, security gates) plus the all-OS 0.1.1
+candidate plan (macOS x64/arm64 gated on the darwin blockers).
+
 Two lenses to keep separate:
 
 - **PULSE's own work:** ~80% of the Step 0-4 plan (Steps 0-3 core, the M4

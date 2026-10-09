@@ -159,6 +159,19 @@
   packages store mid-sweep (reinstalled via `xiom pkg install`; green
   after) -- verify the store after any install. **NEXT: the session-store
   swap retry (bridge `220f814`) -- now unblocked on both platforms.**
+- **Wrap 10 (framework roadmap):** `docs/FRAMEWORK-ROADMAP-PULSE.md`
+  filed -- the production-grade contract (capability map with per-area
+  upstream asks; milestones: 0.1.1 -> 0.2 foundations [driver seam, auth
+  core, OpenAPI/problem+json/pagination, CLI subcommands, multipart,
+  HTTP client] -> 0.3 data drivers [OrbitDB embedded, XVector vector,
+  SQL via bindings, migrations] -> 0.4 integrations [payments, email,
+  OIDC, webhooks, jobs] -> 1.0 production grade) and the **next
+  candidate release plan for ALL OSs** (0.1.1 = v0.64.2 rebuild +
+  session swap + fixes; `pulse-0.1.1-{linux,windows}-x64` ready, macOS
+  x64/arm64 gated on the darwin blockers -- ship all four when green,
+  else carry macOS to 0.1.2). Driver seam = versioned
+  `xiom.pulse.driver` contract; every integration ships with a
+  conformance probe.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
