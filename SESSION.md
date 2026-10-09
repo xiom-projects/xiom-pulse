@@ -3,17 +3,19 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-09 wrap 13d (0.2 slate in progress; 0.1.2 shipped; demo live), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-10 wrap 14 (0.2 PULSE-side slate COMPLETE; first 0.3 interop probes green; 0.1.2 shipped; demo live), by the PULSE consumer lane.
 
-## 0. STATE (2026-10-09 wrap 13d) -- CURRENT STATE digest (supersedes the log below)
+## 0. STATE (2026-10-10 wrap 14) -- CURRENT STATE digest (supersedes the log below)
 
 - **Repo:** `E:\xiom-projects\xiom-pulse`, **PUBLIC** since 2026-10-09
   (owner flipped it); rulesets live -- `protect-main` requires DCO +
   `ubuntu-latest` + `windows-latest`, `protect-release-tags` covers
   `pulse-v*` (org-admin pushes bypass; never move a tag -- if a tag's CI
   fails, fix and cut the next patch version). DCO `-s` commits; identity
-  Lefteris Notas <lefterisnotas@gmail.com>. Head: `92c605d` + the wrap
-  commit on top (see `git log`).
+  Lefteris Notas <lefterisnotas@gmail.com>. Head: `6171304` + the wrap
+  commit on top (see `git log`); wrap-14 commits: pagination `9301052`,
+  idempotency `a6a55b9`, `/v1` `602c9e6`, outbound `bf6d9b0`, uploads
+  `130a54b`, interop `6171304`.
 - **Toolchain:** **v0.64.2 on BOTH Windows and Linux/WSL** (dl live; pins
   in `docs/OPS-REQUEST.md` D.1 and every workflow; macOS shas pinned for
   the gated legs). **C-PULSE-13 CLOSED (m232):** package home unified, no
@@ -70,6 +72,19 @@
   platforms (Linux run with the pinned stdlib). **The 0.2 PULSE-side
   slate is COMPLETE** -- next: docs/public-set refresh, then the 0.2.0
   cut when macOS is green (upstream gates below).
+- **0.3 interop (first tranche, wrap 14):** ORBITDB + XVector consumer
+  conformance probes built and GREEN both platforms --
+  `tests/interop/orbitdb/probe_pkg_orbitdb.xi` (**39/39**; roundtrip +
+  reopen x2 at 1k keys, query edges, open/order/stale-handle errors, txn
+  commit/abort, delete persistence) and
+  `tests/interop/xvector/probe_pkg_xvector.xi` (**30/30**; exact Flat
+  roundtrip, top-k edges, dimension limits, delete/re-add, duplicate-id
+  overwrite, WAL persist/recover, torn-tail prefix). Source-level
+  composition (nested `xiom.toml` + relative `source-roots`; lanes'
+  pattern), local-only until the packages publish. Trap note filed in
+  both relays: `search(k=0)` / `create_collection(dim=0)` are contract
+  traps, not Err. NEXT tranche: orbitdb hard-kill harness (§5.2/3),
+  xvector filters (§5.2) + hybrid join (§5.9), then the 0.3 drivers.
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
   (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
   (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14
@@ -263,6 +278,25 @@
   `openapi`/`routes`. test_app +3 checks; smoke 84 -> **89/89** on both
   platforms (Linux pinned-stdlib). Roadmap 0.2 item 2 done, item 1
   partially; pagination/idempotency/`/v1` next.
+- **Wrap 14 (0.2 slate COMPLETE + first 0.3 interop):** pre-work full
+  regression (fleet, suites x2, smoke 89/89 both platforms) against the
+  wrap-13c binaries; then, in order: **pagination `Link`** on
+  `GET /api/events` (seq-in-record cursor, legacy ordinal fallback,
+  `next_cursor`, RFC 8288 `rel="next"`, `400 invalid_cursor`) `9301052`;
+  **idempotency keys** (`Idempotency-Key`, durable `idem` marker, replay
+  `deduplicated:true`) `a6a55b9`; **`/v1` alias** (`v1_path`; Link
+  preserves the client's prefix) `602c9e6`; **outbound base** (`xiom.http`
+  **0.1.4**, SSRF guard `xiom.pulse.outbound` + `probe_outbound_guard`
+  42 checks in the fleet; libcurl transport seam isolated pending the
+  `--c-source` hook) `bf6d9b0`; **multipart uploads**
+  (`POST /api/uploads` + `/v1`, parser + caps + generated names; found +
+  filed **C-PULSE-17** `io.list_dir` dangling names with a staged repro,
+  and an `io.create_dir` requires-exists trap) `130a54b`; **interop
+  probes** for ORBITDB (39/39) + XVector (30/30) with relay responses
+  `6171304`. Every unit: suites x2 + smoke (final **119/119**, jsonl+kv,
+  Linux pinned stdlib) + signed commit. Smoke PS twin now file-redirects
+  server output and reads exit codes through cmd (pipe-deadlock +
+  empty-ExitCode traps fixed); `check()` needles are wildcard-escaped.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
@@ -751,7 +785,7 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-09 wrap 13d)
+## 3. Paste prompt for the next PULSE session (2026-10-10 wrap 14)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (the official
@@ -767,32 +801,37 @@ E:\xiom-packages\bindings). Identity "Lefteris Notas
 contains quotes or slash-paths use git commit -F <file> (PS mangles
 native-arg quoting). Toolchain: v0.64.2 on BOTH Windows and Linux/WSL
 (pins in docs\OPS-REQUEST.md D.1 and every workflow); Linux
-verification uses the PINNED stdlib (4dd8844) -- export XIOM_STDLIB=<pin>.
+verification uses the PINNED stdlib (4dd8844) -- export
+XIOM_STDLIB=$HOME/.cache/xiom-pin/stdlib-4dd8844 (the WSL tmp cleaner
+wipes /tmp on distro restarts, so the pin cache lives in ~/.cache).
 
 TASK ORDER:
-1. FIRST: quick regression on the existing binaries -- probe fleet +
-   suites x2 + smoke 89/89 (jsonl and kv) on Linux and Windows; Linux
-   with the pinned stdlib; compare against the newest probe-logs run
-   before touching anything.
-2. CONTINUE 0.2.0 (owner: "the release that matters"), in order:
-   (a) pagination Link headers on GET /api/events (decide the cursor:
-   seq-in-record vs offset; additive store change is acceptable),
-   (b) idempotency keys on event writes, (c) `/v1` on new surfaces,
-   (d) `xiom.http` 0.1.4 + the SSRF-guarded client wrapper (+ probe),
-   (e) multipart uploads. Each unit: full suites (Linux pinned) + smoke,
-   docs/relay updates, signed commit in the same wrap.
-3. WATCH the lanes: compiler (darwin fixes -> flip RELEASE_BUILD_MACOS
-   and dry-run all four legs; C-PULSE-16 address-aware bind -> enforce
+1. FIRST: quick regression on the existing binaries -- probe fleet
+   (12/12, incl. probe_outbound_guard) + suites x2 + smoke 119/119
+   (jsonl and kv) on Linux and Windows; Linux with the pinned stdlib;
+   compare against probe-logs\regress-20261010\ before touching anything.
+2. RELEASE 0.2.0 ("the release that matters") when macOS is green (or on
+   the owner's call): the 0.2 PULSE-side slate is COMPLETE (pagination
+   Link + seq cursor, idempotency keys, /v1 alias, outbound base +
+   SSRF guard, multipart uploads). Version bump checklist from SESSION
+   gotchas: EVERY expected-version literal (tests/test_app.xi openapi,
+   the smoke twins, package.xi/SESSION, docs), CHANGELOG entry, tag
+   pulse-v0.2.0, CI publishes, ops mirrors at :17, website lights the
+   macOS button.
+3. INTEROP / 0.3: next tranche of tests/interop/ -- orbitdb hard-kill
+   harness (integration doc §5.2/3: writer/verify modes + kill), xvector
+   filter combos (§5.2) + hybrid join (§5.9); then the 0.3 drivers
+   (open/exec/query/tx seam over ORBITDB; upsert/search/delete over
+   XVector). Probes: tests/interop/<lane>/, nested xiom.toml with
+   source-roots relative to the sibling checkouts; local-only until the
+   packages publish.
+4. WATCH the lanes: compiler (darwin trio -> flip RELEASE_BUILD_MACOS +
+   dry-run all four legs; C-PULSE-16 address-aware bind -> enforce
    loopback + LISTEN-address smoke check; C-PULSE-14 Linux memory retest
-   on the next archive; C-PULSE-12 alias ask), packages/bindings (SQL
-   class when the sqlite --c-source story lands), orbitdb/xvector (their
-   docs/PULSE-INTEGRATION.md arrives -> build probe_pkg_orbitdb /
-   probe_pkg_xvector, then the 0.3 drivers).
-4. RELEASE 0.2.0 when macOS is green (or on the owner's call): version
-   bump checklist from SESSION gotchas (EVERY expected-version literal,
-   incl. tests/test_app.xi openapi and the smoke twins), CHANGELOG entry,
-   tag pulse-v0.2.0, CI publishes, ops mirrors at :17, website lights
-   the macOS button.
+   on the next archive; C-PULSE-12 alias ask; C-PULSE-17 list_dir fix ->
+   re-enable list_dir use if it lands), packages/bindings (SQL class
+   when the sqlite --c-source story lands; the http --c-source hook for
+   the real outbound client), demo redeploys.
 5. OPS/SITE: demo runs 0.1.0; ops redeploys 0.1.2+ at leisure (Linux
    memory: MemoryMax + restart stays). Wire the owner's cover image
    (resources\img\) into the product landing when it lands.
@@ -800,13 +839,18 @@ TASK ORDER:
    PROGRESS.md, commit signed, push.
 
 DISCIPLINE: probes in-repo; suites x2; outputs to files, never inherited
-pipes; durable step logs for crash-prone runs; every struct literal lists
-every field; no module-scope package constructors (Vec-holder pattern);
-no const-receiver .to_str(); explicit *p for &mut Int reads; quoted dotted
-TOML dep keys; avoid inner quotes driving WSL from PS (write scripts to
-/tmp); `wsl --shutdown` on CLR/paging errors (system commit pressure, not
-the build); after any toolchain maintenance verify the package store
-(xiom doctor; re-add with xiom pkg install).
+pipes (chatty servers: file-redirect stdout; the PS smoke reads exit
+codes through a cmd wrapper); durable step logs for crash-prone runs;
+every struct literal lists every field; no module-scope package
+constructors (Vec-holder pattern); no const-receiver .to_str(); explicit
+*p for &mut Int reads; quoted dotted TOML dep keys; avoid inner quotes
+driving WSL from PS (write scripts to files); `wsl --shutdown` on
+CLR/paging errors (system commit pressure, not the build); after any
+toolchain maintenance verify the package store (xiom doctor; re-add with
+xiom pkg install); avoid io.list_dir until C-PULSE-17 is fixed (dangling
+names); guard io.create_dir with io.is_dir (its contract requires the
+path NOT to exist); kill stray test servers/scripts after any stopped
+monitor.
 ```
 
 ## 3c. Paste prompt (2026-10-07, superseded)
