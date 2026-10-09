@@ -189,6 +189,13 @@
   (rebuilt on v0.64.2: Windows memory flat + BIND validation warning +
   docs); CHANGELOG + public docs updated. Tag `pulse-v0.1.1` cuts
   linux+windows artifacts; **macOS stays gated** (darwin blockers).
+- **Wrap 11b (package-lane relay):** durable-DB ask SERVED and verified
+  signed on the registry -- `xiom.sqlite 0.2.0` (vendored amalgamation;
+  waits on the `--c-source` build-hook story for registry consumers),
+  `xiom.libpq 0.2.0` + `xiom.odbc 0.2.0` (dynamic-loader, SKIP when
+  absent), and `xiom.http 0.1.4` (real-libcurl GET/POST -- no outbound
+  binding needed; PULSE bumps in 0.2 and adds the SSRF guard). Filed in
+  the package wishlist + roadmap; no 0.1.1 scope change.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),

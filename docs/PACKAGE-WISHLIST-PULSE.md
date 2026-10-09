@@ -218,6 +218,30 @@ Operational note kept: a toolchain re-extract/repair removes non-archive
 subdirs (like `packages/`) -- verify with `xiom doctor` and re-add with
 `xiom pkg install` after any toolchain maintenance.
 
+### Delta 2026-10-09 (wrap 11b) -- durable-DB binding ask SERVED; HTTP client available
+
+Packages lane relay (via owner) + registry verification (`xiom pkg info`,
+signed):
+
+- **`xiom.sqlite` 0.2.0** -- SQLite bindings, vendored amalgamation
+  3.53.4, signed (`0.3.0` pending their batch 22).
+- **`xiom.libpq` 0.2.0** -- Postgres via dynamic loader (SKIP when the
+  runtime lib is absent), signed.
+- **`xiom.odbc` 0.2.0** -- ODBC via dynamic loader (Windows-first),
+  signed.
+- **`xiom.http` 0.1.4** -- ships the real-libcurl GET/POST client, so
+  PULSE's outbound HTTP needs no new binding; PULSE pins 0.1.2 today and
+  will bump with the 0.2 cycle (client + SSRF guard work).
+
+**Consumer caveat filed by the packages lane:** the vendored-C sqlite
+package needs a `--c-source` build-hook story for registry consumers
+(beyond the lane runner's `port.args.json`) -- i.e., sqlite adoption in
+PULSE waits on that hook or a documented consumption recipe; the
+dynamic-loader packages (libpq/odbc) have no such issue. Roadmap mapping:
+0.3 data drivers now have concrete SQL candidates; the 0.2 HTTP client
+base is `xiom.http` 0.1.4. Wrap-behind-one-module contract acknowledged
+both ways; no PULSE-side changes needed before the 0.2 cycle starts.
+
 ### xiom.http 0.1.2 (eco-v0.1.103) -- republish verified, re-added (wrap 3)
 
 - 0.1.2 carries the extern-unsafe compat fix (64 wraps + unsafe-internal

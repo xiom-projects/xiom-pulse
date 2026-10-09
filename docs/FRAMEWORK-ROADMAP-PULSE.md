@@ -55,6 +55,9 @@ numbers published, and the demo running the same build.
   `/v1` prefix on new surfaces.
 - **Uploads**: multipart parsing PULSE-side (caps already exist).
 - **HTTP client package** (SSRF-guarded) as the base for all outbound.
+  **(2026-10-09: base SERVED -- `xiom.http` 0.1.4 ships the
+  real-libcurl GET/POST client; PULSE bumps to it in 0.2 and adds the
+  SSRF guard + convenience wrappers.)**
 - `pulse new` scaffold proving the DX story.
 - Gates: suites/smoke extended per feature; driver-seam probe; fleet
   green on all shipped OSs; upstream asks listed per feature.
@@ -65,6 +68,10 @@ numbers published, and the demo running the same build.
 - **XVector driver** (vector index): upsert/search/filter probe; a
   hybrid retrieval example (events + embeddings).
 - **SQL class** via bindings (sqlite first, then libpq); migrations.
+  **(2026-10-09: bindings SERVED -- `xiom.sqlite` 0.2.0, `xiom.libpq`
+  0.2.0, `xiom.odbc` 0.2.0 published+signed; sqlite waits on the
+  `--c-source` build-hook story for registry consumers; libpq/odbc are
+  dynamic-loader.)**
 - Gates: driver conformance probes, 1h soak per driver, backup/restore
   round-trips.
 
