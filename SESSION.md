@@ -3,75 +3,74 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-08 wrap 2 (Linux v0.64.1 sweep), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-09 wrap 13d (0.2 slate in progress; 0.1.2 shipped; demo live), by the PULSE consumer lane.
 
-## 0. STATE (2026-10-08 wrap 2) -- CURRENT STATE digest (supersedes the log below)
+## 0. STATE (2026-10-09 wrap 13d) -- CURRENT STATE digest (supersedes the log below)
 
-- **Repo:** `E:\xiom-projects\xiom-pulse`, PRIVATE, no push without owner
-  approval; DCO `-s` commits; identity Lefteris Notas
-  <lefterisnotas@gmail.com>. Head: `c123cc4` (handoff) plus the wrap
+- **Repo:** `E:\xiom-projects\xiom-pulse`, **PUBLIC** since 2026-10-09
+  (owner flipped it); rulesets live -- `protect-main` requires DCO +
+  `ubuntu-latest` + `windows-latest`, `protect-release-tags` covers
+  `pulse-v*` (org-admin pushes bypass; never move a tag -- if a tag's CI
+  fails, fix and cut the next patch version). DCO `-s` commits; identity
+  Lefteris Notas <lefterisnotas@gmail.com>. Head: `92c605d` + the wrap
   commit on top (see `git log`).
-- **Toolchain:** **v0.64.2 on BOTH Windows and Linux/WSL** (released
-  2026-10-09, dl live; pins in `docs/OPS-REQUEST.md` D.1 + every
-  workflow). Linux archive `xiom-0.64.2-linux-x64.tar.gz`, 29,524,552 B,
-  sha256 `bc2026af0af0f811a6578082b34a51d2cc76a23ea88a54a43db8e0a3e6a0ed25`
-  (`sha256sum -c` OK); Windows zip sha256
-  `05d54f4b92480001e5919a9eda213d7c0850808df2555a557ee66c0095c40c4c`; the
-  macOS shas are pinned for the gated legs. **C-PULSE-13 CLOSED (m232):**
-  the package home is unified -- no bridge; verify the store after any
-  toolchain maintenance (`xiom doctor`; re-add with `xiom pkg install`).
-  Stdlib lane checkout `d54929d` (wave 97); the v0.64.2 pairing is
-  `4dd8844` -- both compile PULSE, exact checks use the pin.
-  `dev-env.{ps1,sh}` respect explicit overrides; `dev-env.sh` finds
-  `~/.local/bin/xiom`.
-- **Linux sweep GREEN on v0.64.1** (post-fix logdir
-  `probe-logs/linux-sweep-20261008T134143Z/`; the pre-repair
-  `...T132937Z/` is kept for the C-PULSE-13 record): probe fleet 11/11
-  (adopt-smoke green twice), m212 dash+dot gate (`--check` + `--run`,
-  exit 0), suites x2 (`test_http`/`test_app`/`test_smoke`), smoke
-  **73/73** (jsonl AND kv), crash 6/6, rate, kv 20m store-soak (756
-  writes / 0 fail; compact + hard-kill reopen counts intact;
-  `server_exit=0`).
-- **C-PULSE-09 does NOT reproduce on Linux v0.64.1** -- the cross-module
-  session-store path in `probe_adopt_smoke` completed steps 1-10 with
-  exit 0 twice (durable steps `1,2,3,4,5,11,6,7,8,9,10`). The Windows
-  0xC0000005 crash evidence stands: the defect is now **narrowed to
-  Windows**. Local session store still stands; swap retry waits on the
-  Windows-side runtime fix.
-- **NEW finding C-PULSE-13 (Linux-only install layout):** `xiom pkg
-  install` writes `$HOME/xiom/packages` while the compiler CRB-3c
-  resolver picks the existing canonical `~/.local/share/xiom` ->
-  installed deps invisible to `[dependencies]` resolution (`xiom doctor`:
-  "No packages"; m212 gate red, 6x T001). PULSE bridged locally
-  (`ln -s ~/xiom/packages ~/.local/share/xiom/packages`) and filed the
-  unified-resolver ask in `docs/PACKAGE-WISHLIST-PULSE.md`. Windows is
-  consistent (`%LOCALAPPDATA%\xiom`).
-- **Stores:** jsonl = default; **kv = verified opt-in on both platforms**
-  (`PULSE_STORE_BACKEND=kv` + `PULSE_KV_DIR`/`PULSE_KV_PREFIX`, sequence
-  keys, native compact, single-module holder; Linux 20m soak + Windows
-  runs). **Decision this wrap: no default flip yet** -- gated on kv-aware
-  Dockerfile/backup/crash-test surface + a longer soak (prerequisites in
-  `docs/PACKAGE-WISHLIST-PULSE.md`). Fallback documented.
-- **Bug gates:** **C-PULSE-08 CLOSED** (m212 dash+dot both exit 0, no
-  source-roots); **C-PULSE-10 CLOSED** (kv green, m217); **C-PULSE-11
-  fixed** (m216); **C-PULSE-02 CLOSED** (no-source-roots build + suites
-  x2 + smoke 76/76 verified on both platforms); **C-PULSE-09 OPEN but
-  narrowed to Windows** -- Linux `probe_adopt_smoke` is green twice,
-  Windows still crashes 0xC0000005 at the first cross-module access to a
-  module-level `Vec[SessionStore]` (durable steps `1,2,3,4,5,11,6,7,8,9,10`);
-  local session store stands. **C-PULSE-14 (cross-platform, corrected in
-  wrap 6):** the request path retains RSS linearly at ~32 KB/req
-  (Windows) / ~48 KB/req (Linux); the earlier "Windows flat" was a soak
-  sampling bug (`soak_http.ps1` measured the `cmd.exe` wrapper -- fixed;
-  historical memory numbers invalid). Candidate lane fix: m235
-  loop-body-static-allocas -- retest the probes on the next archive.
-  Release-gating for any unattended demo (any OS), NOT for Phase-1
-  website work; interim ops mitigation: `MemoryMax` + restart cadence.
-- **`xiom.http` CLOSED (packages lane):** the 0.1.2 republish
-  (eco-v0.1.103, unsafe-wrapped internals) fixed the v0.64.1 extern-unsafe
-  breakage; `probe_pkg_http` is GREEN on Windows + Linux and the package
-  is re-added to `xiom.toml`/`package.xi` (suites x2 + smoke with it in
-  the catalog). No known-red package gates remain.
+- **Toolchain:** **v0.64.2 on BOTH Windows and Linux/WSL** (dl live; pins
+  in `docs/OPS-REQUEST.md` D.1 and every workflow; macOS shas pinned for
+  the gated legs). **C-PULSE-13 CLOSED (m232):** package home unified, no
+  bridge anywhere (CI included); after any toolchain maintenance verify
+  the store (`xiom doctor`; re-add with `xiom pkg install` -- a re-extract
+  removes non-archive subdirs like `packages/`). Stdlib lane `d54929d`
+  (wave 97); the v0.64.2 pairing is `4dd8844` -- exact/CI checks use the
+  pin (`export XIOM_STDLIB=<pinned checkout>`). `dev-env.{ps1,sh}` respect
+  explicit overrides; `dev-env.sh` finds `~/.local/bin/xiom`.
+- **Shipped release: 0.1.2** (tag `pulse-v0.1.2`, 2026-10-09): session
+  store swapped to registry `xiom.session` 0.1.0, v0.64.2 rebuild
+  (Windows request-path memory flat), `PULSE_BIND` address-only
+  validation, official icon embedded (pinned rcedit, local + CI).
+  `pulse-v0.1.1` exists but was never released (its CI gate failed on a
+  stale version literal; tags are immutable) -- documented in
+  CHANGELOG.md. dl mirror live (`dl.xiom-lang.org/pulse/...`), GitHub
+  Release has assets + `SHA256SUMS` + provenance.
+- **Live demo:** pulse.xiom-lang.org serves the website page **through
+  PULSE** (nginx -> loopback; landing via `PULSE_LANDING_PATH`, JSON via
+  `/health` + `/api/version`); currently running **0.1.0/cc3e741** -- ops
+  redeploys to 0.1.2+ at leisure (site buttons/badge auto-follow
+  `latest.json`). Linux memory still open: keep `MemoryMax` + restart.
+  orbitdb./xvector. phase-1 pages live (driver work queued for 0.3);
+  docs.xiom-lang.org = versioned compiler-docs root, PULSE docs render
+  at pulse.xiom-lang.org/docs/; registry.xiom-lang.org live (490 pkgs;
+  GitHub sign-in / SQLite social layer implemented in the registry lane).
+- **Current focus: 0.2.0 "the release that matters"** (owner direction):
+  **macOS x64 + arm64 artifacts plus the gap slate.** macOS gate (all
+  upstream; patch-precise fix sketches filed): stdlib
+  `runtime/xiom_runtime.c:4222` (`_SC_AVPHYS_PAGES` Linux-only), stdlib
+  `runtime/fp128_helpers.c` (x86 asm on arm64), compiler
+  `@llvm.memset.p0i8.i64` emission (`xiom-codegen` emitter.rs:859,
+  expr.rs:3774, stmt.rs:713/1131; also warns on Linux CI/llvm-16). When a
+  compiler/stdlib pairing carries them: set
+  `RELEASE_BUILD_MACOS=true`, dry-run all four legs, then 0.2.0.
+- **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
+  (`/openapi.json`, version token substituted at serve time) + `pulse
+  openapi`; full CLI set (`routes`, `version`, `check-config`); additive
+  error `status` in every envelope (incl. the 405 Allow path); official
+  icon adopted + embedded; smoke **89/89** on both platforms (Linux run
+  with the pinned stdlib). NEXT -- pagination `Link` (store cursor
+  decision: seq-in-record vs offset), idempotency keys on event writes,
+  `/v1` on new surfaces, `xiom.http` 0.1.4 + SSRF-guarded client wrapper
+  (+ probe), multipart uploads; then docs refresh + the 0.2.0 cut.
+- **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
+  (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
+  (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14
+  split on v0.64.2**: Windows flat, **Linux still grows (~87 KB/req
+  steady; worse than v0.64.1)** -- retest on the next archive;
+  **C-PULSE-16 OPEN** (`PULSE_BIND` advisory; address-aware bind filed;
+  demo firewalled); C-PULSE-12 open (rename workaround used twice;
+  import-alias syntax ask).
+- **Score:** ~55.4% production grade (`docs/PROGRESS.md`).
+- **Stores:** jsonl = default; kv = verified opt-in both platforms
+  (20m + 45m Linux soaks); flip still gated on the recorded
+  prerequisites. **`xiom.http` 0.1.2 in-repo (0.1.4 client available --
+  bump in the 0.2 client unit);** all ten package gates green.
 - **Wrap 4 (chunked + manifest + soak):** `Transfer-Encoding: chunked`
   REQUEST decoding landed (caps, extensions ignored, trailers validated;
   TE+CL -> 400; other codings -> 501) with smoke **76/76** on both
@@ -737,52 +736,62 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-09 wrap 9, v0.64.2 adopted; demo live)
+## 3. Paste prompt for the next PULSE session (2026-10-09 wrap 13d)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (the official
 XIOM web backend). Read SESSION.md first -- the CURRENT STATE digest at
 the top is authoritative; then docs\PROGRESS.md and the relay docs it
-lists. Consumer lane: never edit E:\xiom-lang\stdlib, E:\xiom-lang\xiom,
-E:\xiom-packages\packages (or its bindings worktree
-E:\xiom-packages\bindings). Repo stays PRIVATE; do not push without owner
-approval. Identity "Lefteris Notas <lefterisnotas@gmail.com>";
-conventional commits, DCO -s. Toolchain: v0.64.1 on BOTH Windows and
-Linux/WSL (pins recorded in docs\OPS-REQUEST.md D.1); stdlib lane
-checkout 4dd8844.
+lists. The repo is PUBLIC now; org rulesets gate PRs on DCO +
+ubuntu-latest + windows-latest (admin pushes bypass; never move a
+published tag -- on a failed tag run, fix and cut the next patch
+version). Consumer lane: never edit E:\xiom-lang\stdlib,
+E:\xiom-lang\xiom, E:\xiom-packages\packages (or its bindings worktree
+E:\xiom-packages\bindings). Identity "Lefteris Notas
+<lefterisnotas@gmail.com>"; conventional commits, DCO -s; when a message
+contains quotes or slash-paths use git commit -F <file> (PS mangles
+native-arg quoting). Toolchain: v0.64.2 on BOTH Windows and Linux/WSL
+(pins in docs\OPS-REQUEST.md D.1 and every workflow); Linux
+verification uses the PINNED stdlib (4dd8844) -- export XIOM_STDLIB=<pin>.
 
 TASK ORDER:
-1. FIRST: run the quick regression on the existing binaries (v0.64.2 on
-   both platforms; canonical package home, no bridge): probe fleet +
-   suites x2 + smoke 78/78 (jsonl and kv) on Linux and Windows; compare
-   against probe-logs/linux-sweep-20261009T161247Z/ (Linux) and today's
-   Windows runs before touching anything.
-2. THE HEADLINE UNIT: retry the session-store swap (C-PULSE-09 closed on
-   v0.64.2; the bridge design is in git history 220f814) on BOTH
-   platforms; suites x2 + smoke after. If green and time allows, cut
-   0.1.1 (bump src/pulse.xi + CHANGELOG.md; the v0.64.2 pins are already
-   in the workflows; macOS stays gated behind RELEASE_BUILD_MACOS).
-3. WATCH the lanes: compiler (C-PULSE-16 address-aware bind -- then
-   enforce loopback and add the LISTEN-address smoke check; darwin
-   runtime/codegen blockers before macOS un-gates; C-PULSE-12 alias
-   ask), bindings (durable DB/KV binding behind the store seam).
-4. NON-BLOCKED hardening / retests: chunked RESPONSES (with keep-alive),
-   a fresh 30-60m soak, the longer kv soak (flip gate), and the
-   C-PULSE-14 Linux memory retest on the next archive (Windows flat).
-5. OPS/SITE: the demo is live (pulse.xiom-lang.org, 0.1.0/cc3e741);
-   pulse-v0.1.0 is on GitHub + dl. No action unless ops reports; macOS
-   buttons light up only when macos assets exist. Wire the owner's cover
-   image (resources\img\) into the product landing when it lands.
-6. Update SESSION.md digest + the three relay docs + PROGRESS.md at every
-   wrap; commit signed.
+1. FIRST: quick regression on the existing binaries -- probe fleet +
+   suites x2 + smoke 89/89 (jsonl and kv) on Linux and Windows; Linux
+   with the pinned stdlib; compare against the newest probe-logs run
+   before touching anything.
+2. CONTINUE 0.2.0 (owner: "the release that matters"), in order:
+   (a) pagination Link headers on GET /api/events (decide the cursor:
+   seq-in-record vs offset; additive store change is acceptable),
+   (b) idempotency keys on event writes, (c) `/v1` on new surfaces,
+   (d) `xiom.http` 0.1.4 + the SSRF-guarded client wrapper (+ probe),
+   (e) multipart uploads. Each unit: full suites (Linux pinned) + smoke,
+   docs/relay updates, signed commit in the same wrap.
+3. WATCH the lanes: compiler (darwin fixes -> flip RELEASE_BUILD_MACOS
+   and dry-run all four legs; C-PULSE-16 address-aware bind -> enforce
+   loopback + LISTEN-address smoke check; C-PULSE-14 Linux memory retest
+   on the next archive; C-PULSE-12 alias ask), packages/bindings (SQL
+   class when the sqlite --c-source story lands), orbitdb/xvector (their
+   docs/PULSE-INTEGRATION.md arrives -> build probe_pkg_orbitdb /
+   probe_pkg_xvector, then the 0.3 drivers).
+4. RELEASE 0.2.0 when macOS is green (or on the owner's call): version
+   bump checklist from SESSION gotchas (EVERY expected-version literal,
+   incl. tests/test_app.xi openapi and the smoke twins), CHANGELOG entry,
+   tag pulse-v0.2.0, CI publishes, ops mirrors at :17, website lights
+   the macOS button.
+5. OPS/SITE: demo runs 0.1.0; ops redeploys 0.1.2+ at leisure (Linux
+   memory: MemoryMax + restart stays). Wire the owner's cover image
+   (resources\img\) into the product landing when it lands.
+6. Wrap at every stopping point: SESSION.md digest + the relay docs +
+   PROGRESS.md, commit signed, push.
 
 DISCIPLINE: probes in-repo; suites x2; outputs to files, never inherited
 pipes; durable step logs for crash-prone runs; every struct literal lists
 every field; no module-scope package constructors (Vec-holder pattern);
 no const-receiver .to_str(); explicit *p for &mut Int reads; quoted dotted
-TOML dep keys; PS-5.1 native-arg quoting workarounds; avoid inner quotes
-driving WSL from PS; `wsl --shutdown` on CLR/paging errors (system commit
-pressure, not the build).
+TOML dep keys; avoid inner quotes driving WSL from PS (write scripts to
+/tmp); `wsl --shutdown` on CLR/paging errors (system commit pressure, not
+the build); after any toolchain maintenance verify the package store
+(xiom doctor; re-add with xiom pkg install).
 ```
 
 ## 3c. Paste prompt (2026-10-07, superseded)
