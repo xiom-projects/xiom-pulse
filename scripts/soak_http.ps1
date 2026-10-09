@@ -74,8 +74,16 @@ $srv.StartInfo = $psi
 $null = $srv.Start()
 Start-Sleep -Milliseconds 1200
 
-$mem0 = (Get-Process -Id $srv.Id).WorkingSet64
-$handles0 = (Get-Process -Id $srv.Id).HandleCount
+# The cmd.exe wrapper owns the log redirection; resolve the REAL server
+# process for memory/handle sampling (sampling the wrapper measured cmd.exe
+# itself -- the 2026-10-08 memory evidence bug fixed here).
+$srvPid = $srv.Id
+$child = Get-CimInstance Win32_Process -Filter "ParentProcessId = $($srv.Id)" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne 'conhost.exe' } | Select-Object -First 1
+if ($child) { $srvPid = $child.ProcessId }
+
+$mem0 = (Get-Process -Id $srvPid).WorkingSet64
+$handles0 = (Get-Process -Id $srvPid).HandleCount
 Write-Host ("soak-http: baseline ws={0:N0} handles={1} for {2}s" -f $mem0, $handles0, $Seconds)
 
 $ok = 0; $fail = 0
@@ -98,7 +106,7 @@ while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
     if ($good) { $ok++ } else { $fail++ }
 
     if (([DateTime]::UtcNow - $lastSample).TotalSeconds -ge 60) {
-        $proc = Get-Process -Id $srv.Id -ErrorAction SilentlyContinue
+        $proc = Get-Process -Id $srvPid -ErrorAction SilentlyContinue
         $line = "{0:u} elapsed={1:N0}s ok={2} fail={3} ws={4:N0} handles={5}" -f `
             [DateTime]::UtcNow, $sw.Elapsed.TotalSeconds, $ok, $fail, $proc.WorkingSet64, $proc.HandleCount
         Add-Content -LiteralPath $progressFile -Value $line
@@ -108,8 +116,8 @@ while ($sw.Elapsed.TotalSeconds -lt $Seconds) {
     Start-Sleep -Milliseconds $IntervalMs
 }
 
-$mem1 = (Get-Process -Id $srv.Id).WorkingSet64
-$handles1 = (Get-Process -Id $srv.Id).HandleCount
+$mem1 = (Get-Process -Id $srvPid).WorkingSet64
+$handles1 = (Get-Process -Id $srvPid).HandleCount
 
 Send-Quit
 if (-not $srv.WaitForExit(15000)) {

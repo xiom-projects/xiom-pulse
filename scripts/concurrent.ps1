@@ -42,8 +42,15 @@ $srv.StartInfo = $psi
 $null = $srv.Start()
 Start-Sleep -Milliseconds 800
 
-$mem0 = (Get-Process -Id $srv.Id).WorkingSet64
-$handles0 = (Get-Process -Id $srv.Id).HandleCount
+# The cmd.exe wrapper owns the log redirection; resolve the REAL server
+# process for memory/handle sampling (sampling the wrapper measured cmd.exe).
+$srvPid = $srv.Id
+$child = Get-CimInstance Win32_Process -Filter "ParentProcessId = $($srv.Id)" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne 'conhost.exe' } | Select-Object -First 1
+if ($child) { $srvPid = $child.ProcessId }
+
+$mem0 = (Get-Process -Id $srvPid).WorkingSet64
+$handles0 = (Get-Process -Id $srvPid).HandleCount
 
 # --- open N simultaneous connections (all established before any request) --
 # NOTE: PowerShell variables are case-insensitive -- keep local state named
@@ -61,8 +68,8 @@ for ($i = 0; $i -lt $Clients; $i++) {
 }
 $connected = @($conns | Where-Object { $_.Connected }).Count
 Write-Host "concurrent: connected=$connected/$Clients connect_fail=$connectFail"
-$mem1 = (Get-Process -Id $srv.Id).WorkingSet64
-$handles1 = (Get-Process -Id $srv.Id).HandleCount
+$mem1 = (Get-Process -Id $srvPid).WorkingSet64
+$handles1 = (Get-Process -Id $srvPid).HandleCount
 
 # --- exchange one request per connection (server serves sequentially) -----
 $ok = 0; $fail = 0
