@@ -1,0 +1,17 @@
+# XIOM PULSE -- XVECTOR interop probe project (source-level composition).
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# Nearest-manifest rule (same as the ORBITDB hybrid probe pattern): this
+# manifest feeds the checker catalog for tests/interop/xvector/*.xi:
+#   - this directory (the probe module itself)
+#   - ../../../../xiom-xvector/src = XVECTOR src (xiom.vector.*)
+# Source-level composition until xiom.xvector publishes; the probe runs
+# only where the sibling checkout exists and is NOT in the CI fleet yet.
+[project]
+name = "pulse-interop-xvector"
+version = "0.0.0"
+root = "."
+source-roots = [
+  "../../../../xiom-xvector/src",
+]

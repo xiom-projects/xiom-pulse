@@ -218,6 +218,22 @@ CLI, HTTP client base, uploads) -- remaining are upstream gates
 (C-PULSE-14/16, darwin runtime-C) and the release cut. Score holds
 (~55.4%)._
 
+_Delta 2026-10-10 (0.3 interop start): **first ORBITDB/XVector consumer
+conformance probes built and GREEN on both platforms** (Linux pinned
+stdlib). `tests/interop/orbitdb/probe_pkg_orbitdb.xi` **39/39**
+(roundtrip+reopen x2 at 1k keys, query edges, open/order/stale-handle
+error paths, txn commit/abort, delete persistence) and
+`tests/interop/xvector/probe_pkg_xvector.xi` **30/30** (exact Flat
+roundtrip, top-k edges, dimension limits, delete/re-add, duplicate-id
+overwrite, `wal_persist`/`wal_load`/`engine_recover` reopen, torn-tail
+prefix). Both use the lanes' source-level composition pattern (nested
+`xiom.toml` + relative `source-roots`), run where the sibling checkouts
+exist, and are excluded from the CI fleet until the packages publish.
+Trap note filed in the relays: `search(k=0)` / `create_collection(dim=0)`
+are contract traps, not Err. Relay responses with probe results + the
+§6 answers appended to both relay docs. Hard-kill / filter / hybrid
+scenarios are the next tranche. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

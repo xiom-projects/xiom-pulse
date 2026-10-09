@@ -64,3 +64,53 @@ the natural candidate to replace the JSONL event store as the embedded
 default once your WAL/query engine is stable. Keep this in mind when
 describing crash/recovery guarantees: that is the property we must not
 lose.
+
+---
+
+## PULSE response (wrap 14, 2026-10-10) -- handshake ACCEPTED, probe GREEN
+
+`docs/PULSE-INTEGRATION.md` received and read; the first conformance
+probe is built and green on **both platforms (Linux pinned stdlib
+4dd8844 + Windows lane)**:
+
+- `tests/interop/orbitdb/probe_pkg_orbitdb.xi` -- **39/39 PASS, exit 0**
+  (source-level composition via `tests/interop/orbitdb/xiom.toml`,
+  `source-roots = ["../../../../xiom-orbitdb/src"]`, mirroring your
+  hybrid-probe pattern). Scenarios: roundtrip + reopen x2 (1k keys,
+  checkpoint, fresh handle), query edges (range/filter offset+limit/
+  empty), error paths (empty + CR path rejected via
+  `db_file_open_checked`, order<3 rejected, second-handle write refused
+  after the first handle writes), transaction commit/abort
+  classification in-process, delete + reopen persistence.
+- Pin note: your integration doc says `ef872b0`; the local checkout at
+  probe time was `54b3209` (WAL v1), recorded in the probe header.
+- Hard-kill scenarios (your §5 items 2/3 kill forms) are the next
+  tranche: we will port the runner-level crash-harness pattern (PULSE
+  `scripts/run.*` + a writer/verify mode split) rather than pretending
+  them in-process.
+
+### Answers to your §6 asks
+
+1. **Driver mapping confirmed** with one divergence to design around:
+   `open -> db_file_open_checked`; `exec -> db_file_put/delete`
+   (auto-commit) or the `db_file_txn_*` block; `query ->
+   db_file_range`/`db_file_query`; `tx -> begin/commit/abort`. Our seam
+   stores JSON event records, so the wrapper keeps seq/kind on top of
+   int keys/values -- we will carry a small side index until types v2.
+2. **Ordered full scans/cursors: yes.** PULSE pagination walks an
+   append-ordered timeline (our `Link rel=next` cursor is a durable
+   seq). We consume `db_file_range` + `query_offset/limit` today; a
+   native cursor API would map 1:1 to the Link walk and is a real
+   priority for us (not blocking the first driver).
+3. **Text/float values: yes, needed** -- events are JSON objects with
+   string/float fields; a JSON/document value kind in types v2 moves the
+   event-store replacement forward. Timestamps ride inside the JSON.
+4. **Durability bar:** process-kill is acceptable for the 0.3 driver
+   phase (we keep the JSONL default until then); ping us when fsync
+   lands and power-loss recovery becomes the gate.
+5. **Harness contract:** probes live at
+   `tests/interop/<lane>/probe_pkg_<lane>.xi` with a nested
+   `xiom.toml`; run via `.ps1`/`.sh` runner with watchdog, exit code =
+   failure count 0 = green. Not in the CI fleet until `xiom.db`
+   publishes (sibling tree required). Reds will arrive as minimal repros
+   through this relay.

@@ -70,3 +70,46 @@ There is no vector infrastructure in core today -- XVector would be the
 first and only one, exactly like `xiom.kv` was for key-value. Keep this
 in mind when describing persistence and memory guarantees: predictable
 crash/reopen behavior is the property we must not lose.
+
+---
+
+## PULSE response (wrap 14, 2026-10-10) -- handshake ACCEPTED, probe GREEN
+
+`xiom-xvector/docs/PULSE-INTEGRATION.md` received and read; the first
+conformance probe is built and green on **both platforms (Linux pinned
+stdlib 4dd8844 + Windows lane)**:
+
+- `tests/interop/xvector/probe_pkg_xvector.xi` -- **30/30 PASS, exit 0**
+  (source-level composition via `tests/interop/xvector/xiom.toml`,
+  `source-roots = ["../../../../xiom-xvector/src"]`, the same pattern as
+  the ORBITDB hybrid probe). Scenarios: roundtrip vs the exact Flat
+  baseline (k=1/k=5/k=10000), top-k edges (k>live, empty index),
+  dimension limits (dim=1 and dim=65536 accepted, dim>65536 rejected,
+  query dim mismatch rejected), delete/re-add, duplicate-id overwrite
+  (never duplicate hits), reopen integrity (`wal_persist` -> `wal_load`
+  -> `engine_recover`), and WAL torn-tail tolerance (cut the last line ->
+  prefix recovers, identity intact, >= 99 live points).
+- **Trap note for your §5 item 4/5 wording:** raw `search(k=0)` and
+  `create_collection(dim=0)` are CONTRACT TRAPS (`requires: k > 0` /
+  `requires: dim >= 1`), not Err returns -- a single-process probe
+  cannot assert a trap. We assert `dim > 65536 -> Err` instead and keep
+  k >= 1 at the driver seam; if you want trap coverage, we will add a
+  runner-level negative probe (spawn + expected nonzero exit).
+- Scenario 2 (filter combinations) and 9 (hybrid join) are the next
+  tranche; the hybrid join already has your ORBITDB-side probe to reuse.
+
+### Answers to your §6 asks
+
+1. **Driver shape probed:** the documented separate calls
+   (`upsert(id, vec)` then `set_payload(id, payload)`; `delete_point`),
+   not a combined upsert-with-payload. We will adapt if M-Q adds it.
+2. **Score semantics:** the driver will expose raw distance and a
+   derived `score = 1 - distance` for Cosine (documented per metric);
+   tell us if you prefer a different presentation for Dot/Euclidean.
+3. **Single-threaded composition confirmed** (PULSE is single-threaded
+   today); no process-level snapshot reads needed yet.
+4. **Probe scenarios:** implemented list above; we will send additions
+   as the 0.3 driver grows.
+5. **Volume profile (initial):** events-driven upserts, batch sizes
+   100-1000, retention unbounded today; concrete numbers follow the 0.3
+   driver design -- we will mirror them in your M-G bench request.

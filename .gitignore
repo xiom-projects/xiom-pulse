@@ -34,6 +34,9 @@ a.out
 /pulse-store-test.jsonl-uploads*/
 /docs/repro/io-list-dir-dangling/.tmp-lsd/
 
+# interop probe state (tests/interop/<lane>/, sibling source trees)
+/tests/interop/*/.tmp/
+
 # xiom.kv probe segments (tests/probes/probe_pkg_kv.xi, best-effort cleanup)
 /kvprobe-*.kv
 

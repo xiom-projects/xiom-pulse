@@ -1,0 +1,21 @@
+# XIOM PULSE -- OrbitDB interop probe project (source-level composition).
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# The compiler resolves a probe's imports against the NEAREST project
+# manifest walking up from the entry file; for
+# tests/interop/orbitdb/*.xi this file is that manifest, so its source
+# roots feed the checker catalog:
+#   - this directory (the probe module itself)
+#   - ../../../../xiom-orbitdb/src  = ORBITDB src (xiom.db.*)
+# The sibling-repo layout mirrors the ORBITDB hybrid probe pattern
+# (xiom-orbitdb/tests/hybrid/xiom.toml) -- source-level composition until
+# xiom.db publishes. The probe only runs where the sibling checkout
+# exists; it is NOT part of the CI fleet yet (CI has no sibling tree).
+[project]
+name = "pulse-interop-orbitdb"
+version = "0.0.0"
+root = "."
+source-roots = [
+  "../../../../xiom-orbitdb/src",
+]
