@@ -624,6 +624,13 @@ the session-store swap retry is PULSE's next unit (C-PULSE-09 closed).
    Linux-only; `fp128_helpers.c` x86 asm on arm64; plus the darwin
    codegen `llvm.memset` report) -- **re-confirmed on the v0.64.2 pins
    2026-10-09**; macOS release legs stay gated until green.
+   **Update (wrap 12): the `use of undefined value
+   '@llvm.memset.p0i8.i64'` codegen warning now reproduces on the LINUX
+   CI runner too** (llvm-16 on ubuntu-latest, during the 0.1.1 build:
+   `warning: LLVM IR verification failed ... proceeding with
+   compilation`; non-fatal, binaries work). The compiler should emit the
+   untyped `llvm.memset` form for LLVM 15+ (or declare the typed
+   intrinsic) -- it is not darwin-specific.
 3. **C-PULSE-14 Linux memory**: Windows is flat on v0.64.2 (thanks --
    confirmed), but **Linux still grows, now ~87 KB/req steady** (worse
    than v0.64.1's ~48); m235 was not in this batch -- repros are
@@ -648,3 +655,16 @@ smoke 78/78. Two notes for this lane:
   would shadow the package alias inside the file. The import-alias syntax
   ask stays open (this is the second time the rename workaround was
   needed).
+
+## Delta 2026-10-09 (wrap 12) -- 0.1.1 tag gate failed PULSE-side; 0.1.2 ships; Linux llvm.memset warning
+
+- `pulse-v0.1.1` was tagged and its CI gate failed on a **stale version
+  assertion** in our own test suite (`test_smoke.xi` expected the old
+  `0.1.0`); release tags are immutable (protect-release-tags, no bypass),
+  so the fixed cut ships as **0.1.2** -- nothing was published from
+  0.1.1. PULSE-side lesson recorded: version bumps must update every
+  expected-version literal and the pre-tag verification must use the
+  pinned stdlib (CI parity).
+- **For this lane:** the IR verification warning on Linux CI
+  (`@llvm.memset.p0i8.i64` undefined under llvm-16, non-fatal) is filed
+  with the darwin item above -- same root, now reproducible on Linux.

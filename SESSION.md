@@ -196,6 +196,18 @@
   absent), and `xiom.http 0.1.4` (real-libcurl GET/POST -- no outbound
   binding needed; PULSE bumps in 0.2 and adds the SSRF guard). Filed in
   the package wishlist + roadmap; no 0.1.1 scope change.
+- **Wrap 12 (0.1.2 ships):** the `pulse-v0.1.1` tag's CI gate failed on
+  a stale version literal in `test_smoke.xi` (PULSE-side; nothing
+  published); tags are immutable (protect-release-tags, no bypass), so
+  the fixed cut is **0.1.2**: all expected-version literals updated
+  (pulse.xi, server APP_VERSION, http Server header x2, test_smoke,
+  test_http, smoke twins), verified with the pinned stdlib (CI parity),
+  re-tagged. Bindings-lane addendum filed: sqlite README carries the
+  3-line consumer snippet + the required `--c-source` flag (ergonomic
+  fix filed by that lane); xiom.http 0.1.4 covers outbound; they
+  keep-fresh and target accelerators after the `xiom.vectors` extraction.
+  Compiler finding updated: the `@llvm.memset.p0i8.i64` IR warning also
+  reproduces on Linux CI (llvm-16), not only darwin.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
@@ -260,7 +272,12 @@
   maintenance verify the store (`xiom doctor`; re-add with `xiom pkg
   install` -- a concurrent re-extract can wipe `packages/`)**;
   `wsl --shutdown` clears CLR/paging errors (system commit pressure, not
-  the build).
+  the build); **version bumps: update EVERY expected-version literal --
+  `src/pulse.xi`, `src/server.xi` APP_VERSION, `src/http.xi` Server
+  header (x2), `tests/test_smoke.xi`, `tests/test_http.xi`,
+  `scripts/http_smoke.{sh,ps1}` -- and run the suites with the pinned
+  stdlib before tagging (CI parity; a stale literal cost the 0.1.1
+  tag).**
 
 ### Session log 2026-10-07/08 (chronological history; superseded by the digest above)
 

@@ -94,7 +94,8 @@ numbers published, and the demo running the same build.
    v0.64.2 -- the user-visible fix for Windows).
 2. **Session-store swap retry** (C-PULSE-09 closed): `xiom.session`
    behind the existing HTTP session contract; suites x2 + smoke after.
-   **(DONE 2026-10-09: verified both platforms, ships in 0.1.1.)**
+   **(DONE 2026-10-09; ships in 0.1.2 -- the 0.1.1 tag was superseded by
+   an immutable-tag version-literal gate, nothing published.)**
 3. `PULSE_BIND=addr:port` validation warning + all companion fixes.
 4. Portability fixes (lsof wait_listen, gtimeout, shasum) and macOS
    packaging legs.

@@ -115,6 +115,14 @@ Version bumped to **0.1.1** (rebuilt on v0.64.2 -- Windows memory flat /
 BIND validation / docs), CHANGELOG + public set updated. Score holds
 (~55.4%)._
 
+_Delta 2026-10-09 (wrap 12): the 0.1.1 tag's CI gate failed on a stale
+version literal in our own test suite (nothing published); tags are
+immutable, so the fixed cut is **0.1.2** -- every expected-version
+literal updated (pulse.xi, server APP_VERSION, http Server header x2,
+test_smoke, test_http, smoke twins), re-verified with the pinned stdlib
+before tagging. Also filed: the `@llvm.memset.p0i8.i64` IR warning
+reproduces on Linux CI (llvm-16), not just darwin._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

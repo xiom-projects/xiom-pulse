@@ -51,7 +51,7 @@ const CONTENT_TEXT: Str = "text/plain; charset=utf-8";
 // `pulse` alias resolves to the xiom.pulse.* family namespace inside this
 // compilation (same shadowing class as C-PULSE-12), so the alias call
 // cannot be used from a xiom.pulse.* module.
-const APP_VERSION: Str = "0.1.0";
+const APP_VERSION: Str = "0.1.2";
 
 var req_counter: Int = 0;
 var icon_bytes: Vec[UInt8] = Vec[UInt8].new();

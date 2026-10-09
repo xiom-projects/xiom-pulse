@@ -4,11 +4,14 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
-## [0.1.1] - 2026-10-09
+## [0.1.2] - 2026-10-09
 
 Maintenance release: rebuilt on XIOM v0.64.2 and completes the registry
-session-store swap. Artifacts: `pulse-0.1.1-linux-x64.zip`,
-`pulse-0.1.1-windows-x64.zip` (+ `.sha256`, combined `SHA256SUMS`).
+session-store swap. Artifacts: `pulse-0.1.2-linux-x64.zip`,
+`pulse-0.1.2-windows-x64.zip` (+ `.sha256`, combined `SHA256SUMS`).
+(Note: `pulse-v0.1.1` was tagged mid-cut but never released -- its CI
+gate failed on a stale version assertion in the test suite, and release
+tags are immutable, so the fixed cut ships as 0.1.2.)
 
 ### Changed
 

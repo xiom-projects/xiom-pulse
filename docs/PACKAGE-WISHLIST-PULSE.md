@@ -242,6 +242,14 @@ dynamic-loader packages (libpq/odbc) have no such issue. Roadmap mapping:
 base is `xiom.http` 0.1.4. Wrap-behind-one-module contract acknowledged
 both ways; no PULSE-side changes needed before the 0.2 cycle starts.
 
+**Bindings-lane addendum (same day):** the `xiom.sqlite` README carries
+the exact 3-line consumer snippet plus the one required `--c-source`
+build flag; the ergonomic fix for that flag is filed on their side --
+adoption is therefore documented, not blocked on a mystery. xiom.http
+0.1.4 covers outbound (no TLS/HTTP binding needed). The bindings lane
+continues on the next sector (accelerators unlock after the
+`xiom.vectors` extraction lands) and keeps fresh from main.
+
 ### xiom.http 0.1.2 (eco-v0.1.103) -- republish verified, re-added (wrap 3)
 
 - 0.1.2 carries the extern-unsafe compat fix (64 wraps + unsafe-internal
