@@ -180,4 +180,12 @@ doc, wrap 8b):
   persist -- macos-x64 fails at `_SC_AVPHYS_PAGES`, macos-arm64 at
   `fp128_helpers.c` inline asm; the codegen issue may or may not remain
   behind the C errors. Variable reset to unset so the next tag is not
-  blocked.)**
+  blocked.)** **(Lane-sources re-check, same day: both still present on
+  the lane at `d54929d` -- `runtime/xiom_runtime.c:4222` calls
+  `sysconf(_SC_AVPHYS_PAGES)` unguarded, and `runtime/fp128_helpers.c`
+  has no `__APPLE__`/`__aarch64__` guard around the x86 asm. Fix
+  sketches: guard the sysconf with `#ifdef _SC_AVPHYS_PAGES` and fall
+  back on Apple (e.g. `sysctl hw.memsize` or `sysconf(_SC_PHYS_PAGES)`);
+  wrap the fp128 x86 asm in `#if defined(__x86_64__) && !defined(__APPLE__)`
+  with a portable/aarch64 fallback. These two plus the compiler
+  `llvm.memset` item are the macOS gate for PULSE 0.2.0.)**

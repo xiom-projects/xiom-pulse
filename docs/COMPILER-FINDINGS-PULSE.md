@@ -630,7 +630,15 @@ the session-store swap retry is PULSE's next unit (C-PULSE-09 closed).
    `warning: LLVM IR verification failed ... proceeding with
    compilation`; non-fatal, binaries work). The compiler should emit the
    untyped `llvm.memset` form for LLVM 15+ (or declare the typed
-   intrinsic) -- it is not darwin-specific.
+   intrinsic) -- it is not darwin-specific. **Exact emit sites
+   (lane main, 2026-10-09):** `crates/xiom-codegen/src/emitter.rs:859`,
+   `expr.rs:3774`, `stmt.rs:713` and `stmt.rs:1131` all emit
+   `call void @llvm.memset.p0i8.i64(...)`. Fix sketch: either emit the
+   `declare void @llvm.memset.p0i8.i64(...)` preamble alongside them, or
+   retarget all four to the untyped `@llvm.memset` (LLVM 15+ keeps it;
+   the typed overloads were removed). This item is now on the critical
+   path for macOS release artifacts (the darwin dry run stops at it
+   after the runtime C items).
 3. **C-PULSE-14 Linux memory**: Windows is flat on v0.64.2 (thanks --
    confirmed), but **Linux still grows, now ~87 KB/req steady** (worse
    than v0.64.1's ~48); m235 was not in this batch -- repros are

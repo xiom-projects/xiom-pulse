@@ -87,48 +87,55 @@ numbers published, and the demo running the same build.
   provenance on every artifact; published benchmarks; OpenAPI frozen;
   multi-tenancy groundwork; SSE/WS as post-1.0.
 
-## 4. Next candidate release -- 0.1.1, all OSs
+## 4. Next candidate release -- 0.2.0, all OSs (macOS included)
 
-**Content (all PULSE-side, already on `main` or one unit away):**
-1. Rebuild on **v0.64.2** (pins already in CI; Windows memory is flat on
-   v0.64.2 -- the user-visible fix for Windows).
-2. **Session-store swap retry** (C-PULSE-09 closed): `xiom.session`
-   behind the existing HTTP session contract; suites x2 + smoke after.
-   **(DONE 2026-10-09; ships in 0.1.2 -- the 0.1.1 tag was superseded by
-   an immutable-tag version-literal gate, nothing published.)**
-3. `PULSE_BIND=addr:port` validation warning + all companion fixes.
-4. Portability fixes (lsof wait_listen, gtimeout, shasum) and macOS
-   packaging legs.
+**Owner direction (2026-10-09): the next cut must matter -- macOS x64 +
+arm64 artifacts and real gap coverage, not another maintenance release.**
+0.1.2 is the current shipped release (session swap on v0.64.2); the
+`pulse-v0.1.1` tag exists but was never released (immutable-tag
+version-literal gate; documented in the changelog).
 
-**Artifact matrix (this is the "all OSs" plan):**
+**macOS gate (critical path, all upstream -- fix sketches filed):**
+1. stdlib `runtime/xiom_runtime.c:4222` -- `_SC_AVPHYS_PAGES` is
+   Linux-only (guard + Apple fallback).
+2. stdlib `runtime/fp128_helpers.c` -- x86 asm compiled on arm64 (arch
+   guard + portable/aarch64 fallback).
+3. compiler codegen -- the typed `@llvm.memset.p0i8.i64` emission
+   (`xiom-codegen` emitter.rs:859, expr.rs:3774, stmt.rs:713/1131)
+   breaks LLVM 15+ IR verification; emit the declaration or the untyped
+   form.
+When a compiler/stdlib pairing carries all three: set
+`RELEASE_BUILD_MACOS=true`, dry-run all four legs green, and 0.2.0 ships
+`pulse-0.2.0-{linux-x64,windows-x64,macos-x64,macos-arm64}.zip`.
 
-| Artifact | Runner | Status |
-|---|---|---|
-| `pulse-0.1.1-linux-x64.zip` | ubuntu-latest | ready (dry run green on v0.64.2) |
-| `pulse-0.1.1-windows-x64.zip` | windows-latest | ready (dry run green on v0.64.2) |
-| `pulse-0.1.1-macos-x64.zip` | macos-15-intel | gated: darwin blockers (see below) |
-| `pulse-0.1.1-macos-arm64.zip` | macos-14 | gated: darwin blockers |
+**PULSE-side content for 0.2.0 (the "matters" slate, in order):**
+1. **API contract**: OpenAPI 3 document served at `/openapi.json` +
+   `pulse openapi` export; additive problem+json fields on the error
+   envelope; pagination `Link` headers; idempotency keys on event
+   writes; `/v1` prefix on new surfaces.
+2. **CLI**: subcommands `openapi`, `routes`, `version`,
+   `check-config` (promoting the current flags).
+3. **HTTP client base**: bump `xiom.http` to 0.1.4, add the
+   SSRF-guarded outbound wrapper + probe (foundation for all
+   integrations).
+4. **Multipart uploads** (PULSE-side parsing + caps).
+5. Docs/public-set refresh; version-bump checklist run (SESSION
+   gotchas) with the pinned stdlib before tagging.
 
-**macOS gate (the release decision):** the darwin blockers are filed and
-re-confirmed on v0.64.2 -- stdlib runtime C (`_SC_AVPHYS_PAGES`
-Linux-only; `fp128_helpers.c` x86 asm on arm64) and the darwin codegen
-`llvm.memset` report. If the lanes land them before the cut: set
-`RELEASE_BUILD_MACOS=true`, dry-run all four legs green, and 0.1.1 ships
-**all four artifacts**. If not: cut 0.1.1 on linux+windows (macOS button
-stays "soon"; don't block the release), and carry macOS into 0.1.2.
+**Carried, upstream-gated (not release blockers unless they land):**
+keep-alive, recv timeouts, SIGTERM drain, threads (stdlib/runtime);
+BIND enforcement (C-PULSE-16); Linux memory (C-PULSE-14). If any land
+before the cut, they join the release notes.
 
-**Sequence:** swap unit green (both platforms) -> full fleet + dry run
-(all four when macOS is un-gated, or two otherwise) -> bump
-`src/pulse.xi` to 0.1.1 + `CHANGELOG.md` entry -> tag `pulse-v0.1.1` ->
-CI publishes (guard/fleet/packages/provenance) -> ops mirrors at :17 ->
-website wires buttons (auto via `latest.json`; macOS only when assets
-exist) -> ops redeploys the demo (Linux memory still open: keep
-`MemoryMax` + restart; the release does not change the Linux profile).
+**Sequence:** execute the PULSE-side slate (suites x2 + smoke + probes
+per feature) -> darwin fixes land -> dry-run all four legs green ->
+bump to 0.2.0 + CHANGELOG -> tag `pulse-v0.2.0` -> CI publishes ->
+ops mirrors (:17) -> website lights the macOS button and the refresh.
 
-**Risks:** session-swap regressions (mitigate: suites x2 + smoke before
-the cut; keep the local store behind the same contract for rollback);
-macOS upstream timing (handled by the gate); store-wipe-after-toolchain
-maintenance (verify `xiom doctor` before tagging).
+**Risks:** darwin timing (macOS is a headline deliverable this time --
+escalate through the relay docs if the lane queue slips); feature scope
+(keep each item additive; full suites after each); toolchain
+maintenance wiping the store (check `xiom doctor` before tagging).
 
 ## 5. Cross-lane asks index (framework-driven)
 

@@ -212,6 +212,17 @@
   keep-fresh and target accelerators after the `xiom.vectors` extraction.
   Compiler finding updated: the `@llvm.memset.p0i8.i64` IR warning also
   reproduces on Linux CI (llvm-16), not only darwin.
+- **Wrap 12b (0.2.0 direction):** owner decision -- the next release must
+  matter: **macOS x64 + arm64 artifacts and real gap coverage** (not a
+  maintenance cut). macOS critical path confirmed upstream and unfixed on
+  the current lane sources: `xiom_runtime.c:4222` (`_SC_AVPHYS_PAGES`),
+  `fp128_helpers.c` (x86 asm on arm64), compiler `@llvm.memset.p0i8.i64`
+  emission (xiom-codegen `emitter.rs:859`, `expr.rs:3774`,
+  `stmt.rs:713/1131`) -- fix sketches filed in the two wishlists. 0.2.0
+  PULSE-side slate fixed in the roadmap: OpenAPI + additive problem+json
+  + pagination + idempotency, CLI subcommands, `xiom.http` 0.1.4 + the
+  SSRF-guarded client wrapper, multipart uploads, docs refresh. 0.1.2
+  remains the shipped release.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
