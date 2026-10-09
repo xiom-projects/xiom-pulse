@@ -146,6 +146,16 @@
   address-aware bind filed upstream; fix + LISTEN-address smoke check
   with the next release (owner: next cut = compiler fixes + macOS).
   Score: Security 46 -> 42, Testing 80 -> 88 -> ~55.4%.
+- **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
+  **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
+  C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
+  C-PULSE-13 (m232 installer home unified -- test dropping the bridge!),
+  C-PULSE-11, plus m228/m231/m234/m239. **Not** in this batch: the BIND
+  primitive (C-PULSE-16) and the darwin blockers -- macOS stays gated.
+  On publish: install both platforms, re-run the probe fleet + suites +
+  smoke, retest C-PULSE-14 soaks (m235 still the candidate), and drop
+  obsolete workarounds (C-PULSE-13 bridge if m232 holds), then cut the
+  next release (0.1.1) per the standing routine.
 - **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
   filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
   facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),
@@ -177,17 +187,19 @@
   ops answered (staging parked; Linux toolchain pin v0.64.1 recorded; CI
   on greenlight).
 - **Score:** ~55.5% production grade (`docs/PROGRESS.md`).
-- **NEXT (in order):** 1) watch the lanes: compiler (C-PULSE-09 Windows
-  runtime fix -> session-swap retry on both platforms; **C-PULSE-14
-  Linux request-path RSS retention -- runtime investigation, repro
-  filed**; C-PULSE-13 resolver unification, routed via the packages
-  lane), bindings (DB/KV binding, store seam). 2) non-blocked hardening:
-  chunked RESPONSES (with keep-alive), a fresh 30-60m soak, a repeatable
-  RSS sampler for C-PULSE-14, or the longer kv soak for the flip gate.
-  3) kv default flip only after the recorded prerequisites; otherwise
-  keep kv opt-in. 4) release: DONE -- pulse-v0.1.0 on GitHub; ops
-  mirrors dl at :17, then the website wires downloads + badge and ops
-  deploys the demo (watch those steps). 5) wire the owner's cover image
+- **NEXT (in order):** 1) FIRST when dl publishes v0.64.2 (release-ready,
+  tag held): install on WSL + Windows, re-run the full fleet
+  (`probe_adopt_smoke` especially, kv probes, suites x2, smoke 78),
+  retest the C-PULSE-14 soaks, and test dropping the C-PULSE-13 bridge
+  (m232 unified the installer home); then retry the session-store swap
+  (C-PULSE-09 fixed in m223..m227) and cut 0.1.1. 2) watch the lanes:
+  compiler (C-PULSE-16 address-aware bind; darwin runtime/codegen
+  blockers before macOS un-gates; C-PULSE-12 alias ask), bindings
+  (DB/KV binding, store seam). 3) non-blocked hardening: chunked
+  RESPONSES (with keep-alive), a fresh 30-60m soak, or the longer kv
+  soak for the flip gate. 4) kv default flip only after the recorded
+  prerequisites; otherwise keep kv opt-in. 5) release ops: pulse-v0.1.0
+  is live (demo + dl + docs verified); wire the owner's cover image
   (`resources/img/`) into the product landing when it lands.
 - **Gotchas:** PS 5.1 strips embedded quotes in native args (use files,
   `--etag-save/--etag-compare`); when driving WSL from PS avoid inner
