@@ -30,7 +30,7 @@ use xiom.pulse.router;
 use xiom.pulse.envelope;
 use xiom.pulse.config;
 use xiom.pulse.metrics;
-use xiom.pulse.session;
+use xiom.pulse.sessions;
 use xiom.jwt;
 use xiom.string.slice;
 use xiom.pulse.store;
@@ -194,23 +194,23 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     }
     let user = schema.schema_str_value(body, "user");
     let ttl = config.cfg_session_ttl_secs();
-    let sid = session.session_create(user, ttl);
-    let csrf = session.csrf_new_token();
+    let sid = sessions.session_create(user, ttl);
+    let csrf = sessions.csrf_new_token();
     var v = json.json_set(json.json_object_new(), "user", json.json_string(user));
     v = json.json_set(v, "sid", json.json_string(sid));
     v = json.json_set(v, "csrf", json.json_string(csrf));
     var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-    hs.push(("Set-Cookie", session.session_cookie_header(sid, ttl)));
-    hs.push(("Set-Cookie", session.csrf_cookie_header(csrf)));
+    hs.push(("Set-Cookie", sessions.session_cookie_header(sid, ttl)));
+    hs.push(("Set-Cookie", sessions.csrf_cookie_header(csrf)));
     return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: json.json_stringify(v); body_bytes: Vec[UInt8].new(); };
   }
   if m.route_id == 5 {
     let cookie_header = http.header_get(req, "cookie");
-    let sid = session.session_id_from_cookie(cookie_header);
+    let sid = sessions.session_id_from_cookie(cookie_header);
     if sid.len() == 0 {
       return out_json(401, envelope.error_body("unauthorized", "no session"));
     }
-    let user = session.session_get(sid);
+    let user = sessions.session_get(sid);
     if user.len() == 0 {
       return out_json(401, envelope.error_body("unauthorized", "invalid or expired session"));
     }
@@ -218,10 +218,10 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
   }
   if m.route_id == 6 {
     let cookie_header = http.header_get(req, "cookie");
-    let sid = session.session_id_from_cookie(cookie_header);
-    if sid.len() > 0 { session.session_drop(sid); }
+    let sid = sessions.session_id_from_cookie(cookie_header);
+    if sid.len() > 0 { sessions.session_drop(sid); }
     var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-    hs.push(("Set-Cookie", session.session_expired_cookie_header()));
+    hs.push(("Set-Cookie", sessions.session_expired_cookie_header()));
     return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: envelope.ok_bool(true); body_bytes: Vec[UInt8].new(); };
   }
   if m.route_id == 7 {
@@ -621,7 +621,7 @@ pub fn main() -> Int {
     io.flush_stdout();
   }
 
-  session.session_init(config.cfg_session_ttl_secs());
+  sessions.session_init(config.cfg_session_ttl_secs());
 
   let icon_ok = load_icon(config.cfg_icon_path());
   if !icon_ok {
@@ -691,7 +691,7 @@ pub fn main() -> Int {
         metrics.metrics_record(204, 0);
         metrics.metrics_record_duration(dur);
         access_log(rid, req.method, req.target, 204, 0, dur);
-      } else if csrf_on && is_mutating(req.method) && session.session_id_from_cookie(cookie_header).len() > 0 && !session.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
+      } else if csrf_on && is_mutating(req.method) && sessions.session_id_from_cookie(cookie_header).len() > 0 && !sessions.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
         var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody);

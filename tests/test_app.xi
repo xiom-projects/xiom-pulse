@@ -19,7 +19,7 @@ use xiom.pulse.envelope;
 use xiom.pulse.config;
 use xiom.pulse.cors;
 use xiom.pulse.metrics;
-use xiom.pulse.session;
+use xiom.pulse.sessions;
 use xiom.pulse.store;
 use xiom.pulse.ratelimit;
 use xiom.pulse.validate;
@@ -211,22 +211,22 @@ pub fn main() -> Int {
   env.remove_var("PULSE_RATE_BURST");
 
   // --- sessions ------------------------------------------------------------
-  session.session_reset();
-  let sid = session.session_create("bob", 60);
+  sessions.session_reset();
+  let sid = sessions.session_create("bob", 60);
   f = f + check("session created", sid.len() == 32);
-  f = f + check("session get", session.session_get(sid) == "bob");
-  let ch = session.session_cookie_header(sid, 60);
+  f = f + check("session get", sessions.session_get(sid) == "bob");
+  let ch = sessions.session_cookie_header(sid, 60);
   f = f + check("session cookie header value-only", string.str_starts_with(ch, "sid=" + sid) && !string.str_contains(ch, "Set-Cookie"));
-  f = f + check("session cookie parse", session.session_id_from_cookie("a=1; sid=" + sid + "; b=2") == sid);
-  f = f + check("session cookie absent", session.session_id_from_cookie("a=1") == "");
-  session.session_drop(sid);
-  f = f + check("session dropped", session.session_get(sid) == "");
-  let ctok = session.csrf_new_token();
+  f = f + check("session cookie parse", sessions.session_id_from_cookie("a=1; sid=" + sid + "; b=2") == sid);
+  f = f + check("session cookie absent", sessions.session_id_from_cookie("a=1") == "");
+  sessions.session_drop(sid);
+  f = f + check("session dropped", sessions.session_get(sid) == "");
+  let ctok = sessions.csrf_new_token();
   f = f + check("csrf token len", ctok.len() == 32);
-  f = f + check("csrf match", session.csrf_matches("sid=x; csrf=" + ctok + "; a=1", ctok));
-  f = f + check("csrf mismatch", !session.csrf_matches("csrf=" + ctok, "wrong"));
-  f = f + check("csrf absent", !session.csrf_matches("sid=x", ctok));
-  session.session_reset();
+  f = f + check("csrf match", sessions.csrf_matches("sid=x; csrf=" + ctok + "; a=1", ctok));
+  f = f + check("csrf mismatch", !sessions.csrf_matches("csrf=" + ctok, "wrong"));
+  f = f + check("csrf absent", !sessions.csrf_matches("sid=x", ctok));
+  sessions.session_reset();
 
   // --- validation -----------------------------------------------------------
   f = f + check("validate field", validate.field_str("{\"user\":\"bob\"}", "user", 64) == "bob");

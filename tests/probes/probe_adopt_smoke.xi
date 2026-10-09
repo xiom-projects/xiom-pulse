@@ -10,7 +10,7 @@ use xiom.io;
 use xiom.string;
 use xiom.convert;
 use xiom.pulse.metrics;
-use xiom.pulse.session;
+use xiom.pulse.sessions;
 use xiom.pulse.cors;
 use xiom.pulse.app;
 
@@ -36,39 +36,39 @@ pub fn main() -> Int {
     io.println("[FAIL] metrics render empty");
     return 1;
   }
-  session.session_reset();
+  sessions.session_reset();
   step(5);
-  let c0 = session.session_count();
+  let c0 = sessions.session_count();
   step(11);
   if c0 != 0 {
     io.println("[FAIL] count after reset=" + c0.to_str());
     return 1;
   }
-  let sid = session.session_create("probe", 60);
+  let sid = sessions.session_create("probe", 60);
   step(6);
   if sid.len() != 32 {
     io.println("[FAIL] session id len=" + sid.len().to_str());
     return 1;
   }
-  let u = session.session_get(sid);
+  let u = sessions.session_get(sid);
   step(7);
   if u != "probe" {
     io.println("[FAIL] session user=[" + u + "]");
     return 1;
   }
-  let t = session.csrf_new_token();
+  let t = sessions.csrf_new_token();
   step(8);
   if t.len() != 32 {
     io.println("[FAIL] csrf len=" + t.len().to_str());
     return 1;
   }
-  let ok = session.csrf_matches("sid=x; csrf=" + t + "; a=1", t);
+  let ok = sessions.csrf_matches("sid=x; csrf=" + t + "; a=1", t);
   step(9);
   if !ok {
     io.println("[FAIL] csrf match");
     return 1;
   }
-  session.session_reset();
+  sessions.session_reset();
   step(10);
   io.println("[PASS] adopt-smoke");
   return 0;

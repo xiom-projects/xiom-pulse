@@ -631,3 +631,20 @@ the session-store swap retry is PULSE's next unit (C-PULSE-09 closed).
 4. C-PULSE-12 alias ask (module last-segment shadowing) and the
    triplicate-sibling-exports finding are tracked on the compiler side;
    PULSE has no addendum.
+
+## Delta 2026-10-09 (wrap 11) -- session-store swap shipped (0.1.1)
+
+The `xiom.session` 0.1.0 store is now PULSE's session backend
+(`src/session.xi` is the single wrapper module; user stored as the "user"
+entry; ids/expiry/pruning/cookie rendering come from the package).
+Verified on both platforms: build + `probe_adopt_smoke` + suites x2 +
+smoke 78/78. Two notes for this lane:
+
+- The m223..m227 fix is validated in production use: the same
+  cross-module wrapper pattern that crashed on v0.64.0 (C-PULSE-09) runs
+  clean on v0.64.2, Linux and Windows.
+- **C-PULSE-12 workaround re-applied:** our wrapper module is named
+  `xiom.pulse.sessions` because `xiom.pulse.session` + `use xiom.session;`
+  would shadow the package alias inside the file. The import-alias syntax
+  ask stays open (this is the second time the rename workaround was
+  needed).

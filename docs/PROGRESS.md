@@ -105,6 +105,16 @@ next archive; m235 not in v0.64.2). Incident: a concurrent toolchain
 re-extract wiped the WSL packages store mid-sweep (reinstalled via
 `xiom pkg install`; green after). Score holds (~55.4%)._
 
+_Delta 2026-10-09 (wrap 11, 0.1.1 cut): **session-store swap DONE** --
+`src/session.xi` is now a wrapper over the registry `xiom.session` 0.1.0
+store (128-bit hex ids, explicit-clock expiry, pruning; user as the
+"user" entry) behind the identical HTTP contract; module renamed
+`xiom.pulse.sessions` to dodge the C-PULSE-12 alias shadowing. Verified:
+build + `probe_adopt_smoke` + suites x2 + smoke 78/78 on BOTH platforms.
+Version bumped to **0.1.1** (rebuilt on v0.64.2 -- Windows memory flat /
+BIND validation / docs), CHANGELOG + public set updated. Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -423,7 +433,7 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
 | C-PULSE-06 missing struct field -> garbage | OPEN | every struct literal must list all fields |
 | C-PULSE-07 module-scope package ctor -> undefined call/crash | OPEN | package aggregates stay caller-owned (Vec-holder pattern pinned by `probe_pkg_state_holder`) |
 | C-PULSE-08 m212 dotted-key roots | **CLOSED on v0.64.1** (m215) | gate dash+dot green on Windows and Linux (Linux after the C-PULSE-13 home bridge); `source-roots` kept only as belt-and-braces |
-| C-PULSE-09 xiom.session store integration crash via wrapper modules | **CLOSED on v0.64.2 (2026-10-09)** | `probe_adopt_smoke` green in the full fleet on BOTH platforms (Windows steps 1..10, exit 0); the session-store swap retry (bridge `220f814`) is the next PULSE unit |
+| C-PULSE-09 xiom.session store integration crash via wrapper modules | **CLOSED + SWAP DONE (2026-10-09)** | `src/session.xi` now wraps the registry `xiom.session` 0.1.0 store behind the same HTTP contract (module renamed `xiom.pulse.sessions` for C-PULSE-12); `probe_adopt_smoke` + suites x2 + smoke 78/78 green on BOTH platforms; ships in 0.1.1 |
 | C-PULSE-10 xiom.kv kv_get Str corruption + bytes truncation | **CLOSED on v0.64.1** (m217) | `probe_pkg_kv` green; kv backend verified incl. the 20m soak |
 | C-PULSE-11 package type alias invisible cross-module (defaults to i64) | **fixed in v0.64.1** (m216) | alias design compiles; swap re-tries on the C-PULSE-09 schedule |
 | C-PULSE-12 module last-segment shadows an imported alias | OPEN (design around) | PULSE renamed the app module; import-alias syntax filed in the stdlib wishlist |

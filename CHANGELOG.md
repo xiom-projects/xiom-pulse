@@ -4,6 +4,37 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
+## [0.1.1] - 2026-10-09
+
+Maintenance release: rebuilt on XIOM v0.64.2 and completes the registry
+session-store swap. Artifacts: `pulse-0.1.1-linux-x64.zip`,
+`pulse-0.1.1-windows-x64.zip` (+ `.sha256`, combined `SHA256SUMS`).
+
+### Changed
+
+- Built with XIOM **v0.64.2**: the Windows request-path memory growth is
+  fixed upstream (flat RSS under load); `PULSE_BIND` now validates the
+  address-only shape (an `addr:port` value warns at startup and in
+  `--check-config`).
+- Sessions are backed by the registry `xiom.session` 0.1.0 store
+  (128-bit hex ids, explicit-clock expiry, opportunistic pruning) behind
+  the same HTTP contract -- routes, cookies and CSRF behavior unchanged.
+
+### Fixed
+
+- Cross-module session-store crash (C-PULSE-09): resolved upstream in the
+  v0.64.2 batch and adopted here; `probe_adopt_smoke` passes on both
+  platforms.
+- Release/backup script portability fixes; DCO workflow pinned; docs
+  refresh (public set + framework roadmap).
+
+### Known limits
+
+- Linux RSS growth in the request path is still under investigation
+  (upstream, C-PULSE-14): run with a memory limit + restart policy.
+- No macOS artifacts yet (upstream darwin blockers); Linux x64 and
+  Windows x64 only.
+
 ## [0.1.0] - 2026-10-09
 
 First public release (beta). Artifacts: `pulse-0.1.0-linux-x64.zip`,

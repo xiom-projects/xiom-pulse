@@ -181,6 +181,14 @@
   `probe_pkg_orbitdb` / `probe_pkg_xvector` and wires the 0.3 drivers;
   the vector use cases are events search + RAG endpoints, and the hybrid
   (OrbitDB rows + XVector embeddings) is the intended showcase.
+- **Wrap 11 (0.1.1 cut):** session-store swap DONE -- `src/session.xi`
+  wraps registry `xiom.session` 0.1.0 (ids/expiry/pruning from the
+  package; user as the "user" entry; module renamed
+  `xiom.pulse.sessions` for C-PULSE-12). Verified both platforms: build
+  + `probe_adopt_smoke` + suites x2 + smoke 78/78. Version 0.1.1
+  (rebuilt on v0.64.2: Windows memory flat + BIND validation warning +
+  docs); CHANGELOG + public docs updated. Tag `pulse-v0.1.1` cuts
+  linux+windows artifacts; **macOS stays gated** (darwin blockers).
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),

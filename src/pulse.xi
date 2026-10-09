@@ -9,5 +9,5 @@ module xiom.pulse
 pub fn pulse_version() -> Str
   ensures: result.len() > 0
 {
-  "0.1.0"
+  "0.1.1"
 }
