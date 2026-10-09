@@ -172,6 +172,15 @@
   else carry macOS to 0.1.2). Driver seam = versioned
   `xiom.pulse.driver` contract; every integration ships with a
   conformance probe.
+- **Wrap 10b (orbitdb/xvector handshake):** two relay messages filed --
+  `docs/ORBITDB-RELAY-PULSE.md` and `docs/XVECTOR-RELAY-PULSE.md` --
+  asking each lane to write `docs/PULSE-INTEGRATION.md` in their repo
+  (embedding API + snippets, build/link contract + platform matrix, pin,
+  consumer-affecting findings incl. recovery/memory, conformance test
+  proposal, cross-asks). PULSE reads it locally (read-only), then builds
+  `probe_pkg_orbitdb` / `probe_pkg_xvector` and wires the 0.3 drivers;
+  the vector use cases are events search + RAG endpoints, and the hybrid
+  (OrbitDB rows + XVector embeddings) is the intended showcase.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
