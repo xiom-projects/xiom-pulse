@@ -56,6 +56,28 @@ pub fn cfg_rate_burst() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_RATE_BURST", "0"), 0);
 }
 
+/// cfg_upload_dir returns the multipart upload directory
+/// (PULSE_UPLOAD_DIR, default "uploads"). Complexity: O(1). Pure.
+pub fn cfg_upload_dir() -> Str {
+  return env.var_or("PULSE_UPLOAD_DIR", "uploads");
+}
+
+/// cfg_upload_max_bytes returns the per-part upload cap
+/// (PULSE_UPLOAD_MAX_BYTES, default 1048576). Complexity: O(1). Pure.
+pub fn cfg_upload_max_bytes() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_UPLOAD_MAX_BYTES", "1048576"), 1048576);
+}
+
+/// cfg_upload_max_parts returns the per-request part cap
+/// (PULSE_UPLOAD_MAX_PARTS, default 8, clamped 1..64).
+/// Complexity: O(1). Pure.
+pub fn cfg_upload_max_parts() -> Int {
+  var n: Int = cfg_parse_uint(env.var_or("PULSE_UPLOAD_MAX_PARTS", "8"), 8);
+  if n < 1 { n = 1; }
+  if n > 64 { n = 64; }
+  return n;
+}
+
 /// cfg_cors_origin returns the allowed CORS origin ("" = CORS off).
 /// Complexity: O(1). Pure.
 pub fn cfg_cors_origin() -> Str {

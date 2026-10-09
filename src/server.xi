@@ -45,6 +45,7 @@ use xiom.env;
 use xiom.encoding.percent;
 use xiom.pulse.audit;
 use xiom.pulse.openapi;
+use xiom.pulse.multipart;
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -410,6 +411,59 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
       return out_json(500, envelope.error_body("internal", "openapi document unavailable"));
     }
     return out_json(200, doc);
+  }
+  if m.route_id == 18 {
+    // Multipart uploads (0.2, new surface reachable at /v1/api/uploads):
+    // parse, cap, store under generated names; client filenames are never
+    // path components (only a sanitized extension survives).
+    let ct = http.header_get(req, "content-type");
+    let boundary = multipart.boundary_from_content_type(ct);
+    if boundary.len() == 0 {
+      return out_json(415, envelope.error_body("unsupported_media_type", "expected multipart/form-data with a boundary"));
+    }
+    let parsed = multipart.parse_multipart(&req.body, boundary, config.cfg_upload_max_parts(), config.cfg_upload_max_bytes());
+    if !parsed.ok {
+      var st: Int = 400;
+      if parsed.error == "part_too_large" || parsed.error == "too_many_parts" {
+        st = 413;
+      }
+      return out_json(st, envelope.error_body(parsed.error, "multipart body rejected"));
+    }
+    let dir = config.cfg_upload_dir();
+    // is_dir, not file_exists: fopen("r") fails on directories on Windows,
+    // so file_exists(dir) lies for an existing upload dir (found 2026-10-10).
+    if !io.is_dir(dir) {
+      let mk = io.create_dir(dir);
+      if mk.is_err {
+        return out_json(500, envelope.error_body("store_error", "cannot create upload dir"));
+      }
+    }
+    let now = time.unix_timestamp();
+    var stored: Int = 0;
+    var files_json: Str = "";
+    var ui: Int = 0;
+    while ui < parsed.parts.len() {
+      let part = parsed.parts[ui];
+      if part.filename.len() > 0 {
+        // Epoch seconds + monotonic ms + part index: unique per request
+        // without exposing client filenames on disk.
+        var name = "up-" + now.to_str() + "-" + time.monotonic_ms().to_str() + "-" + ui.to_str();
+        let ext = multipart.sanitized_ext(part.filename);
+        if ext.len() > 0 {
+          name = name + "." + ext;
+        }
+        let wr = io.write_file(io.join_paths(dir, name), part.content);
+        if wr.is_err {
+          return out_json(500, envelope.error_body("store_error", "upload write failed"));
+        }
+        if stored > 0 { files_json = files_json + ","; }
+        files_json = files_json + "{\"name\":" + json.json_stringify(json.json_string(name)) + ",\"original\":" + json.json_stringify(json.json_string(part.filename)) + ",\"bytes\":" + part.content.len().to_str() + ",\"content_type\":" + json.json_stringify(json.json_string(part.content_type)) + "}";
+        stored = stored + 1;
+      }
+      ui = ui + 1;
+    }
+    let up_body = "{\"stored\":" + stored.to_str() + ",\"files\":[" + files_json + "]}";
+    return out_json(200, up_body);
   }
   if m.route_id == 14 {
     // Static assets via registry xiom.static 0.1.0: ETag/Last-Modified/

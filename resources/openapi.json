@@ -207,6 +207,23 @@
         }
       }
     },
+    "/api/uploads": {
+      "post": {
+        "tags": ["uploads"],
+        "summary": "Multipart upload (multipart/form-data; new in 0.2, reachable at /v1/api/uploads)",
+        "operationId": "postUploads",
+        "requestBody": {
+          "required": true,
+          "content": { "multipart/form-data": { "schema": { "type": "object", "properties": { "file": { "type": "string", "format": "binary" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Stored files", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UploadStored" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "415": { "description": "Body is not multipart/form-data with a boundary" }
+        }
+      }
+    },
     "/metrics": {
       "get": {
         "tags": ["ops"],
@@ -285,6 +302,7 @@
       "TokenVerify": { "type": "object", "properties": { "valid": { "type": "boolean" }, "sub": { "type": "string" } } },
       "Event": { "type": "object", "properties": { "kind": { "type": "string", "const": "event" }, "seq": { "type": "integer", "description": "Durable sequence cursor (pagination)" }, "idem": { "type": "string", "description": "Idempotency marker when the write carried a key" }, "ts": { "type": "integer" }, "data": {} } },
       "EventStored": { "type": "object", "properties": { "stored": { "type": "boolean" }, "count": { "type": "integer" }, "seq": { "type": "integer" }, "deduplicated": { "type": "boolean", "description": "true when the Idempotency-Key was already stored; nothing was appended" } } },
+      "UploadStored": { "type": "object", "properties": { "stored": { "type": "integer" }, "files": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string", "description": "Generated name on disk (client filenames are never path components)" }, "original": { "type": "string" }, "bytes": { "type": "integer" }, "content_type": { "type": "string" } } } } } },
       "EventsList": { "type": "object", "properties": { "events": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } }, "count": { "type": "integer" }, "next_cursor": { "type": "integer", "description": "0 when no older page exists; pass as ?before= to fetch it" } } },
       "Count": { "type": "object", "required": ["count"], "properties": { "count": { "type": "integer" } } },
       "Error": {

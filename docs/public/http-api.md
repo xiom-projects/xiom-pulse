@@ -50,6 +50,7 @@ headers preserve whichever prefix the client used.
 | GET | `/api/events` | list; `?limit=1..100`, `?kind=`, `?before=` (pagination) |
 | GET | `/api/events/count` | `{"count":N}` |
 | POST | `/api/events/compact` | rewrite without torn lines |
+| POST | `/api/uploads` | `multipart/form-data` upload (0.2; `/v1/api/uploads`) |
 
 ### Pagination
 
@@ -76,6 +77,21 @@ append a second event: the original sequence is replayed with
 `"deduplicated":true` and the count stays unchanged. The key is stored
 inside the event record (`idem`), so the guarantee survives restarts on
 both backends; a malformed key is `400 invalid_idempotency_key`.
+
+### Uploads
+
+`POST /api/uploads` accepts `multipart/form-data` (one or more file
+parts; parts without a filename are ignored). Files are written under
+`PULSE_UPLOAD_DIR` (default `uploads/`) with generated names -- client
+filenames are never path components, only a sanitized extension
+survives -- and the response lists `name` / `original` / `bytes` /
+`content_type` per file. Caps: `PULSE_UPLOAD_MAX_BYTES` per part
+(default 1 MiB) and `PULSE_UPLOAD_MAX_PARTS` (default 8); the HTTP
+core's decoded-body cap still bounds the whole request. Errors: `415
+unsupported_media_type` (not multipart / no boundary), `400
+boundary_not_found` or `400 malformed` (broken framing), `413
+part_too_large` / `413 too_many_parts`. This is a 0.2 surface: it is
+reachable at `/api/uploads` and `/v1/api/uploads`.
 
 ## Request limits and semantics
 

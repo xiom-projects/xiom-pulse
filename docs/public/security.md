@@ -34,6 +34,9 @@ the known gaps; do not deploy it as a hard production service yet.
   literal host -- a public name that resolves to a private address (DNS
   rebinding) is stopped by the allowlist, not the blocklist.
 - Mutating requests are written to the audit log (with rotation).
+- Uploads (`POST /api/uploads`) are bounded: per-part and part-count
+  caps, generated on-disk names (client filenames are never path
+  components), and the same decoded-body cap as every other request.
 
 ## Known limits (the gap list)
 

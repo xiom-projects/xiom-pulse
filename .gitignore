@@ -29,11 +29,22 @@ a.out
 /pulse-store-test.jsonl
 /pulse-audit.log
 
+# multipart uploads (POST /api/uploads, PULSE_UPLOAD_DIR)
+/uploads/
+/pulse-store-test.jsonl-uploads*/
+/docs/repro/io-list-dir-dangling/.tmp-lsd/
+
 # xiom.kv probe segments (tests/probes/probe_pkg_kv.xi, best-effort cleanup)
 /kvprobe-*.kv
 
 # audit rotation probe files (tests/probes/probe_audit_rotate.xi)
 /pulse-audit-rotate-test.log*
+
+# adopt-smoke probe trace (tests/probes/probe_adopt_smoke.xi)
+/pulse-adopt-steps.txt
+
+# editor artifacts
+/.VSCodeCounter/
 
 # release artifacts (scripts/release.*)
 /dist/

@@ -40,6 +40,15 @@ GitHub release body.
   platforms. The libcurl transport seam (`src/outbound_transport.xi`)
   lands behind the package `--c-source` build hook (same family as
   sqlite), so the server binary stays libcurl-free.
+- **Multipart uploads**: `POST /api/uploads` (0.2 surface, also
+  `/v1/api/uploads`) parses `multipart/form-data` PULSE-side with
+  per-part (`PULSE_UPLOAD_MAX_BYTES`, default 1 MiB) and part-count
+  (`PULSE_UPLOAD_MAX_PARTS`, default 8) caps. Files go to
+  `PULSE_UPLOAD_DIR` under generated names -- client filenames are
+  never path components -- and the JSON response lists
+  `name`/`original`/`bytes`/`content_type`. Stable errors: `415
+  unsupported_media_type`, `400 boundary_not_found`/`malformed`, `413
+  part_too_large`/`too_many_parts`. Smoke suite at **119 checks**.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).

@@ -12,9 +12,9 @@
 // 7 POST /api/token, 8 POST /api/token/verify, 9 GET /metrics,
 // 10 GET /api/items/:id, 11 POST /api/events, 12 GET /api/events/count,
 // 13 GET /api/events, 14 GET /favicon.ico, 15 GET /, 16 POST /api/events/compact,
-// 17 GET /openapi.json. Every route is also reachable through the `/v1`
-// alias prefix (v1_path strips it before matching); new surfaces are
-// introduced under `/v1` first.
+// 17 GET /openapi.json, 18 POST /api/uploads. Every route is also reachable
+// through the `/v1` alias prefix (v1_path strips it before matching); new
+// surfaces are introduced under `/v1` first.
 module xiom.pulse.router
 
 use xiom.string;
@@ -158,12 +158,13 @@ pub fn routes_list() -> Vec[(Str, Str)] {
   out.push(("GET", "/"));
   out.push(("POST", "/api/events/compact"));
   out.push(("GET", "/openapi.json"));
+  out.push(("POST", "/api/uploads"));
   return out;
 }
 
 /// route_match builds the app table, matches (method, target) via the
 /// registry router and maps the registration index to the app route id.
-/// The table is rebuilt per call (16 registrations; negligible at current
+/// The table is rebuilt per call (18 registrations; negligible at current
 /// load and avoids module-global mutable struct state).
 /// Complexity: O(routes).
 pub fn route_match(method: Str, target: Str) -> PulseRoute {
@@ -201,6 +202,7 @@ pub fn route_match(method: Str, target: Str) -> PulseRoute {
   let _r15 = router.router_add(&mut t, "GET", "/");                 ids.push(15);
   let _r16 = router.router_add(&mut t, "POST", "/api/events/compact"); ids.push(16);
   let _r17 = router.router_add(&mut t, "GET", "/openapi.json");    ids.push(17);
+  let _r18 = router.router_add(&mut t, "POST", "/api/uploads");    ids.push(18);
 
   let rm = router.router_match(&t, method, path);
   if rm.code == 404 {

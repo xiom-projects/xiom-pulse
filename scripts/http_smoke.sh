@@ -71,7 +71,7 @@ LOG_DIR="$PULSE_REPO_ROOT/probe-logs"
 mkdir -p "$LOG_DIR"
 SERVER_LOG="$LOG_DIR/http-smoke.out"
 
-PULSE_CORS_ORIGIN='*' PULSE_PORT="$PORT" "$SERVER_EXE" >"$SERVER_LOG" 2>&1 &
+PULSE_CORS_ORIGIN='*' PULSE_PORT="$PORT" PULSE_UPLOAD_DIR="$LOG_DIR/smoke-uploads" "$SERVER_EXE" >"$SERVER_LOG" 2>&1 &
 SRV_PID=$!
 
 if ! wait_listen "$PORT" 10; then
@@ -294,6 +294,19 @@ R=$(http_get "/v1/api/events?limit=1")
 pulse_check "v1 events 200" "$R" "200 OK"
 R=$(http_get /v1/nope)
 pulse_check "v1 unknown 404" "$R" "404 Not Found"
+
+# --- 13d. Multipart upload (0.2) --------------------------------------------
+TF=/tmp/pulse-smoke-up.txt
+printf 'hello upload' > "$TF"
+R=$(curl -s -i -F "file=@$TF;type=text/plain" "$(pulse_base)/api/uploads")
+pulse_check "upload 200" "$R" "200 OK"
+pulse_check "upload stored" "$R" '"stored":1'
+pulse_check "upload original" "$R" '"original":"pulse-smoke-up.txt"'
+pulse_check "upload bytes" "$R" '"bytes":12'
+R=$(curl -s -i -H "Content-Type: multipart/form-data" --data-binary "nope" "$(pulse_base)/api/uploads")
+pulse_check "upload no boundary 415" "$R" "415 Unsupported Media Type"
+pulse_check "upload no boundary code" "$R" '"code":"unsupported_media_type"'
+rm -f "$TF"
 
 # --- 13. QUIT ---------------------------------------------------------------
 pulse_quit

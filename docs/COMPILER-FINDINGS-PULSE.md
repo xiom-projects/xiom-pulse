@@ -690,3 +690,25 @@ smoke 78/78. Two notes for this lane:
 - **For this lane:** the IR verification warning on Linux CI
   (`@llvm.memset.p0i8.i64` undefined under llvm-16, non-fatal) is filed
   with the darwin item above -- same root, now reproducible on Linux.
+
+## Delta 2026-10-10 (wrap 14, 0.2 slate) -- NEW C-PULSE-17: `io.list_dir` returns dangling names
+
+- On v0.64.2 (Windows lane stdlib AND Linux pinned `4dd8844`),
+  `xiom.io.list_dir(path)` returns entries that compare equal RIGHT
+  AFTER the call but whose bytes are backed by memory that later
+  allocations overwrite: concatenating/printing a listed name yields
+  decimal pointer-looking garbage (`shown=[[2483528924144]]`), and
+  `io.remove_file(io.join_paths(dir, listed_name))` fails because the
+  retained entry is clobbered by the time `join_paths` allocates.
+  Measured: `names_ok=true print_ok=false rm_ok=false`. In consumers
+  this shows up as flaky leftovers rather than a hard error; PULSE
+  root-caused it while adding multipart uploads (test cleanup left
+  files behind; a second run then saw stale counts).
+- **Repro:** `docs/repro/io-list-dir-dangling/probe.xi` (exit 1 =
+  reproduced, 0 = fixed once names compare `aa.txt`/`bb.txt`).
+  PULSE-side workaround adopted the same day: no `list_dir` in
+  production or tests -- generated names come from the response JSON and
+  are probed with `io.file_exists`/`read_file`/`remove_file`.
+- Everything else in the 0.2 uploads unit is green on both platforms
+  (suites x2 + smoke **119/119**, Linux pinned stdlib); nothing else
+  blocked.

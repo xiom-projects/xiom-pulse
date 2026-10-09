@@ -39,6 +39,7 @@ Remove-Item Env:PULSE_PORT -ErrorAction SilentlyContinue
 
 $env:PULSE_PORT = "$Port"
 $env:PULSE_CORS_ORIGIN = "*"
+$env:PULSE_UPLOAD_DIR = Join-Path $repoRoot "probe-logs\smoke-uploads"
 # Server stdout/stderr go to FILES (never pipes): the access log exceeds
 # the ~4 KiB pipe buffer after ~40 requests, and an undrained pipe blocks
 # the single-threaded server mid-loop (standing project lesson). Launched
@@ -327,6 +328,19 @@ $r = Invoke-CurlGet "/v1/api/events?limit=1"
 Check "v1 events 200" $r "200 OK"
 $r = Invoke-CurlGet "/v1/nope"
 Check "v1 unknown 404" $r "404 Not Found"
+
+# 13d. Multipart upload (0.2)
+$tf = Join-Path $env:TEMP "pulse-smoke-up.txt"
+Set-Content -LiteralPath $tf -Value "hello upload" -NoNewline -Encoding ascii
+$r = curl.exe -s -i -F "file=@$tf;type=text/plain" "$base/api/uploads" 2>&1 | Out-String
+Check "upload 200" $r "200 OK"
+Check "upload stored" $r '"stored":1'
+Check "upload original" $r '"original":"pulse-smoke-up.txt"'
+Check "upload bytes" $r '"bytes":12'
+Remove-Item -LiteralPath $tf -ErrorAction SilentlyContinue
+$r = curl.exe -s -i -H "Content-Type: multipart/form-data" --data-binary "nope" "$base/api/uploads" 2>&1 | Out-String
+Check "upload no boundary 415" $r "415 Unsupported Media Type"
+Check "upload no boundary code" $r '"code":"unsupported_media_type"'
 
 # 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1

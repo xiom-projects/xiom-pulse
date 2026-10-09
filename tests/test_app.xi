@@ -76,6 +76,18 @@ fn route_req_v1(method: Str, target: Str, body: Str) -> HandlerOut {
   return app.handle_route(m, &req, body);
 }
 
+fn json_field(body: Str, field: Str) -> Str {
+  // First "field":"value" string value in a small JSON body (upload names).
+  let needle = "\"" + field + "\":\"";
+  let idx = string.str_index_of(body, needle);
+  if idx.is_none { return ""; }
+  let start = idx.value + needle.len();
+  let rest = string.str_slice(body, start, body.len());
+  let end = string.str_index_of(rest, "\"");
+  if end.is_none { return ""; }
+  return string.str_slice(body, start, start + end.value);
+}
+
 pub fn main() -> Int {
   var f: Int = 0;
 
@@ -427,6 +439,53 @@ pub fn main() -> Int {
   f = f + check("v1 link preserves prefix", v1e.headers.len() == 1 && string.str_contains(v1e.headers[0].1, "</v1/api/events?"));
   let v1f = route_req_v1("GET", "/v1/favicon.ico", "");
   f = f + check("v1 favicon 200", v1f.status == 200 && v1f.body_bytes.len() > 1000);
+
+  // --- multipart uploads (0.2) ----------------------------------------------
+  // Unique dir per run so runs cannot contaminate each other.
+  let updir = sp + "-uploads-" + time.monotonic_ms().to_str();
+  env.set_var("PULSE_UPLOAD_DIR", updir);
+  let mp_body = "--B1\r\nContent-Disposition: form-data; name=\"file\"; filename=\"hello.txt\"\r\nContent-Type: text/plain\r\n\r\nhello world\r\n--B1\r\nContent-Disposition: form-data; name=\"note\"\r\n\r\nfield only\r\n--B1--\r\n";
+  let up1 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=B1\r\n", mp_body);
+  f = f + check("upload 200", up1.status == 200 && string.str_contains(up1.body, "\"stored\":1"));
+  f = f + check("upload original", string.str_contains(up1.body, "\"original\":\"hello.txt\""));
+  f = f + check("upload bytes", string.str_contains(up1.body, "\"bytes\":11"));
+  // NOTE: no io.list_dir anywhere -- C-PULSE-17 returns dangling names
+  // (docs/repro/io-list-dir-dangling). Generated names come from the
+  // response JSON and are probed with io.file_exists/read_file/remove_file.
+  let up1_name = json_field(up1.body, "name");
+  f = f + check("upload stored on disk", up1_name.len() > 0 && io.file_exists(io.join_paths(updir, up1_name)));
+  var up_text: Str = "";
+  if up1_name.len() > 0 {
+    let up_rf = io.read_file(io.join_paths(updir, up1_name));
+    if up_rf.is_ok {
+      up_text = up_rf.value;
+    }
+  }
+  f = f + check("upload content exact", up_text == "hello world");
+  f = f + check("upload generated name", string.str_contains(up1_name, "up-") && string.str_ends_with(up1_name, ".txt") && !string.str_contains(up1_name, "..") && !string.str_contains(up1_name, "/") && !string.str_contains(up1_name, "\\"));
+  let mp_trav = "--B2\r\nContent-Disposition: form-data; name=\"f\"; filename=\"..\\..\\evil.txt\"\r\n\r\nx\r\n--B2--\r\n";
+  let up2 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=B2\r\n", mp_trav);
+  f = f + check("upload traversal 200", up2.status == 200 && string.str_contains(up2.body, "evil.txt"));
+  let up2_name = json_field(up2.body, "name");
+  f = f + check("upload traversal stored safely", up2_name.len() > 0 && !string.str_contains(up2_name, "evil") && io.file_exists(io.join_paths(updir, up2_name)));
+  f = f + check("upload no escape", !io.file_exists(io.join_paths(updir, "evil.txt")) && !io.file_exists(io.join_paths(updir, "../evil.txt")));
+  let up3 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data\r\n", "nope");
+  f = f + check("upload no boundary 415", up3.status == 415 && string.str_contains(up3.body, "\"code\":\"unsupported_media_type\""));
+  let up4 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=B3\r\n", "no boundary here");
+  f = f + check("upload bad body 400", up4.status == 400 && string.str_contains(up4.body, "\"code\":\"boundary_not_found\""));
+  env.set_var("PULSE_UPLOAD_MAX_BYTES", "4");
+  let mp_big = "--B4\r\nContent-Disposition: form-data; name=\"f\"; filename=\"big.txt\"\r\n\r\n0123456789\r\n--B4--\r\n";
+  let up5 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=B4\r\n", mp_big);
+  f = f + check("upload part cap 413", up5.status == 413 && string.str_contains(up5.body, "\"code\":\"part_too_large\""));
+  env.remove_var("PULSE_UPLOAD_MAX_BYTES");
+  // cleanup by known names (the dir itself stays; gitignored)
+  if up1_name.len() > 0 {
+    let _ru1 = io.remove_file(io.join_paths(updir, up1_name));
+  }
+  if up2_name.len() > 0 {
+    let _ru2 = io.remove_file(io.join_paths(updir, up2_name));
+  }
+  env.remove_var("PULSE_UPLOAD_DIR");
   env.remove_var("PULSE_STORE_PATH");
   let rm1 = io.remove_file(sp);
   f = f + check("store cleanup", rm1.is_ok);
@@ -459,7 +518,14 @@ pub fn main() -> Int {
     rli = rli + 1;
   }
   f = f + check("routes list has openapi", has_openapi);
-  f = f + check("routes list size", rl.len() == 17);
+  var has_uploads: Bool = false;
+  var rli2: Int = 0;
+  while rli2 < rl.len() {
+    if rl[rli2].0 == "POST" && rl[rli2].1 == "/api/uploads" { has_uploads = true; }
+    rli2 = rli2 + 1;
+  }
+  f = f + check("routes list has uploads", has_uploads);
+  f = f + check("routes list size", rl.len() == 18);
 
   // --- additive error status field (0.2) -------------------------------------
   let nf = route_req("GET", "/nope", "");

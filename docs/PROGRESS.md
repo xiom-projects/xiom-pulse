@@ -198,6 +198,26 @@ until the `--c-source` build hook -- so the libcurl half is isolated in
 refreshed in the package wishlist. Roadmap 0.2: multipart uploads
 remain. Score holds (~55.4%)._
 
+_Delta 2026-10-10 (0.2 multipart): **multipart uploads** -- new
+`POST /api/uploads` surface (reachable at `/v1/api/uploads`) parses
+`multipart/form-data` in the new `xiom.pulse.multipart` module (caps:
+`PULSE_UPLOAD_MAX_BYTES` default 1 MiB per part, `PULSE_UPLOAD_MAX_PARTS`
+default 8; the HTTP core's decoded-body cap still bounds the whole
+request). Files land in `PULSE_UPLOAD_DIR` under generated names --
+client filenames are never path components, only a sanitized extension
+survives -- and the response lists name/original/bytes/content_type.
+Stable errors: 415 `unsupported_media_type`, 400 `boundary_not_found` /
+`malformed`, 413 `part_too_large` / `too_many_parts`. Found + filed
+**C-PULSE-17** while testing: `io.list_dir` returns dangling names on
+v0.64.2 (right `len`, corrupted bytes; cleanup deletes silently fail) --
+repro `docs/repro/io-list-dir-dangling/`, workaround = no list_dir in
+PULSE code (generated names from the response; `file_exists` probes).
+test_app +12 checks; smoke 113 -> **119/119** on both platforms (Linux
+pinned-stdlib). **Roadmap 0.2 PULSE-side slate complete** (API contract,
+CLI, HTTP client base, uploads) -- remaining are upstream gates
+(C-PULSE-14/16, darwin runtime-C) and the release cut. Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

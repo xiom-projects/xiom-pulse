@@ -124,7 +124,10 @@ When a compiler/stdlib pairing carries all three: set
    guard + `probe_outbound_guard` in the fleet; the libcurl transport
    seam (`src/outbound_transport.xi`) adopts once the package
    `--c-source` build hook is ergonomic.)**
-4. **Multipart uploads** (PULSE-side parsing + caps).
+4. **Multipart uploads** (PULSE-side parsing + caps). **(DONE
+   2026-10-10: `POST /api/uploads` + `/v1` alias; `xiom.pulse.multipart`
+   parser; per-part/part-count caps; generated names; smoke 119/119 both
+   platforms. C-PULSE-17 (`io.list_dir`) found + worked around.)**
 5. Docs/public-set refresh; version-bump checklist run (SESSION
    gotchas) with the pinned stdlib before tagging.
 

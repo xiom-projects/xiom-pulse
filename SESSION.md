@@ -64,9 +64,12 @@
   client base** (`xiom.http` **0.1.4**, SSRF guard
   `xiom.pulse.outbound` + `probe_outbound_guard` in the fleet;
   libcurl transport seam isolated pending the `--c-source` build hook);
-  fleet **12/12**, smoke **113/113** on both platforms (Linux run with
-  the pinned stdlib). NEXT -- multipart uploads; then docs refresh + the
-  0.2.0 cut.
+  **multipart uploads** (`POST /api/uploads` + `/v1` alias; PULSE-side
+  parser, per-part/part-count caps, generated on-disk names, stable
+  415/400/413 errors); fleet **12/12**, smoke **119/119** on both
+  platforms (Linux run with the pinned stdlib). **The 0.2 PULSE-side
+  slate is COMPLETE** -- next: docs/public-set refresh, then the 0.2.0
+  cut when macOS is green (upstream gates below).
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
   (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
   (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14
@@ -74,12 +77,15 @@
   steady; worse than v0.64.1)** -- retest on the next archive;
   **C-PULSE-16 OPEN** (`PULSE_BIND` advisory; address-aware bind filed;
   demo firewalled); C-PULSE-12 open (rename workaround used twice;
-  import-alias syntax ask).
+  import-alias syntax ask); **C-PULSE-17 NEW** (`io.list_dir` returns
+  dangling names on v0.64.2 -- repro
+  `docs/repro/io-list-dir-dangling/`; PULSE avoids list_dir entirely).
 - **Score:** ~55.4% production grade (`docs/PROGRESS.md`).
 - **Stores:** jsonl = default; kv = verified opt-in both platforms
   (20m + 45m Linux soaks); flip still gated on the recorded
-  prerequisites. **`xiom.http` 0.1.2 in-repo (0.1.4 client available --
-  bump in the 0.2 client unit);** all ten package gates green.
+  prerequisites. **`xiom.http` 0.1.4 in-repo** (bumped in the 0.2
+  outbound unit; client calls still need the `--c-source` bridge, see
+  the wishlist); all ten package gates green.
 - **Wrap 4 (chunked + manifest + soak):** `Transfer-Encoding: chunked`
   REQUEST decoding landed (caps, extensions ignored, trailers validated;
   TE+CL -> 400; other codings -> 501) with smoke **76/76** on both
