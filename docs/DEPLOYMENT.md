@@ -38,7 +38,7 @@ flowchart LR
 | `PULSE_RATE_LIMIT` | `0` | global req/s cap; `0` = off |
 | `PULSE_RATE_BURST` | = limit | token-bucket capacity |
 | `PULSE_CSRF` | `1` | `0` disables CSRF checks |
-| `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS origin allowlist |
+| `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS allowlist (comma-separated; `*` = any) |
 
 Invalid values warn at startup and in `--check-config` (they fall back to
 the defaults above).

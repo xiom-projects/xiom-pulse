@@ -17,6 +17,7 @@ use xiom.pulse.http;
 use xiom.pulse.router;
 use xiom.pulse.envelope;
 use xiom.pulse.config;
+use xiom.pulse.cors;
 use xiom.pulse.metrics;
 use xiom.pulse.session;
 use xiom.pulse.store;
@@ -139,6 +140,16 @@ pub fn main() -> Int {
   env.remove_var("PULSE_CSRF");
   env.remove_var("PULSE_SESSION_TTL");
   env.remove_var("PULSE_RATE_LIMIT");
+
+  // --- CORS allowlist (comma-separated) -------------------------------------
+  env.set_var("PULSE_CORS_ORIGIN", "https://pulse.xiom-lang.org, https://xiom-lang.org");
+  f = f + check("cors list first", cors.cors_allow_origin("https://pulse.xiom-lang.org") == "https://pulse.xiom-lang.org");
+  f = f + check("cors list second", cors.cors_allow_origin("https://xiom-lang.org") == "https://xiom-lang.org");
+  f = f + check("cors list reject", cors.cors_allow_origin("https://evil.test") == "");
+  env.set_var("PULSE_CORS_ORIGIN", "*");
+  f = f + check("cors star", cors.cors_allow_origin("https://any.test") == "*");
+  env.remove_var("PULSE_CORS_ORIGIN");
+  f = f + check("cors off", cors.cors_allow_origin("https://any.test") == "");
 
   // --- metrics -------------------------------------------------------------
   metrics.metrics_reset();
