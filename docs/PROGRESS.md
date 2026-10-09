@@ -158,6 +158,18 @@ empty with redirection); `check` needles are wildcard-escaped.
 Roadmap 0.2 item 1: pagination done -- idempotency keys and `/v1` next.
 Score holds (~55.4%)._
 
+_Delta 2026-10-10 (0.2 idempotency): **idempotency keys on event
+writes** -- `POST /api/events` accepts `Idempotency-Key` (1-200 visible
+bytes, else `400 invalid_idempotency_key`). A known key replays the
+stored `seq` with `"deduplicated":true` and appends nothing; the marker
+lives inside the event record (`idem`, JSON-escaped), so the guarantee
+is durable and backend-agnostic (scan-based lookup, O(n) like the other
+store reads). Responses carry `seq` now; keyed events list like any
+other event. test_app +11 checks; smoke 100 -> **107/107** on both
+platforms (Linux pinned-stdlib). Roadmap 0.2 item 1: idempotency done --
+`/v1`, the SSRF-guarded HTTP client and multipart remain. Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

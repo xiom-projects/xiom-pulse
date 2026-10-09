@@ -19,6 +19,12 @@ GitHub release body.
   (the `kind` filter is preserved, percent-encoded). `?before=K` walks
   backwards; a malformed cursor is `400 invalid_cursor`. Identical
   behavior on the JSONL and kv backends.
+- **Idempotency keys on event writes**: `POST /api/events` accepts an
+  optional `Idempotency-Key` header (1-200 visible characters). A retry
+  with a stored key replays the original `seq` with `"deduplicated":true`
+  and appends nothing -- the marker lives inside the event record, so the
+  guarantee is durable on both backends. Malformed keys are
+  `400 invalid_idempotency_key`. Responses also carry `seq` now.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).

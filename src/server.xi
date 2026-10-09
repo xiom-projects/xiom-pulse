@@ -98,6 +98,19 @@ fn error_status_body(status: Int, body: Str) -> Str {
   return body;
 }
 
+/// idem_key_valid guards the Idempotency-Key header: 1-200 bytes, no
+/// control characters. Complexity: O(key). Pure.
+fn idem_key_valid(s: Str) -> Bool {
+  if s.len() < 1 || s.len() > 200 { return false; }
+  var i: Int = 0;
+  while i < s.len() {
+    let b = s.byte_at(i);
+    if b < 32u8 || b == 127u8 { return false; }
+    i = i + 1;
+  }
+  return true;
+}
+
 fn out_json(status: Int, body: Str) -> HandlerOut {
   return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: Vec[(Str, Str)].new(); body: error_status_body(status, body); body_bytes: Vec[UInt8].new(); };
 }
@@ -291,13 +304,27 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     if !validate.is_json_object(body) {
       return out_json(400, envelope.error_body("invalid_json", "body must be a JSON object"));
     }
+    // Idempotency (0.2): an Idempotency-Key header makes retries safe --
+    // a known key replays the stored seq with deduplicated=true instead
+    // of appending a second event.
+    let idem = http.header_get(req, "idempotency-key");
+    if idem.len() > 0 && !idem_key_valid(idem) {
+      return out_json(400, envelope.error_body("invalid_idempotency_key", "Idempotency-Key must be 1-200 visible characters"));
+    }
     let path = config.cfg_store_path();
-    if !store.store_append_event(path, body) {
+    if idem.len() > 0 {
+      let exist = store.store_find_idem(path, idem);
+      if exist > 0 {
+        let c = store.store_count(path);
+        return out_json(200, "{\"stored\":true,\"count\":" + convert.int_to_string(c) + ",\"seq\":" + convert.int_to_string(exist) + ",\"deduplicated\":true}");
+      }
+    }
+    let seq = store.store_append_event_keyed(path, body, idem);
+    if seq == 0 {
       return out_json(500, envelope.error_body("store_error", "append failed"));
     }
-    var v = json.json_set(json.json_object_new(), "stored", json.json_bool(true));
-    v = json.json_set(v, "count", json.json_number(convert.int_to_float(store.store_count(path))));
-    return out_json(200, json.json_stringify(v));
+    let c = store.store_count(path);
+    return out_json(200, "{\"stored\":true,\"count\":" + convert.int_to_string(c) + ",\"seq\":" + convert.int_to_string(seq) + "}");
   }
   if m.route_id == 12 {
     let n = store.store_count(config.cfg_store_path());

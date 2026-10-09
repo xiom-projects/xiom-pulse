@@ -222,6 +222,25 @@ R=$(http_get "/api/events?before=xyz")
 pulse_check "paginate bad cursor 400" "$R" "400 Bad Request"
 pulse_check "paginate bad cursor code" "$R" '"code":"invalid_cursor"'
 
+# --- 11c. Idempotency keys on event writes (0.2) ----------------------------
+R1=$(post_json /api/events '{"kind":"idem","n":1}' -H 'Idempotency-Key: smoke-idem-1')
+pulse_check "idem first 200" "$R1" "200 OK"
+pulse_check "idem first seq" "$R1" '"seq":'
+R2=$(post_json /api/events '{"kind":"idem","n":1}' -H 'Idempotency-Key: smoke-idem-1')
+pulse_check "idem replay 200" "$R2" "200 OK"
+pulse_check "idem replay dedup" "$R2" '"deduplicated":true'
+C1=$(printf '%s' "$R1" | grep -oE '"count":[0-9]+' | head -n 1 | cut -d: -f2)
+C2=$(printf '%s' "$R2" | grep -oE '"count":[0-9]+' | head -n 1 | cut -d: -f2)
+if [ -n "$C1" ] && [ "$C1" = "$C2" ]; then
+  pulse_check "idem replay count stable" yes yes
+else
+  pulse_check "idem replay count stable" "c1=$C1 c2=$C2" yes
+fi
+LONGKEY=$(printf 'a%.0s' $(seq 1 201))
+R=$(post_json /api/events '{"kind":"idem"}' -H "Idempotency-Key: $LONGKEY")
+pulse_check "idem bad key 400" "$R" "400 Bad Request"
+pulse_check "idem bad key code" "$R" '"code":"invalid_idempotency_key"'
+
 R=$(post_empty /api/events/compact)
 pulse_check "events compact 200" "$R" "200 OK"
 pulse_check "events compact ok" "$R" '"ok":true'

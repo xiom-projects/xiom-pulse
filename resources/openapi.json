@@ -170,14 +170,17 @@
       },
       "post": {
         "tags": ["events"],
-        "summary": "Append an event (audited)",
+        "summary": "Append an event (audited; Idempotency-Key supported)",
         "operationId": "postEvents",
+        "parameters": [
+          { "name": "Idempotency-Key", "in": "header", "description": "Optional retry-safety key (1-200 visible chars). A request whose key was already stored replays the original seq with deduplicated=true and appends nothing.", "schema": { "type": "string", "minLength": 1, "maxLength": 200 } }
+        ],
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "type": "object", "properties": { "kind": { "type": "string" }, "body": {} } } } }
         },
         "responses": {
-          "200": { "description": "Stored event", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Event" } } } },
+          "200": { "description": "Stored event", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EventStored" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "413": { "$ref": "#/components/responses/PayloadTooLarge" }
         }
@@ -279,7 +282,8 @@
       "Me": { "type": "object", "properties": { "user": { "type": "string" } } },
       "Token": { "type": "object", "properties": { "token": { "type": "string" } } },
       "TokenVerify": { "type": "object", "properties": { "valid": { "type": "boolean" }, "sub": { "type": "string" } } },
-      "Event": { "type": "object", "properties": { "seq": { "type": "integer" }, "kind": { "type": "string" }, "body": {} } },
+      "Event": { "type": "object", "properties": { "kind": { "type": "string", "const": "event" }, "seq": { "type": "integer", "description": "Durable sequence cursor (pagination)" }, "idem": { "type": "string", "description": "Idempotency marker when the write carried a key" }, "ts": { "type": "integer" }, "data": {} } },
+      "EventStored": { "type": "object", "properties": { "stored": { "type": "boolean" }, "count": { "type": "integer" }, "seq": { "type": "integer" }, "deduplicated": { "type": "boolean", "description": "true when the Idempotency-Key was already stored; nothing was appended" } } },
       "EventsList": { "type": "object", "properties": { "events": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } }, "count": { "type": "integer" }, "next_cursor": { "type": "integer", "description": "0 when no older page exists; pass as ?before= to fetch it" } } },
       "Count": { "type": "object", "required": ["count"], "properties": { "count": { "type": "integer" } } },
       "Error": {

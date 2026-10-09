@@ -241,21 +241,41 @@ fn store_max_seq(path: Str) -> Int {
   return m;
 }
 
+/// build_event_record renders one event record, embedding the idempotency
+/// key (JSON-escaped) when non-empty. Complexity: O(body). Pure.
+fn build_event_record(seq: Int, ts: Int, key: Str, body_json: Str) -> Str {
+  var rec: Str = "{\"kind\":\"event\",\"seq\":" + convert.int_to_string(seq);
+  if key.len() > 0 {
+    rec = rec + ",\"idem\":" + json.json_stringify(json.json_string(key));
+  }
+  rec = rec + ",\"ts\":" + convert.int_to_string(ts) + ",\"data\":" + body_json + "}";
+  return rec;
+}
+
+/// store_append_event_keyed appends one event, embedding `key` as the
+/// idempotency marker ("": plain event); returns the assigned sequence
+/// (0 on failure). The caller checks store_find_idem first when it wants
+/// deduplication. Complexity: O(n) jsonl / O(1) kv.
+pub fn store_append_event_keyed(path: Str, body_json: Str, key: Str) -> Int {
+  var seq: Int = 0;
+  if backend_kv() {
+    if !kv_ensure() { return 0; }
+    seq = g_seq + 1;
+  } else {
+    seq = store_max_seq(path) + 1;
+  }
+  let rec = build_event_record(seq, time.unix_timestamp(), key, body_json);
+  if !store_append(path, rec) { return 0; }
+  return seq;
+}
+
 /// store_append_event appends
 /// `{"kind":"event","seq":N,"ts":<unix>,"data":<body>}`; the sequence cursor
 /// is durable in the record (kv keys mirror it; JSONL derives N from the
 /// current maximum). `body_json` must already be valid JSON. Complexity:
 /// O(n) jsonl / O(1) kv.
 pub fn store_append_event(path: Str, body_json: Str) -> Bool {
-  var seq: Int = 0;
-  if backend_kv() {
-    if !kv_ensure() { return false; }
-    seq = g_seq + 1;
-  } else {
-    seq = store_max_seq(path) + 1;
-  }
-  let rec = "{\"kind\":\"event\",\"seq\":" + convert.int_to_string(seq) + ",\"ts\":" + time.unix_timestamp().to_str() + ",\"data\":" + body_json + "}";
-  return store_append(path, rec);
+  return store_append_event_keyed(path, body_json, "") > 0;
 }
 
 /// store_compact drops invalid records. jsonl: temp file + atomic replace
@@ -306,6 +326,37 @@ fn record_kind(rec: Str) -> Str {
     _ => { return ""; },
   }
   return ks;
+}
+
+/// store_find_idem returns the effective sequence of the event whose
+/// idempotency key equals `key` (0 when absent or `key` is empty).
+/// Complexity: O(n).
+pub fn store_find_idem(path: Str, key: Str) -> Int {
+  if key.len() == 0 { return 0; }
+  let all = store_valid_records(path);
+  var i: Int = all.len() - 1;
+  while i >= 0 {
+    let rec = all[i];
+    let pv = json.json_parse(rec);
+    if pv.is_ok {
+      let iopt = json.json_get(pv.value, "idem");
+      if !iopt.is_none {
+        let iv = iopt.value;
+        var is_match: Bool = false;
+        match iv {
+          JsonValue.String(x) => {
+            if x == key { is_match = true; }
+          },
+          _ => {},
+        }
+        if is_match {
+          return effective_seq(rec, i + 1);
+        }
+      }
+    }
+    i = i - 1;
+  }
+  return 0;
 }
 
 /// store_page returns up to `limit` records older than the `before` cursor

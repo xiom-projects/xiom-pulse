@@ -38,7 +38,7 @@ mirrored additively:
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/events` | append an event (audited) |
+| POST | `/api/events` | append an event (audited; optional `Idempotency-Key`) |
 | GET | `/api/events` | list; `?limit=1..100`, `?kind=`, `?before=` (pagination) |
 | GET | `/api/events/count` | `{"count":N}` |
 | POST | `/api/events/compact` | rewrite without torn lines |
@@ -59,6 +59,15 @@ Link: </api/events?limit=10&before=42>; rel="next"
 Follow it (or call `?before=<next_cursor>` yourself; `kind` is preserved
 in the link) until `next_cursor` is `0`. A malformed cursor is rejected
 `400` with code `invalid_cursor`. Both store backends page identically.
+
+### Idempotent writes
+
+`POST /api/events` accepts an optional `Idempotency-Key` header (1-200
+visible characters). Repeating a request with the same key does not
+append a second event: the original sequence is replayed with
+`"deduplicated":true` and the count stays unchanged. The key is stored
+inside the event record (`idem`), so the guarantee survives restarts on
+both backends; a malformed key is `400 invalid_idempotency_key`.
 
 ## Request limits and semantics
 

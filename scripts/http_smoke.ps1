@@ -258,6 +258,21 @@ $r = Invoke-CurlGet "/api/events?before=xyz"
 Check "paginate bad cursor 400" $r "400 Bad Request"
 Check "paginate bad cursor code" $r '"code":"invalid_cursor"'
 
+# 11c. Idempotency keys on event writes (0.2)
+$r1 = Invoke-CurlPost "/api/events" '{"kind":"idem","n":1}' -ExtraHeaders @("-H", "Idempotency-Key: smoke-idem-1")
+Check "idem first 200" $r1 "200 OK"
+Check "idem first seq" $r1 '"seq":'
+$r2 = Invoke-CurlPost "/api/events" '{"kind":"idem","n":1}' -ExtraHeaders @("-H", "Idempotency-Key: smoke-idem-1")
+Check "idem replay 200" $r2 "200 OK"
+Check "idem replay dedup" $r2 '"deduplicated":true'
+$c1 = [regex]::Match($r1, '"count":(\d+)').Groups[1].Value
+$c2 = [regex]::Match($r2, '"count":(\d+)').Groups[1].Value
+if ($c1 -and $c2 -and ($c1 -eq $c2)) { Check "idem replay count stable" "yes" "yes" } else { Check "idem replay count stable" "c1=$c1 c2=$c2" "yes" }
+$longKey = "a" * 201
+$r = Invoke-CurlPost "/api/events" '{"kind":"idem"}' -ExtraHeaders @("-H", "Idempotency-Key: $longKey")
+Check "idem bad key 400" $r "400 Bad Request"
+Check "idem bad key code" $r '"code":"invalid_idempotency_key"'
+
 $r = Invoke-CurlPost "/api/events/compact" ""
 Check "events compact 200" $r "200 OK"
 Check "events compact ok" $r '"ok":true'

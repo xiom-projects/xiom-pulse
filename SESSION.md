@@ -56,10 +56,13 @@
   icon adopted + embedded; **pagination `Link` on `GET /api/events`**
   (seq-in-record cursor: durable `seq`, legacy fallback ordinal,
   `next_cursor` + RFC 8288 `Link rel="next"`, `?before=` walk-back,
-  `400 invalid_cursor`); smoke **100/100** on both platforms (Linux run
-  with the pinned stdlib). NEXT -- idempotency keys on event writes,
-  `/v1` on new surfaces, `xiom.http` 0.1.4 + SSRF-guarded client wrapper
-  (+ probe), multipart uploads; then docs refresh + the 0.2.0 cut.
+  `400 invalid_cursor`); **idempotency keys on event writes**
+  (`Idempotency-Key` header, durable `idem` marker in the record, replay
+  with `deduplicated:true`, `400 invalid_idempotency_key`); smoke
+  **107/107** on both platforms (Linux run with the pinned stdlib).
+  NEXT -- `/v1` on new surfaces, `xiom.http` 0.1.4 + SSRF-guarded client
+  wrapper (+ probe), multipart uploads; then docs refresh + the 0.2.0
+  cut.
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
   (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
   (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14

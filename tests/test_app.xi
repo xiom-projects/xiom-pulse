@@ -58,6 +58,15 @@ fn route_req_hdr(method: Str, target: Str, headers: Str, body: Str) -> HandlerOu
   return app.handle_route(m, &req, decoded);
 }
 
+fn route_req_hdr_cl(method: Str, target: Str, headers: Str, body: Str) -> HandlerOut {
+  // Custom headers + a proper Content-Length body (idempotency tests).
+  let raw_str = method + " " + target + " HTTP/1.1\r\nHost: t\r\n" + headers + "Content-Length: " + body.len().to_str() + "\r\n\r\n" + body;
+  let raw = http.str_to_bytes(raw_str);
+  let req = http.parse_request(&raw);
+  let m = router.route_match(method, target);
+  return app.handle_route(m, &req, body);
+}
+
 pub fn main() -> Int {
   var f: Int = 0;
 
@@ -368,6 +377,31 @@ pub fn main() -> Int {
   f = f + check("paginate bad cursor 400", pgbad.status == 400 && string.str_contains(pgbad.body, "\"code\":\"invalid_cursor\""));
   let pg0 = route_req("GET", "/api/events?before=1", "");
   f = f + check("paginate oldest cursor empty", pg0.status == 200 && string.str_contains(pg0.body, "\"events\":[]"));
+
+  // --- idempotency keys (0.2) -----------------------------------------------
+  let c_before = store.store_count(sp);
+  let idem1 = route_req_hdr_cl("POST", "/api/events", "Idempotency-Key: itest-1\r\n", "{\"kind\":\"idem\",\"n\":1}");
+  f = f + check("idem first 200", idem1.status == 200 && string.str_contains(idem1.body, "\"stored\":true"));
+  f = f + check("idem first seq", string.str_contains(idem1.body, "\"seq\":"));
+  f = f + check("idem first appended", store.store_count(sp) == c_before + 1);
+  f = f + check("idem find", store.store_find_idem(sp, "itest-1") > 0);
+  let idem2 = route_req_hdr_cl("POST", "/api/events", "Idempotency-Key: itest-1\r\n", "{\"kind\":\"idem\",\"n\":1}");
+  f = f + check("idem replay 200", idem2.status == 200);
+  f = f + check("idem replay dedup", string.str_contains(idem2.body, "\"deduplicated\":true"));
+  f = f + check("idem replay no append", store.store_count(sp) == c_before + 1);
+  let idem3 = route_req_hdr_cl("POST", "/api/events", "Idempotency-Key: itest-2\r\n", "{\"kind\":\"idem\",\"n\":2}");
+  f = f + check("idem new key appends", idem3.status == 200 && store.store_count(sp) == c_before + 2);
+  var longkey: Str = "";
+  var lki: Int = 0;
+  while lki < 201 {
+    longkey = longkey + "a";
+    lki = lki + 1;
+  }
+  let idem_bad = route_req_hdr_cl("POST", "/api/events", "Idempotency-Key: " + longkey + "\r\n", "{\"kind\":\"idem\"}");
+  f = f + check("idem long key 400", idem_bad.status == 400 && string.str_contains(idem_bad.body, "\"code\":\"invalid_idempotency_key\""));
+  f = f + check("idem bad key no append", store.store_count(sp) == c_before + 2);
+  let idem_list = route_req("GET", "/api/events?kind=idem", "");
+  f = f + check("idem events listed", idem_list.status == 200 && string.str_contains(idem_list.body, "\"idem\":\"itest-1\""));
   env.remove_var("PULSE_STORE_PATH");
   let rm1 = io.remove_file(sp);
   f = f + check("store cleanup", rm1.is_ok);
