@@ -137,7 +137,10 @@
   matrix macos-x64/macos-arm64 with suites x2 + smoke; portability: lsof
   `wait_listen` fallback, `timeout`/`gtimeout` watchdog fallback,
   `pulse_sha256` sha256sum/shasum helper, `release.sh` OS detection ->
-  `pulse-<ver>-macos-<arch>.zip`; dry-run validates before any tag).
+  `pulse-<ver>-macos-<arch>.zip`; the first dry run surfaced upstream
+  darwin blockers (runtime C `_SC_AVPHYS_PAGES`, arm64 x86 asm, a
+  codegen intrinsic -- all filed), so the legs are gated behind
+  `RELEASE_BUILD_MACOS` and the next release is not blocked).
   **C-PULSE-16 filed:** ops verified `PULSE_BIND` is not enforced (stdlib
   wildcard bind; local repro LISTEN `0.0.0.0`); demo firewalled;
   address-aware bind filed upstream; fix + LISTEN-address smoke check

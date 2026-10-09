@@ -254,5 +254,8 @@ right now. When greenlit, ops executes the following (already specified):
    compiler/stdlib lane). Keep the host firewall + proxy-only exposure,
    as verified on the demo. PULSE will enforce loopback and add a
    LISTEN-address smoke check once the primitive lands; per the owner,
-   no re-cut of 0.1.0 -- the fix ships with the next release (together
-   with macOS x64/arm64 artifacts, which are prepared in the workflow).
+   no re-cut of 0.1.0 -- the fix ships with the next release (macOS
+   x64/arm64 legs are prepared but gated behind the `RELEASE_BUILD_MACOS`
+   variable: the 2026-10-09 dry run hit upstream darwin blockers -- the
+   runtime C `_SC_AVPHYS_PAGES`, arm64 x86 inline asm, and a codegen
+   intrinsic issue; all filed, enable the variable when they clear).

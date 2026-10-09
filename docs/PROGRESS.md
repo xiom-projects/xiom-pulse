@@ -82,7 +82,11 @@ action, PR gates, tag releases that cut pulse-v0.1.0 end-to-end with
 provenance, weekly heavy soaks; macOS x64/arm64 legs prepared for the
 next release with the portability fixes: lsof wait_listen fallback,
 timeout/gtimeout watchdog fallback, sha256sum/shasum helper,
-`pulse-<ver>-macos-<arch>.zip`). **C-PULSE-16 filed:** the ops-verified
+`pulse-<ver>-macos-<arch>.zip`); the first macOS dry run hit upstream
+darwin blockers (runtime C `_SC_AVPHYS_PAGES`, arm64 x86 asm, a codegen
+intrinsic; filed), so the macOS legs are gated behind
+`RELEASE_BUILD_MACOS` and the next release is not blocked. **C-PULSE-16
+filed:** the ops-verified
 `PULSE_BIND` gap (stdlib `socket_bind` wildcard-only; repro LISTEN
 `0.0.0.0`); address-aware bind filed upstream, firewall mitigation
 verified on the demo; fix + LISTEN-address smoke check ship with the
@@ -202,7 +206,7 @@ fallbacks._
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
 | 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14 cross-platform request-path RSS growth (~32 KB/req Windows, ~48 KB/req Linux) -- all "flat memory" soak numbers invalidated by the cmd-wrapper sampling bug (fixed, wrap 6)**; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 88% | 4.4 | suites+smoke (78) on **Windows and Linux**; twins everywhere; **CI live (wrap 7): PR gates + SHA-pinned release workflow cut 0.1.0 end-to-end + weekly heavy soaks; macOS legs prepared (next release)**; soak sampler fix + rss_probe twins; release packager + backup tooling; Dockerfile verified |
+| 12 | Testing / CI / release | 5% | 88% | 4.4 | suites+smoke (78) on **Windows and Linux**; twins everywhere; **CI live (wrap 7): PR gates + SHA-pinned release workflow cut 0.1.0 end-to-end + weekly heavy soaks; macOS legs prepared, gated on upstream darwin fixes**; soak sampler fix + rss_probe twins; release packager + backup tooling; Dockerfile verified |
 | | **Total** | **100%** | | **55.4** | |
 
 Two lenses to keep separate:

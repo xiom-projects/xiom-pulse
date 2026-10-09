@@ -91,10 +91,6 @@ jobs:
             os: ubuntu-latest
           - platform: windows-x64
             os: windows-latest
-          - platform: macos-x64
-            os: macos-15-intel
-          - platform: macos-arm64
-            os: macos-14
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -113,23 +109,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
-
-      - name: Build (macOS)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
-
-      - name: "Fleet (macOS: suites x2 + smoke)"
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          for r in 1 2; do
-            for s in test_http test_app test_smoke; do
-              bash scripts/run.sh "tests/$s.xi" --quiet --timeout-sec 300
-            done
-          done
-          bash scripts/http_smoke.sh --port 18090
 
       - name: "Fleet (Linux: suites x2, smoke, rate, crash, kv store soak)"
         if: runner.os == 'Linux'
@@ -170,16 +149,6 @@ jobs:
           bash scripts/release.sh --no-build --version "${RELEASE_VERSION}"
           ls -l dist/
 
-      - name: "Package (macOS)"
-        if: runner.os == 'macOS'
-        shell: bash
-        env:
-          RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && inputs.version || needs.guard.outputs.version }}
-        run: |
-          set -euo pipefail
-          bash scripts/release.sh --no-build --version "${RELEASE_VERSION}"
-          ls -l dist/
-
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -202,10 +171,79 @@ jobs:
         with:
           subject-path: "dist/pulse-*.zip"
 
+  # macOS is opt-in until the toolchain/stdlib darwin blockers clear (the
+  # 2026-10-09 dry run: stdlib runtime `_SC_AVPHYS_PAGES` is Linux-only,
+  # fp128_helpers.c carries x86 inline asm on arm64, and the darwin target
+  # hits an `llvm.memset.p0i8.i64` codegen error -- all filed upstream).
+  # Enable with: gh variable set RELEASE_BUILD_MACOS --body true
+  # The release job below tolerates this job being skipped.
+  build-macos:
+    name: package ${{ matrix.platform }}
+    if: vars.RELEASE_BUILD_MACOS == 'true'
+    needs: [guard]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-x64
+            os: macos-15-intel
+          - platform: macos-arm64
+            os: macos-14
+    steps:
+      - name: Checkout PULSE
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup XIOM (toolchain + stdlib + deps)
+        uses: ./.github/actions/setup-xiom
+        with:
+          cross-repo-token: ${{ secrets.XIOM_CROSS_REPO_TOKEN || github.token }}
+
+      - name: Build (macOS)
+        shell: bash
+        run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
+
+      - name: "Fleet (macOS: suites x2 + smoke)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          for r in 1 2; do
+            for s in test_http test_app test_smoke; do
+              bash scripts/run.sh "tests/$s.xi" --quiet --timeout-sec 300
+            done
+          done
+          bash scripts/http_smoke.sh --port 18090
+
+      - name: Package (macOS)
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && inputs.version || needs.guard.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash scripts/release.sh --no-build --version "${RELEASE_VERSION}"
+          ls -l dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pulse-${{ matrix.platform }}-${{ github.run_id }}
+          path: |
+            dist/pulse-*.zip
+            dist/pulse-*.zip.sha256
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: "dist/pulse-*.zip"
+
   release:
     name: publish GitHub Release
     if: startsWith(github.ref, 'refs/tags/pulse-v') && !failure() && !cancelled()
-    needs: [build]
+    needs: [build, build-macos]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts

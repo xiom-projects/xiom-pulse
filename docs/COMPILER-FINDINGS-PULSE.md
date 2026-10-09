@@ -559,3 +559,23 @@ outside a function body would be safer for consumers.
   PULSE verification plan in `docs/STDLIB-WISHLIST-PULSE.md`, wrap-8
   row). PULSE adds a smoke check asserting the LISTEN socket's local
   address once the primitive lands (next release).
+
+## Delta 2026-10-09 (wrap 8b) -- PULSE macOS build blocked upstream (dry-run evidence)
+
+The first four-platform release dry run (workflow_dispatch, no release)
+was green on linux-x64 + windows-x64 and failed both macOS legs at the
+build step, all upstream:
+
+- `stdlib/runtime/xiom_runtime.c:4222`: `_SC_AVPHYS_PAGES` is undeclared
+  on darwin (Linux-only sysconf constant) -- hits x64 and arm64.
+- `stdlib/runtime/fp128_helpers.c`: x86 inline asm (`leaq`/`movq`)
+  compiled on arm64 -- needs an arch guard or an arm64 path.
+- darwin codegen (arm64 log): `use of undefined value
+  '@llvm.memset.p0i8.i64'` -- the intrinsic declaration is missing on the
+  darwin target.
+
+PULSE's macOS release legs are now gated behind the repository variable
+`RELEASE_BUILD_MACOS` (skipped by default; the release job tolerates the
+skip, mirroring the xiom workflow), so the next tag is not blocked.
+Re-running the dry run with `gh variable set RELEASE_BUILD_MACOS --body
+true` is the acceptance test once these clear.

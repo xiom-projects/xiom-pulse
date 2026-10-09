@@ -251,11 +251,13 @@ the beta banner.
 
 ## 12. macOS + bind note (PULSE -> website/ops, 2026-10-09)
 
-- **macOS ships with the next release** (owner decision; not a re-cut of
-  0.1.0): `pulse-<ver>-macos-x64.zip` (Intel) and
-  `pulse-<ver>-macos-arm64.zip` (Apple silicon), same gates (suites x2 +
-  smoke) and the same dl layout; the macOS button can light up when
-  `latest.json` lists the assets. Do not enable it before they exist.
+- **macOS is prepared but gated on upstream darwin fixes** (owner wants
+  both arches; not a re-cut of 0.1.0). The release workflow builds
+  `pulse-<ver>-macos-x64.zip` / `pulse-<ver>-macos-arm64.zip` behind the
+  `RELEASE_BUILD_MACOS` variable; the first dry run surfaced upstream
+  runtime/codegen blockers (filed). The macOS button stays "soon" until
+  the assets actually appear in `latest.json`. Do not enable it before
+  they exist.
 - **Bind note (C-PULSE-16):** `PULSE_BIND` is advisory in 0.1.x (the
   stdlib binds the wildcard; ops firewalled the demo -- verified safe).
   The next release enforces loopback at the app level once the

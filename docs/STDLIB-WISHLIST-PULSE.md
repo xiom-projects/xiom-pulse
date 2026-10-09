@@ -157,3 +157,21 @@ the pin below.
   then enforce loopback and add a smoke check that the LISTEN socket's
   local address matches `PULSE_BIND`; `PULSE_BIND` already validates the
   address-only shape (config warning) and stays advisory until then.
+
+### Delta 2026-10-09 (wrap 8b) -- macOS build blockers in the runtime C (dry-run evidence)
+
+The PULSE macOS release dry run fails at the build on both darwin
+arches; two are in this lane's runtime C (see also the compiler findings
+doc, wrap 8b):
+
+- `stdlib/runtime/xiom_runtime.c:4222`: `_SC_AVPHYS_PAGES` is a
+  Linux-only sysconf constant -- needs an `#ifdef __APPLE__` branch
+  (e.g. `sysctl hw.memsize` / `host_statistics64`) or a graceful
+  fallback.
+- `stdlib/runtime/fp128_helpers.c`: x86 inline asm (`leaq`/`movq`)
+  compiled on arm64 -- guard with `__x86_64__` and provide the arm64
+  path (or a portable fallback).
+- (compiler side, also filed: darwin codegen emits an undeclared
+  `@llvm.memset.p0i8.i64`.) PULSE re-runs the dry run as the acceptance
+  test; macOS release legs stay gated on `RELEASE_BUILD_MACOS` until
+  green.
