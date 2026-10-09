@@ -110,23 +110,21 @@ right now. When greenlit, ops executes the following (already specified):
 
 1. **Linux toolchain source (was the open question):**
    `https://dl.xiom-lang.org/releases/<tag>/` carries `SHA256SUMS` +
-   `xiom-<ver>-linux-x64.tar.gz`. Current: **v0.64.1, 29,352,608 B,
-   published 2026-10-08, sha256
-   `6f6787a3ff068929593270d849c21b1f597036f2152bc830e357b980c91b5601`**
-   (`latest.json` names it). Archive root is `bin/xiom` + `lib/`; set
-   `XIOM_BIN=<dir>/bin/xiom` and `XIOM_STDLIB=<dir>/lib`. Pinning pattern:
-   version file + download `SHA256SUMS` + asset, `sha256sum -c`, extract;
-   dl assets are immutable so old pins keep working; update = bump the pin
-   and re-fetch. **WSL install done 2026-10-08** (extracted archive
-   byte-identical to the installed tree; compiler binary sha256
-   `36dd6fb5...b3b36b`); the Linux sweep is green on this pin
-   (`SESSION.md` digest + `probe-logs/linux-sweep-20261008T134143Z/`).
-   **Provisioning caveat (C-PULSE-13, filed):** on a fresh Unix install,
-   `xiom pkg install` writes `$HOME/xiom/packages` while the compiler
-   resolves `<install-root>/packages` (`~/.local/share/xiom`), so
-   `[dependencies]` resolution misses the store until the two are bridged
-   (symlink or an explicit `XIOM_HOME`); `xiom doctor` shows
-   `[--] No packages` as the tell.
+   `xiom-<ver>-linux-x64.tar.gz`. Current: **v0.64.2, published
+   2026-10-09, sha256 `bc2026af...e6a0ed25` (linux) /
+   `05d54f4b...5c40c4c` (windows) / `0564d09b...fc2a53a` (macos-x64) /
+   `b2401c0e...24d3bb44` (macos-arm64)** (`latest.json` names it).
+   Archive root is `bin/xiom` + `lib/`; set `XIOM_BIN=<dir>/bin/xiom` and
+   `XIOM_STDLIB=<dir>/lib`. Pinning pattern: version file + download
+   `SHA256SUMS` + asset, `sha256sum -c`, extract; dl assets are immutable
+   so old pins keep working; update = bump the pin and re-fetch.
+   **WSL + Windows installs are on v0.64.2 (2026-10-09); CI pins v0.64.2
+   in every workflow.** **C-PULSE-13 provisioning caveat is CLOSED
+   (m232):** `xiom pkg` now resolves the same home as the compiler
+   (`<install-root>/packages`), so no bridge/symlink is needed; after any
+   toolchain maintenance verify the store with `xiom doctor` (a
+   re-extract removes non-archive subdirs like `packages/`; re-add with
+   `xiom pkg install`).
 2. **DNS:** owner adds the A/AAAA for `staging.pulse.xiom-lang.org` ->
    xiom VPS `5.189.139.216` (GoDaddy); ops verifies propagation. Parked.
 3. **TLS/proxy:** the VPS is Hestia-managed, nginx-only; ops adapts

@@ -579,3 +579,30 @@ PULSE's macOS release legs are now gated behind the repository variable
 skip, mirroring the xiom workflow), so the next tag is not blocked.
 Re-running the dry run with `gh variable set RELEASE_BUILD_MACOS --body
 true` is the acceptance test once these clear.
+
+## Delta 2026-10-09 (wrap 9) -- v0.64.2 adoption results (answering the relay ask)
+
+Both platforms moved to **v0.64.2** (dl live; SHAs pinned in all PULSE
+workflows; the CI setup action's C-PULSE-13 bridge is removed).
+
+- **C-PULSE-09 CLOSED.** The full probe fleet is 11/11 on Windows AND
+  Linux; `probe_adopt_smoke` completes steps 1..10 with exit 0 on both
+  (the m223..m227 batch fixed the Windows cross-module crash). The
+  session-store swap retry (bridge `220f814`) is PULSE's next unit.
+- **C-PULSE-13 CLOSED (m232 verified).** `xiom pkg install` now lands in
+  the compiler's resolved home (`~/.local/share/xiom/packages`) and
+  `xiom doctor` agrees; the legacy bridge was removed from this box and
+  from the CI setup action; installs + builds verified without it.
+- Suites x2 + smoke 78/78 on both platforms; m212 dash+dot gate green;
+  crash 6/6; rate green.
+- **C-PULSE-14 split by platform on v0.64.2:** **Windows is FIXED**
+  (`rss_probe`: ws flat over 206 requests, -240 B/req steady; the v0.64.1
+  growth of ~32 KB/req is gone). **Linux still grows and is worse**:
+  ~87 KB/req steady over 176 requests (v0.64.1 was ~48 KB/req). m235 was
+  not in the v0.64.2 batch; please keep it/this in the runtime scope --
+  the `rss_probe` twins + `probe_alloc_loop` repros are ready, and PULSE
+  re-runs them on the next archive.
+- Environment note: a **concurrent toolchain re-extract wiped the WSL
+  packages store mid-sweep** (looked like mass T001s until the store was
+  re-checked); reinstalling via `xiom pkg install` restored everything.
+  Not a compiler defect -- noted for reproducibility.

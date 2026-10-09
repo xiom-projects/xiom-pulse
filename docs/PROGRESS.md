@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-08 (Linux v0.64.1 sweep + kv soak/default decision)
+**Last updated:** 2026-10-09 (v0.64.2 adoption: C-PULSE-09/13 closed; memory: Windows fixed, Linux worse)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -92,6 +92,18 @@ filed:** the ops-verified
 verified on the demo; fix + LISTEN-address smoke check ship with the
 next release. Security 46 -> 42 (-0.5); Testing 80 -> 88 (+0.4) now that
 CI exists and cut a release. Total ~55.5% -> ~55.4%._
+
+_Delta 2026-10-09 (wrap 9, v0.64.2 adoption): **both platforms on
+v0.64.2** (dl live; SHAs pinned in all workflows; the CI setup action no
+longer creates the C-PULSE-13 bridge). **C-PULSE-09 CLOSED** -- probe
+fleet 11/11 on Windows AND Linux, `probe_adopt_smoke` steps 1..10, exit
+0. **C-PULSE-13 CLOSED** (m232: `xiom pkg` resolves the compiler home;
+verified installs + doctor). Suites x2 + smoke 78/78 on both platforms.
+**C-PULSE-14: Windows FIXED on v0.64.2 (flat over 206 req); Linux still
+grows ~87 KB/req steady -- worse than v0.64.1's ~48** (retest on the
+next archive; m235 not in v0.64.2). Incident: a concurrent toolchain
+re-extract wiped the WSL packages store mid-sweep (reinstalled via
+`xiom pkg install`; green after). Score holds (~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
@@ -205,7 +217,7 @@ fallbacks._
 | 8 | Security hardening | 12% | 42% | 5.0 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; **C-PULSE-16: `PULSE_BIND` advisory (wildcard bind below the app; host firewall mitigates) -- fix queued with the next release**; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
-| 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14 cross-platform request-path RSS growth (~32 KB/req Windows, ~48 KB/req Linux) -- all "flat memory" soak numbers invalidated by the cmd-wrapper sampling bug (fixed, wrap 6)**; single-thread, no timeouts, no signals |
+| 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14: Windows FIXED on v0.64.2 (flat); Linux still grows ~87 KB/req steady (worse than v0.64.1's ~48)**; single-thread, no timeouts, no signals |
 | 12 | Testing / CI / release | 5% | 88% | 4.4 | suites+smoke (78) on **Windows and Linux**; twins everywhere; **CI live (wrap 7): PR gates + SHA-pinned release workflow cut 0.1.0 end-to-end + weekly heavy soaks; macOS legs prepared, gated on upstream darwin fixes**; soak sampler fix + rss_probe twins; release packager + backup tooling; Dockerfile verified |
 | | **Total** | **100%** | | **55.4** | |
 
@@ -407,12 +419,12 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
 | C-PULSE-06 missing struct field -> garbage | OPEN | every struct literal must list all fields |
 | C-PULSE-07 module-scope package ctor -> undefined call/crash | OPEN | package aggregates stay caller-owned (Vec-holder pattern pinned by `probe_pkg_state_holder`) |
 | C-PULSE-08 m212 dotted-key roots | **CLOSED on v0.64.1** (m215) | gate dash+dot green on Windows and Linux (Linux after the C-PULSE-13 home bridge); `source-roots` kept only as belt-and-braces |
-| C-PULSE-09 xiom.session store integration crash via wrapper modules | OPEN -- **narrowed to Windows** | Linux `probe_adopt_smoke` green twice (steps 1-10, exit 0); Windows 0xC0000005 evidence stands; local session store retained |
+| C-PULSE-09 xiom.session store integration crash via wrapper modules | **CLOSED on v0.64.2 (2026-10-09)** | `probe_adopt_smoke` green in the full fleet on BOTH platforms (Windows steps 1..10, exit 0); the session-store swap retry (bridge `220f814`) is the next PULSE unit |
 | C-PULSE-10 xiom.kv kv_get Str corruption + bytes truncation | **CLOSED on v0.64.1** (m217) | `probe_pkg_kv` green; kv backend verified incl. the 20m soak |
 | C-PULSE-11 package type alias invisible cross-module (defaults to i64) | **fixed in v0.64.1** (m216) | alias design compiles; swap re-tries on the C-PULSE-09 schedule |
 | C-PULSE-12 module last-segment shadows an imported alias | OPEN (design around) | PULSE renamed the app module; import-alias syntax filed in the stdlib wishlist |
-| C-PULSE-13 Unix pkg-home mismatch (`xiom pkg` -> `$HOME/xiom/packages`; compiler CRB-3c -> `~/.local/share/xiom`) | **NEW, Linux-only -- routed to the compiler/installer lane** | symlink bridge applied on WSL; m212 gate green after; unified-resolver ask in `docs/PACKAGE-WISHLIST-PULSE.md` |
-| C-PULSE-14 cross-platform request-path RSS growth (~32 KB/req Windows, ~48 KB/req Linux) | **fixed scope (wrap 6)** | filed with repros (`probe_alloc_loop`, `rss_probe` twins, soak curves); candidate lane fix m235; gating for any unattended demo (interim: `MemoryMax` + restart) |
+| C-PULSE-13 Unix pkg-home mismatch | **CLOSED on v0.64.2 (m232)** | `xiom pkg` resolves the compiler home; bridge removed from the WSL box AND the CI setup action; verified: installs land in `<home>/packages`, doctor OK |
+| C-PULSE-14 request-path RSS growth | **Windows FIXED on v0.64.2 (flat, -240 B/req over 206 req); Linux OPEN and worse (~87 KB/req steady vs ~48 on v0.64.1)** | repros `rss_probe` twins + `probe_alloc_loop`; retest on the next archive (m235 was not in v0.64.2); the Linux demo keeps `MemoryMax` + restart |
 | C-PULSE-16 `PULSE_BIND` not enforced (stdlib `socket_bind` wildcard-only) | **NEW, all platforms** | ops mitigated with the host firewall (demo verified); address-aware bind filed upstream; fix + LISTEN-address smoke check with the next release |
 | C-PULSE-02 deps not mapped to catalog roots | **CLOSED on v0.64.1** (gate green; m212/m215) | dotted `[dependencies]` resolve to installed stores; PULSE keeps `source-roots` until a no-source-roots app build is verified |
 | No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |

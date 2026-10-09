@@ -41,11 +41,8 @@ runs:
         echo "${XIOM_LINUX_SHA256}  /tmp/xiom-toolchain.tar.gz" | sha256sum -c -
         mkdir -p "$HOME/.local/share/xiom"
         tar -xzf /tmp/xiom-toolchain.tar.gz -C "$HOME/.local/share/xiom"
-        # C-PULSE-13 bridge: `xiom pkg` installs under ~/xiom/packages while
-        # the compiler resolves <install-root>/packages (see
-        # docs/COMPILER-FINDINGS-PULSE.md). Re-create it on every install.
-        mkdir -p "$HOME/xiom/packages"
-        ln -sfn "$HOME/xiom/packages" "$HOME/.local/share/xiom/packages"
+        # C-PULSE-13 is CLOSED (m232): xiom pkg resolves the same home as
+        # the compiler (canonical installer layout), so no bridge is needed.
         echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
         "$HOME/.local/share/xiom/bin/xiom" --version
 
@@ -67,9 +64,7 @@ runs:
         echo "${sha}  /tmp/xiom-toolchain.tar.gz" | shasum -a 256 -c -
         mkdir -p "$HOME/.local/share/xiom"
         tar -xzf /tmp/xiom-toolchain.tar.gz -C "$HOME/.local/share/xiom"
-        # C-PULSE-13 bridge (same as the Linux branch).
-        mkdir -p "$HOME/xiom/packages"
-        ln -sfn "$HOME/xiom/packages" "$HOME/.local/share/xiom/packages"
+        # C-PULSE-13 is CLOSED (m232): no bridge needed.
         echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
         "$HOME/.local/share/xiom/bin/xiom" --version
 

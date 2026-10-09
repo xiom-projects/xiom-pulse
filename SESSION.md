@@ -11,17 +11,19 @@
   approval; DCO `-s` commits; identity Lefteris Notas
   <lefterisnotas@gmail.com>. Head: `c123cc4` (handoff) plus the wrap
   commit on top (see `git log`).
-- **Toolchain:** **Windows = v0.64.1** (installed in place at
-  `%LOCALAPPDATA%\xiom.new`; the package store was wiped and all TEN deps
-  were reinstalled). **Linux/WSL = v0.64.1** (installed 2026-10-08 from
-  the published archive `xiom-0.64.1-linux-x64.tar.gz`, 29,352,608 B,
-  sha256 `6f6787a3ff068929593270d849c21b1f597036f2152bc830e357b980c91b5601`;
-  `sha256sum -c SHA256SUMS` OK and `diff -rq` extract-vs-install
-  byte-identical; compiler binary sha256
-  `36dd6fb581ecf6819563c5fb6df86b9c69b436418e08d817c7e49b3ba6b3b36b`; pin
-  in `docs/OPS-REQUEST.md` D.1). Stdlib lane checkout `4dd8844` (0.64.2
-  pin prep). `dev-env.{ps1,sh}` respect explicit `XIOM_COMPILER`/
-  `XIOM_STDLIB` (A/B); `dev-env.sh` also finds `~/.local/bin/xiom`.
+- **Toolchain:** **v0.64.2 on BOTH Windows and Linux/WSL** (released
+  2026-10-09, dl live; pins in `docs/OPS-REQUEST.md` D.1 + every
+  workflow). Linux archive `xiom-0.64.2-linux-x64.tar.gz`, 29,524,552 B,
+  sha256 `bc2026af0af0f811a6578082b34a51d2cc76a23ea88a54a43db8e0a3e6a0ed25`
+  (`sha256sum -c` OK); Windows zip sha256
+  `05d54f4b92480001e5919a9eda213d7c0850808df2555a557ee66c0095c40c4c`; the
+  macOS shas are pinned for the gated legs. **C-PULSE-13 CLOSED (m232):**
+  the package home is unified -- no bridge; verify the store after any
+  toolchain maintenance (`xiom doctor`; re-add with `xiom pkg install`).
+  Stdlib lane checkout `d54929d` (wave 97); the v0.64.2 pairing is
+  `4dd8844` -- both compile PULSE, exact checks use the pin.
+  `dev-env.{ps1,sh}` respect explicit overrides; `dev-env.sh` finds
+  `~/.local/bin/xiom`.
 - **Linux sweep GREEN on v0.64.1** (post-fix logdir
   `probe-logs/linux-sweep-20261008T134143Z/`; the pre-repair
   `...T132937Z/` is kept for the C-PULSE-13 record): probe fleet 11/11
@@ -146,6 +148,17 @@
   address-aware bind filed upstream; fix + LISTEN-address smoke check
   with the next release (owner: next cut = compiler fixes + macOS).
   Score: Security 46 -> 42, Testing 80 -> 88 -> ~55.4%.
+- **Wrap 9 (v0.64.2 adoption):** both platforms on v0.64.2; the CI setup
+  action's C-PULSE-13 bridge removed. **C-PULSE-09 CLOSED** -- probe
+  fleet 11/11 on Windows AND Linux (`probe_adopt_smoke` steps 1..10, exit
+  0 on both). **C-PULSE-13 CLOSED** (m232; verified installs + doctor).
+  Suites x2 + smoke 78/78 on both platforms; m212 gate green; crash 6/6.
+  **C-PULSE-14: Windows FIXED (flat over 206 req); Linux still grows
+  ~87 KB/req steady (worse than v0.64.1's ~48)** -- retest on the next
+  archive. Incident: a concurrent toolchain re-extract wiped the WSL
+  packages store mid-sweep (reinstalled via `xiom pkg install`; green
+  after) -- verify the store after any install. **NEXT: the session-store
+  swap retry (bridge `220f814`) -- now unblocked on both platforms.**
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),
@@ -186,31 +199,31 @@
   complete on both platforms** (Linux sweep green, incl. the 20m kv soak);
   ops answered (staging parked; Linux toolchain pin v0.64.1 recorded; CI
   on greenlight).
-- **Score:** ~55.5% production grade (`docs/PROGRESS.md`).
-- **NEXT (in order):** 1) FIRST when dl publishes v0.64.2 (release-ready,
-  tag held): install on WSL + Windows, re-run the full fleet
-  (`probe_adopt_smoke` especially, kv probes, suites x2, smoke 78),
-  retest the C-PULSE-14 soaks, and test dropping the C-PULSE-13 bridge
-  (m232 unified the installer home); then retry the session-store swap
-  (C-PULSE-09 fixed in m223..m227) and cut 0.1.1. 2) watch the lanes:
-  compiler (C-PULSE-16 address-aware bind; darwin runtime/codegen
-  blockers before macOS un-gates; C-PULSE-12 alias ask), bindings
-  (DB/KV binding, store seam). 3) non-blocked hardening: chunked
-  RESPONSES (with keep-alive), a fresh 30-60m soak, or the longer kv
-  soak for the flip gate. 4) kv default flip only after the recorded
+- **Score:** ~55.4% production grade (`docs/PROGRESS.md`).
+- **NEXT (in order):** 1) the **session-store swap retry** (bridge
+  `220f814`) -- now unblocked on both platforms (C-PULSE-09 closed on
+  v0.64.2: fleet 11/11, adopt_smoke green both); after it, cut 0.1.1
+  (v0.64.2 pins already in the workflows; macOS stays gated). 2) watch
+  the lanes: compiler (C-PULSE-16 address-aware bind; darwin
+  runtime/codegen blockers; C-PULSE-12 alias ask), bindings (DB/KV
+  binding, store seam). 3) non-blocked hardening: chunked RESPONSES
+  (with keep-alive), a fresh 30-60m soak, or the longer kv soak for the
+  flip gate; **C-PULSE-14 Linux memory retest on the next archive**
+  (Windows flat on v0.64.2). 4) kv default flip only after the recorded
   prerequisites; otherwise keep kv opt-in. 5) release ops: pulse-v0.1.0
-  is live (demo + dl + docs verified); wire the owner's cover image
+  live (demo + dl + docs verified); wire the owner's cover image
   (`resources/img/`) into the product landing when it lands.
 - **Gotchas:** PS 5.1 strips embedded quotes in native args (use files,
   `--etag-save/--etag-compare`); when driving WSL from PS avoid inner
   quotes (write scripts to `/tmp` instead); `io.flush_stdout` is a no-op
   (durable step logs); no inline if-expressions; module last-segment
   collisions shadow imports (C-PULSE-12); no module-scope package
-  constructors (Vec-holder pattern); keep the WSL bridge
-  `~/.local/share/xiom/packages -> ~/xiom/packages` (or an explicit
-  `XIOM_HOME`) so dependency resolution works outside `source-roots`
-  (C-PULSE-13); `wsl --shutdown` clears CLR/paging errors (system commit
-  pressure, not the build).
+  constructors (Vec-holder pattern); **C-PULSE-13 is CLOSED (m232): no
+  bridge -- `xiom pkg` resolves the compiler home; after any toolchain
+  maintenance verify the store (`xiom doctor`; re-add with `xiom pkg
+  install` -- a concurrent re-extract can wipe `packages/`)**;
+  `wsl --shutdown` clears CLR/paging errors (system commit pressure, not
+  the build).
 
 ### Session log 2026-10-07/08 (chronological history; superseded by the digest above)
 
@@ -628,7 +641,7 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-08 wrap 2, Linux sweep complete)
+## 3. Paste prompt for the next PULSE session (2026-10-09 wrap 9, v0.64.2 adopted; demo live)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (the official
@@ -643,36 +656,27 @@ Linux/WSL (pins recorded in docs\OPS-REQUEST.md D.1); stdlib lane
 checkout 4dd8844.
 
 TASK ORDER:
-1. FIRST: confirm the WSL bridge for C-PULSE-13 is intact (symlink
-   ~/.local/share/xiom/packages -> ~/xiom/packages, or XIOM_HOME set),
-   then run the quick regression on the existing binaries: the probe
-   fleet (incl. probe_pkg_http) + suites x2 + smoke 76/76 (jsonl and kv)
-   on Linux; compare against probe-logs/linux-sweep-20261008T134143Z/
-   before touching anything.
-2. NON-BLOCKED hardening (pick by value): chunked RESPONSES (with
-   keep-alive), a fresh 30-60m soak, a repeatable RSS sampler for
-   C-PULSE-14, or the longer kv soak (flip gate). Keep-alive
-   stays gated on socket timeouts, SIGTERM on the stdlib handler API,
-   build stamping on a compiler define flag (all filed).
-3. WATCH the lanes: compiler (C-PULSE-09 is Windows-only now -> retry
-   the session-store swap with the bridge in git history 220f814 on BOTH
-   platforms; C-PULSE-14 request-path RSS retention (cross-platform;
-   repros scripts\rss_probe.* + probe_alloc_loop; retest on the next
-   archive -- m235 candidate); C-PULSE-13
-   resolver unification, routed via the packages lane; C-PULSE-12
-   alias-shadowing ask), bindings (durable DB/KV
-   binding behind the store seam). xiom.http 0.1.2 is closed -- no
-   action; keep probe_pkg_http in the fleet.
-4. kv default: keep jsonl; flip ONLY after the prerequisites in
-   docs\PACKAGE-WISHLIST-PULSE.md land (kv-aware Dockerfile, backup,
-   crash test, deployment doc, longer soak).
-5. WEBSITE/OPS: the website lane owns Phase 1 for pulse.xiom-lang.org
-   (brief + paste prompt in docs\WEBSITE-RELAY-PULSE.md; orbitdb./
-   xvector. later, same template). On owner greenlight: GH Actions
-   release workflow -> repo public + main rulesets (mirror xiom/stdlib)
-   -> dl publish -> ops deploys the demo per docs\OPS-REQUEST.md
-   section E. Wire the owner's cover image (resources\img\) into the
-   product landing when it lands.
+1. FIRST: run the quick regression on the existing binaries (v0.64.2 on
+   both platforms; canonical package home, no bridge): probe fleet +
+   suites x2 + smoke 78/78 (jsonl and kv) on Linux and Windows; compare
+   against probe-logs/linux-sweep-20261009T161247Z/ (Linux) and today's
+   Windows runs before touching anything.
+2. THE HEADLINE UNIT: retry the session-store swap (C-PULSE-09 closed on
+   v0.64.2; the bridge design is in git history 220f814) on BOTH
+   platforms; suites x2 + smoke after. If green and time allows, cut
+   0.1.1 (bump src/pulse.xi + CHANGELOG.md; the v0.64.2 pins are already
+   in the workflows; macOS stays gated behind RELEASE_BUILD_MACOS).
+3. WATCH the lanes: compiler (C-PULSE-16 address-aware bind -- then
+   enforce loopback and add the LISTEN-address smoke check; darwin
+   runtime/codegen blockers before macOS un-gates; C-PULSE-12 alias
+   ask), bindings (durable DB/KV binding behind the store seam).
+4. NON-BLOCKED hardening / retests: chunked RESPONSES (with keep-alive),
+   a fresh 30-60m soak, the longer kv soak (flip gate), and the
+   C-PULSE-14 Linux memory retest on the next archive (Windows flat).
+5. OPS/SITE: the demo is live (pulse.xiom-lang.org, 0.1.0/cc3e741);
+   pulse-v0.1.0 is on GitHub + dl. No action unless ops reports; macOS
+   buttons light up only when macos assets exist. Wire the owner's cover
+   image (resources\img\) into the product landing when it lands.
 6. Update SESSION.md digest + the three relay docs + PROGRESS.md at every
    wrap; commit signed.
 
