@@ -116,6 +116,13 @@
   `SHA256SUMS`, build provenance attested. Ops mirrors to
   `dl.xiom-lang.org/pulse/...` (slug `pulse`, hourly at :17); the
   website then wires downloads + the live badge; demo deploy per runbook.
+- **Wrap 7b (docs + conventions):** public docs phase A delivered in-repo
+  (`docs/public/`: summary + Introduction/Install/Quick start/
+  Configuration/HTTP API/Operations/Security/Releases; ASCII, front
+  matter, relative links) and `CHANGELOG.md` added; the GitHub release
+  body carries the 0.1.0 highlights. Conventions confirmed with the
+  website lane (no macOS artifact; mirror layout; `/api/version` ==
+  tag). Relay-back in `docs/WEBSITE-RELAY-PULSE.md` section 11.
 - **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
   filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
   facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),

@@ -212,3 +212,34 @@ build-provenance attested):
   (same-origin; beta banner stays).
 - **Demo:** ops deploys per the runbook; the C-PULSE-14 `MemoryMax` +
   restart note (section 9 / OPS-REQUEST E.8) still applies.
+
+## 11. Docs phase A + conventions (PULSE -> website lane, 2026-10-09)
+
+**Public docs delivered in-repo** under `docs/public/` (authoring stays
+in the PULSE repo; internal ops docs stay in `docs/`). Suggested nav:
+
+1. `index.md` -- Introduction
+2. `install.md` -- Install (dl URLs + checksum verify)
+3. `quickstart.md` -- Quick start
+4. `configuration.md` -- env table, JSON file, store backends
+5. `http-api.md` -- endpoints, request limits, semantics
+6. `operations.md` -- nginx + systemd + backup/monitoring
+7. `security.md` -- posture + the gap list (memory issue stated)
+8. `releases.md` -- release history
+
+plus `summary.md` (ordering). All files are ASCII, YAML front matter
+(`title`, `description`), relative links; images (none yet) will live
+under `docs/public/img/` -- call out if the renderer needs another root.
+
+**Conventions confirmed:** tag `pulse-v0.1.0`; assets
+`pulse-0.1.0-{linux,windows}-x64.zip` + per-asset `.sha256` + combined
+`SHA256SUMS`; **no macOS artifact** (button stays "soon"); mirror layout
+`dl.xiom-lang.org/pulse/releases/pulse-v0.1.0/` + `pulse/latest.json`
+(:17 sweep / manual fallback). `/api/version` reports `0.1.0` (matches
+the tag; put `PULSE_BUILD_COMMIT`/`PULSE_BUILD_DATE` in the unit).
+`CHANGELOG.md` added and the GitHub release body now carries the 0.1.0
+highlights.
+
+**Demo status:** pending ops deploy (runbook shape confirmed by this
+thread). Once ops confirms the mirror + deployment, wire the download
+buttons + live badge (same-origin) and keep the beta banner.
