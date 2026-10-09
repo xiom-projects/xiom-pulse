@@ -10,6 +10,14 @@ All responses are JSON unless noted. `GET /health` returns
 mirrored additively:
 `{"error":{"status":404,"code":"not_found","message":"..."}}`.
 
+## Versioning
+
+Every route also resolves under the `/v1` alias: `/v1/api/events` is
+equivalent to `/api/events` (query strings preserved), `/v1/health` to
+`/health`, and so on. New surfaces are introduced under `/v1` first;
+the canonical `/api` paths remain stable during beta. Pagination `Link`
+headers preserve whichever prefix the client used.
+
 ## Public endpoints
 
 | Method | Path | Notes |

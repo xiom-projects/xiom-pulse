@@ -283,6 +283,18 @@ R=$(http_get /openapi.json)
 pulse_check "openapi 200" "$R" "200 OK"
 pulse_check "openapi title" "$R" "XIOM PULSE"
 
+# --- 13c. /v1 alias namespace (0.2) -----------------------------------------
+R=$(http_get /v1/health)
+pulse_check "v1 health 200" "$R" "200 OK"
+pulse_check "v1 health json" "$R" '{"status":"ok"}'
+R=$(http_get /v1/api/version)
+pulse_check "v1 version 200" "$R" "200 OK"
+pulse_check "v1 version name" "$R" '"name":"xiom-pulse"'
+R=$(http_get "/v1/api/events?limit=1")
+pulse_check "v1 events 200" "$R" "200 OK"
+R=$(http_get /v1/nope)
+pulse_check "v1 unknown 404" "$R" "404 Not Found"
+
 # --- 13. QUIT ---------------------------------------------------------------
 pulse_quit
 if ! wait_exit "$SRV_PID" 10; then

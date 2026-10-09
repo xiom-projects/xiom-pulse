@@ -25,6 +25,10 @@ GitHub release body.
   and appends nothing -- the marker lives inside the event record, so the
   guarantee is durable on both backends. Malformed keys are
   `400 invalid_idempotency_key`. Responses also carry `seq` now.
+- **`/v1` versioned alias**: every route also resolves under `/v1`
+  (`/v1/api/events` == `/api/events`, query preserved); new surfaces are
+  introduced under `/v1` first, and pagination `Link` headers preserve
+  whichever prefix the client used.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).

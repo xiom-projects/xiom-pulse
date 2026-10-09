@@ -9,6 +9,7 @@
   },
   "servers": [
     { "url": "https://pulse.xiom-lang.org", "description": "live demo (beta)" },
+    { "url": "https://pulse.xiom-lang.org/v1", "description": "versioned alias: every path below also resolves under /v1 (new surfaces are introduced under /v1 first; Link headers preserve the prefix used)" },
     { "url": "http://127.0.0.1:8080", "description": "local default (loopback)" }
   ],
   "tags": [

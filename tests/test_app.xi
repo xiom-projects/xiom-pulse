@@ -67,6 +67,15 @@ fn route_req_hdr_cl(method: Str, target: Str, headers: Str, body: Str) -> Handle
   return app.handle_route(m, &req, body);
 }
 
+fn route_req_v1(method: Str, target: Str, body: Str) -> HandlerOut {
+  // Mirrors dispatch_one: strip the /v1 alias, match the canonical path,
+  // dispatch with the ORIGINAL request (Link/target semantics intact).
+  let t = router.v1_path(target);
+  let req = make_req(method, target, body);
+  let m = router.route_match(method, t);
+  return app.handle_route(m, &req, body);
+}
+
 pub fn main() -> Int {
   var f: Int = 0;
 
@@ -402,6 +411,22 @@ pub fn main() -> Int {
   f = f + check("idem bad key no append", store.store_count(sp) == c_before + 2);
   let idem_list = route_req("GET", "/api/events?kind=idem", "");
   f = f + check("idem events listed", idem_list.status == 200 && string.str_contains(idem_list.body, "\"idem\":\"itest-1\""));
+
+  // --- /v1 alias (0.2) ------------------------------------------------------
+  f = f + check("v1 path map", router.v1_path("/v1/api/events?limit=2") == "/api/events?limit=2");
+  f = f + check("v1 path root", router.v1_path("/v1") == "/");
+  f = f + check("v1 path passthrough", router.v1_path("/api/events") == "/api/events");
+  let v1h = route_req_v1("GET", "/v1/health", "");
+  f = f + check("v1 health 200", v1h.status == 200 && string.str_contains(v1h.body, "\"status\":\"ok\""));
+  let v1v = route_req_v1("GET", "/v1/api/version", "");
+  f = f + check("v1 version 200", v1v.status == 200 && string.str_contains(v1v.body, "xiom-pulse"));
+  let v1n = route_req_v1("GET", "/v1/nope", "");
+  f = f + check("v1 unknown 404", v1n.status == 404);
+  let v1e = route_req_v1("GET", "/v1/api/events?limit=1", "");
+  f = f + check("v1 events 200", v1e.status == 200 && string.str_contains(v1e.body, "\"events\":"));
+  f = f + check("v1 link preserves prefix", v1e.headers.len() == 1 && string.str_contains(v1e.headers[0].1, "</v1/api/events?"));
+  let v1f = route_req_v1("GET", "/v1/favicon.ico", "");
+  f = f + check("v1 favicon 200", v1f.status == 200 && v1f.body_bytes.len() > 1000);
   env.remove_var("PULSE_STORE_PATH");
   let rm1 = io.remove_file(sp);
   f = f + check("store cleanup", rm1.is_ok);

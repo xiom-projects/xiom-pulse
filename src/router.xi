@@ -12,7 +12,9 @@
 // 7 POST /api/token, 8 POST /api/token/verify, 9 GET /metrics,
 // 10 GET /api/items/:id, 11 POST /api/events, 12 GET /api/events/count,
 // 13 GET /api/events, 14 GET /favicon.ico, 15 GET /, 16 POST /api/events/compact,
-// 17 GET /openapi.json.
+// 17 GET /openapi.json. Every route is also reachable through the `/v1`
+// alias prefix (v1_path strips it before matching); new surfaces are
+// introduced under `/v1` first.
 module xiom.pulse.router
 
 use xiom.string;
@@ -39,6 +41,26 @@ pub fn split_target(target: Str) -> (Str, Str) {
   }
   let q = qo.value;
   return (string.str_slice(target, 0, q), string.str_slice(target, q + 1, target.len()));
+}
+
+/// v1_path maps a versioned `/v1/<rest>` alias onto the canonical
+/// `<rest>` path, query preserved: `/v1/api/events?limit=1` ->
+/// `/api/events?limit=1`; `/v1` and `/v1/` map to `/`; anything else
+/// passes through untouched. Complexity: O(n). Pure.
+pub fn v1_path(target: Str) -> Str {
+  let parts = split_target(target);
+  let p = parts.0;
+  let q = parts.1;
+  if p == "/v1" {
+    if q.len() > 0 { return "/?" + q; }
+    return "/";
+  }
+  if string.str_starts_with(p, "/v1/") {
+    let rest = string.str_slice(p, 3, p.len());
+    if q.len() > 0 { return rest + "?" + q; }
+    return rest;
+  }
+  return target;
 }
 
 fn hex_val(b: UInt8) -> Int {

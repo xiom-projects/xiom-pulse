@@ -316,6 +316,18 @@ $r = Invoke-CurlGet "/openapi.json"
 Check "openapi 200" $r "200 OK"
 Check "openapi title" $r "XIOM PULSE"
 
+# 13c. /v1 alias namespace (0.2)
+$r = Invoke-CurlGet "/v1/health"
+Check "v1 health 200" $r "200 OK"
+Check "v1 health json" $r '{"status":"ok"}'
+$r = Invoke-CurlGet "/v1/api/version"
+Check "v1 version 200" $r "200 OK"
+Check "v1 version name" $r '"name":"xiom-pulse"'
+$r = Invoke-CurlGet "/v1/api/events?limit=1"
+Check "v1 events 200" $r "200 OK"
+$r = Invoke-CurlGet "/v1/nope"
+Check "v1 unknown 404" $r "404 Not Found"
+
 # 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1
 if (-not $srv.WaitForExit(10000)) {

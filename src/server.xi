@@ -156,14 +156,17 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
 /// dispatch_one routes one request: `/assets/<path>` is served from
 /// PULSE_ASSETS_DIR (showcase sites), everything else goes through the
 /// router + handle_route. GET and HEAD only; other methods fall through.
+/// The `/v1` alias prefix is stripped first (router.v1_path), so every
+/// route resolves under both the canonical path and `/v1/...`.
 /// Complexity: O(request).
 fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOut {
-  if eff_method == "GET" && string.str_starts_with(req.target, "/assets/") {
-    let parts = router.split_target(req.target);
+  let tgt = router.v1_path(req.target);
+  if eff_method == "GET" && string.str_starts_with(tgt, "/assets/") {
+    let parts = router.split_target(tgt);
     let rel = string.str_slice(parts.0, 8, parts.0.len());
     return serve_static_file(config.cfg_assets_dir(), rel, req, 3600);
   }
-  let m = router.route_match(eff_method, req.target);
+  let m = router.route_match(eff_method, tgt);
   return handle_route(m, &req, body_str);
 }
 
@@ -377,15 +380,17 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     if page.has_more { next_cursor = page.first_seq; }
     let out_body = "{\"count\":" + store.store_count(path).to_str() + ",\"events\":" + arr + ",\"next_cursor\":" + next_cursor.to_str() + "}";
     if next_cursor > 0 {
-      // RFC 8288 Link header for the next (older) page; the kind filter is
-      // client input, so it is percent-encoded into the URL.
+      // RFC 8288 Link header for the next (older) page; the base path is
+      // the one the client used (canonical or /v1 alias), and the kind
+      // filter is client input, so it is percent-encoded into the URL.
+      let tparts = router.split_target(req.target);
       var q: Str = "?";
       if kind_filter.len() > 0 {
         q = q + "kind=" + percent.percent_encode_component(kind_filter) + "&";
       }
       q = q + "limit=" + limit.to_str() + "&before=" + next_cursor.to_str();
       var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-      hs.push(("Link", "</api/events" + q + ">; rel=\"next\""));
+      hs.push(("Link", "<" + tparts.0 + q + ">; rel=\"next\""));
       return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: out_body; body_bytes: Vec[UInt8].new(); };
     }
     return out_json(200, out_body);
@@ -410,8 +415,9 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     // Static assets via registry xiom.static 0.1.0: ETag/Last-Modified/
     // Cache-Control, If-None-Match -> 304, Range -> 206/416, traversal guard.
     // NOTE: static_serve takes the path AFTER the leading "/"; a leading
-    // slash is rejected as "absolute".
-    let parts = router.split_target(req.target);
+    // slash is rejected as "absolute". The /v1 alias is stripped so
+    // /v1/favicon.ico resolves like /favicon.ico.
+    let parts = router.split_target(router.v1_path(req.target));
     var rel: Str = parts.0;
     if rel.len() > 0 && rel.byte_at(0) == 47u8 {
       rel = string.str_slice(rel, 1, rel.len());

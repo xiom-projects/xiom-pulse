@@ -170,6 +170,16 @@ platforms (Linux pinned-stdlib). Roadmap 0.2 item 1: idempotency done --
 `/v1`, the SSRF-guarded HTTP client and multipart remain. Score holds
 (~55.4%)._
 
+_Delta 2026-10-10 (0.2 `/v1` alias): **`/v1` versioned namespace** --
+`router.v1_path` strips the alias before matching, so every route
+resolves under both forms (`/v1/api/events` === `/api/events`, query
+preserved; `/v1/health`, `/v1/favicon.ico`, `/v1/assets/...` included).
+New surfaces are introduced under `/v1` first; pagination `Link` headers
+now preserve the client's prefix instead of hardcoding `/api/events`.
+test_app +9 checks; smoke 107 -> **113/113** on both platforms (Linux
+pinned-stdlib). Roadmap 0.2 item 1 complete -- the SSRF-guarded HTTP
+client and multipart uploads remain. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
