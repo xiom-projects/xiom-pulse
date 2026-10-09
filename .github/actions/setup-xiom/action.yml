@@ -68,6 +68,23 @@ runs:
         echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
         "$HOME/.local/share/xiom/bin/xiom" --version
 
+    - name: Install rcedit (Windows exe icon)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        # Pinned workaround until the compiler ships `--icon` (v0.64.2 has
+        # no such flag). build.ps1 probes %LOCALAPPDATA%\xiom-tools for the
+        # binary, so release exes carry the official icon.
+        $url = "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
+        $sha = "3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a"
+        $dir = Join-Path $env:LOCALAPPDATA "xiom-tools"
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
+        $exe = Join-Path $dir "rcedit-x64.exe"
+        Invoke-WebRequest -Uri $url -OutFile $exe
+        $actual = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+        if ($actual -ne $sha) { throw "rcedit SHA256 mismatch: $actual" }
+        Write-Host "rcedit installed: $exe"
+
     - name: Install XIOM toolchain (Windows, pinned + SHA256)
       if: runner.os == 'Windows'
       shell: pwsh

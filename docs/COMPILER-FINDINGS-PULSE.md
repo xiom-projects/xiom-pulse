@@ -177,6 +177,20 @@ icon hash next to the runtime cache; ships with `--help`, compiler
 icons (Info.plist / .desktop) are separate scope. PULSE will re-test and
 delete the rcedit hook when `--icon` lands.
 
+**Status update (2026-10-09):** `--icon` is still absent from the v0.64.2
+`--help` (re-checked); the workaround is now production-grade on PULSE's
+side: the **new official icon art** (owner-provided `pulse.ico`,
+187,396 B, sha256 `d424af89...e438`) replaced the old 270 KB art at the
+same canonical path (`resources/img/pulse-ico.ico`, so every reference,
+the release staging and the `/favicon.ico` route stay stable);
+`scripts/build.ps1` resolves rcedit from PATH, the npm global install,
+or `%LOCALAPPDATA%\xiom-tools`; and CI (`.github/actions/setup-xiom`,
+Windows) fetches **pinned rcedit v2.0.0** (sha256
+`3e7801db...ade2a`) so release exes carry the icon. Verified locally:
+exe +187,904 bytes after rcedit, `ExtractAssociatedIcon` loads 32x32.
+The compiler ask stands unchanged (`xiom --icon`); the rcedit hook is
+deleted the day it ships.
+
 
 
 ## C-PULSE-05 -- details (W005 delta: const receiver)

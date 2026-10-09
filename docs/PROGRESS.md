@@ -282,7 +282,7 @@ suites x2 on both platforms, these work end-to-end:
 | GET | `/api/events` | last 10 events + count |
 | GET | `/api/events/count` | event count |
 | GET | `/metrics` | Prometheus text counters |
-| GET | `/favicon.ico` | official app icon (270,398 bytes, chunked send) |
+| GET | `/favicon.ico` | official app icon (187,396 bytes; also embedded in the Windows exe) |
 | GET | `/` | landing page linking the icon |
 
 Cross-cutting, working: router with 404/405+`Allow`, uniform error
@@ -457,7 +457,7 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
 | C-PULSE-14 request-path RSS growth | **Windows FIXED on v0.64.2 (flat, -240 B/req over 206 req); Linux OPEN and worse (~87 KB/req steady vs ~48 on v0.64.1)** | repros `rss_probe` twins + `probe_alloc_loop`; retest on the next archive (m235 was not in v0.64.2); the Linux demo keeps `MemoryMax` + restart |
 | C-PULSE-16 `PULSE_BIND` not enforced (stdlib `socket_bind` wildcard-only) | **NEW, all platforms** | ops mitigated with the host firewall (demo verified); address-aware bind filed upstream; fix + LISTEN-address smoke check with the next release |
 | C-PULSE-02 deps not mapped to catalog roots | **CLOSED on v0.64.1** (gate green; m212/m215) | dotted `[dependencies]` resolve to installed stores; PULSE keeps `source-roots` until a no-source-roots app build is verified |
-| No exe icon embedding | feature gap | icon served at `/favicon.ico` for now |
+| No toolchain exe icon (`xiom --icon`) | gap, workaround shipped | pinned rcedit in `build.ps1` + CI; new official icon art; exe icon verified locally |
 | stdlib deadlines/timeouts, write_all, request parser, real flush | queued wave | slow-client guard, streaming, HTTP parse duplication, log lag |
 | `xiom.router` 0.1.0 | **LIVE and adopted by PULSE** (probe 8/8, suites x2) | routing hardened; wildcards/groups remain package roadmap |
 | `xiom.session`/`static`/`http.middleware` | static + middleware **adopted**; session single-module green, store integration gated | module replacement + middleware framework |

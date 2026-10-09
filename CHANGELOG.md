@@ -8,6 +8,12 @@ GitHub release body.
 
 ### Added
 
+- **Official icon art adopted**: the owner-provided `pulse.ico` (187,396 B)
+  replaces the older art at the canonical path `resources/img/pulse-ico.ico`
+  (used by `/favicon.ico`), and is now **embedded in the Windows exe** via
+  pinned rcedit (fetched by CI; `scripts/build.ps1` resolves it from PATH,
+  npm, or `%LOCALAPPDATA%\xiom-tools`). The compiler `xiom --icon` flag is
+  still awaited; the rcedit hook retires when it ships.
 - `GET /openapi.json` serves the OpenAPI 3.1 API contract; the version
   is substituted at request time from the running build, so the contract
   and `/api/version` can never drift apart.

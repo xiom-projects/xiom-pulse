@@ -233,6 +233,15 @@
   BOTH platforms (Linux run with the pinned stdlib). Roadmap 0.2 items
   1/2 partially ticked; problem+json, pagination, idempotency, `/v1`,
   flag promotions next.
+- **Wrap 13b (icon):** owner-provided `pulse.ico` (187,396 B, sha256
+  `d424af89...`) adopted as the canonical icon at
+  `resources/img/pulse-ico.ico` (all references, release staging and the
+  `/favicon.ico` route stay stable); the **Windows exe now carries it**
+  via **pinned rcedit v2.0.0** (`build.ps1` resolves PATH -> npm global
+  -> `%LOCALAPPDATA%\xiom-tools`; the CI setup action fetches and
+  sha256-verifies it for release builds). Verified: exe +187,904 B,
+  `ExtractAssociatedIcon` loads 32x32; suites x2 + smoke 84/84 on both
+  platforms. `xiom --icon` is still absent in v0.64.2 -- ask stands.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),

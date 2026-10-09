@@ -82,6 +82,21 @@ if (-not $NoIcon -and $Icon) {
     if (Test-Path -LiteralPath $iconPath) {
         $rcedit = Get-Command rcedit -ErrorAction SilentlyContinue
         if ($null -eq $rcedit) { $rcedit = Get-Command rcedit-x64 -ErrorAction SilentlyContinue }
+        if ($null -eq $rcedit) {
+            # Fallbacks: npm global shim/binary, then the pinned tools dir CI
+            # and local installs use (the toolchain does not ship --icon yet).
+            $candidates = @(
+                (Join-Path $env:APPDATA "npm\rcedit.cmd"),
+                (Join-Path $env:APPDATA "npm\node_modules\rcedit\bin\rcedit-x64.exe"),
+                (Join-Path $env:LOCALAPPDATA "xiom-tools\rcedit-x64.exe")
+            )
+            foreach ($c in $candidates) {
+                if ($c -and (Test-Path -LiteralPath $c)) {
+                    $rcedit = [pscustomobject]@{ Source = $c }
+                    break
+                }
+            }
+        }
         if ($null -ne $rcedit) {
             & $rcedit.Source $outExe --set-icon $iconPath 2>&1 | Out-Null
             if ($?) {
