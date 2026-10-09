@@ -30,7 +30,9 @@ infra.
    (`client_body_temp_path` etc.) when running unprivileged; the PULSE
    `.sh` E2E shows the pattern.
 4. **Service:** run the Linux binary under systemd (restart-on-failure,
-   env file). Suggested env: `PULSE_PORT=8080`, `PULSE_LOG=1`,
+   env file). Suggested env: `PULSE_PORT=8080`, `PULSE_BIND=127.0.0.1`
+   (**address only -- the port goes in `PULSE_PORT`; never
+   `addr:port`**), `PULSE_LOG=1`,
    `PULSE_STORE_PATH=<data>/pulse-events.jsonl`,
    `PULSE_AUDIT_PATH=<data>/pulse-audit.log`,
    `PULSE_JWT_SECRET=<from secret store>`, optional `PULSE_RATE_LIMIT`,

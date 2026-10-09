@@ -141,6 +141,21 @@ pub fn main() -> Int {
   env.remove_var("PULSE_SESSION_TTL");
   env.remove_var("PULSE_RATE_LIMIT");
 
+  // --- PULSE_BIND shape (address vs address:port) ---------------------------
+  env.set_var("PULSE_BIND", "127.0.0.1:3500");
+  let w9 = config.cfg_validate();
+  f = f + check("cfg warn bind host:port", w9.len() == 1 && string.str_contains(w9[0], "PULSE_BIND"));
+  env.set_var("PULSE_BIND", "[::1]:3500");
+  let w10 = config.cfg_validate();
+  f = f + check("cfg warn bind [v6]:port", w10.len() == 1 && string.str_contains(w10[0], "PULSE_BIND"));
+  env.set_var("PULSE_BIND", "::1");
+  let w11 = config.cfg_validate();
+  f = f + check("cfg bind bare v6 ok", w11.len() == 0);
+  env.set_var("PULSE_BIND", "127.0.0.1");
+  let w12 = config.cfg_validate();
+  f = f + check("cfg bind plain ok", w12.len() == 0);
+  env.remove_var("PULSE_BIND");
+
   // --- CORS allowlist (comma-separated) -------------------------------------
   env.set_var("PULSE_CORS_ORIGIN", "https://pulse.xiom-lang.org, https://xiom-lang.org");
   f = f + check("cors list first", cors.cors_allow_origin("https://pulse.xiom-lang.org") == "https://pulse.xiom-lang.org");

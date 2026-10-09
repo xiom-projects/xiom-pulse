@@ -41,7 +41,8 @@ flowchart LR
 | `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS allowlist (comma-separated; `*` = any) |
 
 Invalid values warn at startup and in `--check-config` (they fall back to
-the defaults above).
+the defaults above). `PULSE_BIND` is the address only -- the port goes in
+`PULSE_PORT` (a combined `addr:port` value is flagged as a warning).
 
 Run: `out/pulse_app` (Linux) or `out\pulse_app.exe` (Windows); rebuild
 with `scripts/build.sh src/server.xi --name pulse_app` (Linux) or

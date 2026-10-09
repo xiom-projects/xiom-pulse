@@ -29,7 +29,8 @@ MemoryMax=512M
 WantedBy=multi-user.target
 ```
 
-`/etc/pulse.env` carries `PULSE_PORT`, `PULSE_BIND=127.0.0.1`,
+`/etc/pulse.env` carries `PULSE_PORT` (e.g. `3500`),
+`PULSE_BIND=127.0.0.1` (address only -- the port goes in `PULSE_PORT`),
 `PULSE_STORE_PATH`, `PULSE_AUDIT_PATH`, `PULSE_JWT_SECRET` (from your
 secret store), `PULSE_LANDING_PATH` / `PULSE_ASSETS_DIR` when serving a
 showcase, and `PULSE_BUILD_COMMIT` / `PULSE_BUILD_DATE` for provenance.

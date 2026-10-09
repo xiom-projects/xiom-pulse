@@ -33,6 +33,11 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_CSRF` | `1` | `0` disables CSRF checks |
 | `PULSE_CORS_ORIGIN` | (unset) | CORS allowlist: comma-separated origins, or `*` |
 
+`PULSE_BIND` takes the **address only** (`127.0.0.1`, `::1`, `0.0.0.0`
+in containers); the port belongs to `PULSE_PORT`. A combined value such
+as `127.0.0.1:3500` is reported as a validation warning -- never put a
+port in `PULSE_BIND`.
+
 `PULSE_LANDING_PATH` is re-read on every request to `/`, so content
 pipelines can update the landing page without restarting the server.
 

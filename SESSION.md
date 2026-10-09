@@ -123,6 +123,15 @@
   body carries the 0.1.0 highlights. Conventions confirmed with the
   website lane (no macOS artifact; mirror layout; `/api/version` ==
   tag). Relay-back in `docs/WEBSITE-RELAY-PULSE.md` section 11.
+- **Wrap 7c (ops env correction):** `PULSE_BIND=<addr>:<port>` is a silent
+  trap (the port part is ignored; ops hit it on the VPS and fixed the
+  unit to `PULSE_BIND=127.0.0.1` + `PULSE_PORT=3500`). Now covered by
+  config validation: an `addr:port` / `[v6]:port` value warns at startup
+  and in `--check-config` (bare IPv6 like `::1` is not flagged);
+  test_app +4 checks; runbooks (public + internal) all state
+  address-only. Verified both platforms (suites x2, smoke 78/78).
+  Side-finding filed: the compiler silently accepted a stray `}` that
+  left code outside the function body (COMPILER-FINDINGS wrap 7c).
 - **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
   filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
   facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),

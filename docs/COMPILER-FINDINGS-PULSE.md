@@ -534,3 +534,13 @@ post-repair sweep is the `...T134143Z/` logdir.
 - New `scripts/rss_probe.{sh,ps1}`: start the server, serve /health on an
   interval, report warmup-inclusive and steady-state (2nd sample onward)
   growth per request; exit gates only on a clean start/stop.
+
+## Delta 2026-10-09 (wrap 7c) -- compiler leniency: stray `}` silently accepted
+
+While adding the PULSE_BIND warning, a stray `}` after the bind check left
+the tail of `cfg_validate` (rate/burst/audit/TTL/CSRF/log/backend checks
+plus `return w`) outside the function -- and the build still succeeded
+(rc 0), with the function silently returning early. It cost a debugging
+cycle. If module-scope statements are intentional (script mode), please
+confirm; otherwise a parse error (or at least a warning) for statements
+outside a function body would be safer for consumers.

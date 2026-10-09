@@ -156,8 +156,10 @@ owner-gated.** Answers to the four asks:
    the CI/ruleset steps are specified; on the owner's go, ops executes
    and the website lane wires the page.
 2. **Demo endpoints + binding facts** (verified on the current build):
-   - Bind: `PULSE_BIND=127.0.0.1` (loopback by design); `PULSE_PORT`
-     unit's choice on the host.
+   - Bind: `PULSE_BIND=127.0.0.1` (**address only** -- the port goes in
+     `PULSE_PORT`; never `addr:port`; the VPS unit uses
+     `PULSE_BIND=127.0.0.1` + `PULSE_PORT=3500`, and a combined value is
+     now flagged by config validation).
    - Landing: `PULSE_LANDING_PATH=<checkout>/index.html` -- read **per
      request**, so the hourly-pull edits flow with no restart.
    - Assets: `PULSE_ASSETS_DIR` serves `/assets/<path>` (ETag +

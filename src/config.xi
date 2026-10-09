@@ -249,6 +249,50 @@ fn cfg_digit_value(s: Str) -> Int {
   return v;
 }
 
+/// cfg_digits_at is true when s[start..] is non-empty and all ASCII
+/// digits. Complexity: O(n). Pure.
+fn cfg_digits_at(s: Str, start: Int) -> Bool {
+  if start >= s.len() { return false; }
+  var i: Int = start;
+  while i < s.len() {
+    let b = s.byte_at(i);
+    if b < 48u8 || b > 57u8 { return false; }
+    i = i + 1;
+  }
+  return true;
+}
+
+/// cfg_bind_has_port is true for `host:port` and `[v6]:port` shapes, i.e.
+/// PULSE_BIND values that embed a port (bare IPv6 literals like `::1` are
+/// not flagged). Complexity: O(n). Pure.
+fn cfg_bind_has_port(s: Str) -> Bool {
+  if s.len() == 0 { return false; }
+  if s.byte_at(0) == 91u8 {
+    var i: Int = 0;
+    while i + 1 < s.len() {
+      if s.byte_at(i) == 93u8 && s.byte_at(i + 1) == 58u8 {
+        return cfg_digits_at(s, i + 2);
+      }
+      i = i + 1;
+    }
+    return false;
+  }
+  var colons: Int = 0;
+  var colon_at: Int = -1;
+  var j: Int = 0;
+  while j < s.len() {
+    if s.byte_at(j) == 58u8 {
+      colons = colons + 1;
+      colon_at = j;
+    }
+    j = j + 1;
+  }
+  if colons == 1 {
+    return cfg_digits_at(s, colon_at + 1);
+  }
+  return false;
+}
+
 /// cfg_validate returns human-readable warnings for set-but-invalid
 /// values (invalid values silently fall back to defaults, so surface them
 /// once at startup and in --check-config). Empty vector = all good.
@@ -262,6 +306,11 @@ pub fn cfg_validate() -> Vec[Str] {
     if pv < 1 || pv > 65535 {
       w.push("PULSE_PORT=\"" + port + "\" is not a valid port (1-65535); using 8080");
     }
+  }
+
+  let bind = env.var_or("PULSE_BIND", "");
+  if bind.len() > 0 && cfg_bind_has_port(bind) {
+    w.push("PULSE_BIND=\"" + bind + "\" looks like address:port; set PULSE_BIND to the address only and put the port in PULSE_PORT");
   }
 
   let rl = env.var_or("PULSE_RATE_LIMIT", "");
