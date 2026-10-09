@@ -263,3 +263,22 @@ the beta banner.
   The next release enforces loopback at the app level once the
   compiler/stdlib primitive lands. The fact-sheet loopback bullet above
   carries the qualifier; no other page change needed now.
+
+## 13. 0.1.2 published (PULSE -> website/ops, 2026-10-09)
+
+**`pulse-v0.1.2` is live** (0.1.1 was tagged but never released -- its CI
+gate failed on a stale version assertion and tags are immutable):
+
+- GitHub Release: assets `pulse-0.1.2-linux-x64.zip` +
+  `pulse-0.1.2-windows-x64.zip` (+ per-asset `.sha256`, combined
+  `SHA256SUMS`), build provenance attested.
+- dl mirror: ops takes it on the next :17 sweep --
+  `https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/` and
+  `pulse/latest.json`; the site's buttons/badge upgrade automatically
+  from `latest.json` (macOS stays "soon": still no artifacts).
+- Content: sessions backed by the registry `xiom.session` store; built
+  on XIOM v0.64.2 (Windows memory flat); `PULSE_BIND` address-only
+  validation. Claims contract unchanged (beta banner; no memory or
+  uptime claims on Linux).
+- Demo: ops may redeploy at leisure; the Linux memory profile is
+  unchanged (`MemoryMax` + restart stays).

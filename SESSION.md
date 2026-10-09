@@ -202,7 +202,11 @@
   the fixed cut is **0.1.2**: all expected-version literals updated
   (pulse.xi, server APP_VERSION, http Server header x2, test_smoke,
   test_http, smoke twins), verified with the pinned stdlib (CI parity),
-  re-tagged. Bindings-lane addendum filed: sqlite README carries the
+  re-tagged. **`pulse-v0.1.2` published green:** guard + linux/windows
+  packages + GitHub Release (assets + per-asset `.sha256` + `SHA256SUMS`,
+  provenance attested; release body carries the 0.1.2 highlights).
+  Relay-back + ops mirror note: `WEBSITE-RELAY-PULSE.md` section 13.
+  Bindings-lane addendum filed: sqlite README carries the
   3-line consumer snippet + the required `--c-source` flag (ergonomic
   fix filed by that lane); xiom.http 0.1.4 covers outbound; they
   keep-fresh and target accelerators after the `xiom.vectors` extraction.
