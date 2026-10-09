@@ -68,6 +68,15 @@ section now reflects the real Linux support + C-PULSE-14 mitigation.
 Remaining flip gate: a longer kv soak (crash/reopen already covered by
 `store_soak`). Score holds (~56.1%)._
 
+_Delta 2026-10-09 (wrap 6): **C-PULSE-14 corrected -- cross-platform.**
+The Windows soak's memory sampler measured the `cmd.exe` wrapper, not the
+server: every historical "flat memory" Windows number is invalid. Fixed
+(`soak_http.ps1`/`concurrent.ps1` resolve the real child); the corrected
+5m soak shows **~32 KB/request** growth (Linux ~48 KB/req); the new
+`rss_probe` twins reproduce it in ~2 minutes on either OS. Candidate lane
+fix spotted: m235 (loop-body static allocas) -- retest on the next
+archive. Reliability 40 -> 35, Testing 82 -> 80. Total ~56.1% -> ~55.5%._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -80,7 +89,7 @@ load, failure, and restart, not just the happy path.
 
 ---
 
-## 1. Overall score: **~56.1% of production grade**
+## 1. Overall score: **~55.5% of production grade**
 
 _Delta 2026-10-08 (kv backend): 54.6% -> ~55.6% -- **`xiom.kv` adopted as
 the opt-in event-store backend** (`PULSE_STORE_BACKEND=kv`,
@@ -180,9 +189,9 @@ fallbacks._
 | 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
-| 11 | Reliability & concurrency | 10% | 40% | 4.0 | flat-memory soaks on Windows (1h 13,198/13,198 + 6,543/6,543); **Linux RSS growth ~48 KB/req open (C-PULSE-14, 30m: 2.5 -> 146 MB)**; single-thread, no timeouts, no signals |
-| 12 | Testing / CI / release | 5% | 82% | 4.1 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 71); release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
-| | **Total** | **100%** | | **56.1** | |
+| 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14 cross-platform request-path RSS growth (~32 KB/req Windows, ~48 KB/req Linux) -- all "flat memory" soak numbers invalidated by the cmd-wrapper sampling bug (fixed, wrap 6)**; single-thread, no timeouts, no signals |
+| 12 | Testing / CI / release | 5% | 80% | 4.0 | suites+smoke+soak+probes on **Windows and Linux**; `.ps1`+`.sh` twins (smoke 78); **soak memory sampler bug fixed + `rss_probe` twins added (wrap 6)**; release packager + backup tooling; **`deploy/Dockerfile` verified** (build + container E2E); no CI |
+| | **Total** | **100%** | | **55.5** | |
 
 Two lenses to keep separate:
 
@@ -225,13 +234,15 @@ sessions, JWT, crash-safe JSONL store, binary responses, request body
 framing, global rate limiting (429 + `Retry-After`), graceful test
 shutdown (`X-Pulse-Quit`).
 
-**Load evidence:** 1h soak: PS driver 7,070/7,070 + WSL client 6,128, server
-served **13,198/13,198** requests, 0 errors, clean shutdown, working set
-+48 KB, handles 113 -> 113. 64 simultaneous connections served, 64/64.
-**Linux caveat (wrap 4):** the first Linux-server HTTP soak
-(`soak_http.sh`, 30m) grows RSS ~48 KB per request linearly (2.5 -> 146
-MB over 3,097 requests, 0 errors) while Windows v0.64.1 is flat; filed
-as C-PULSE-14 with a runtime repro (`tests/probes/probe_alloc_loop.xi`).
+**Load evidence:** 1h soak: PS driver 7,070/7,070 + WSL client 6,128,
+server served **13,198/13,198** requests, 0 errors, clean shutdown; 64
+simultaneous connections served, 64/64. **Memory caveat (wrap 6
+correction):** the Windows "flat memory" figures from that era are
+invalid -- `soak_http.ps1` sampled the `cmd.exe` wrapper, not the server
+(fixed). Corrected: the request path grows RSS on **both platforms**
+(~32 KB/req Windows over 587 requests; ~48 KB/req Linux over 3,097;
+handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
+(`tests/probes/probe_alloc_loop.xi`, `scripts/rss_probe.{sh,ps1}`).
 
 **Module inventory** (`src/`, all green in `tests/test_app.xi` x2):
 
@@ -336,13 +347,15 @@ as C-PULSE-14 with a runtime repro (`tests/probes/probe_alloc_loop.xi`).
   Registry has `xiom.websocket`/`xiom.realtime`; GraphQL stays behind an
   interface (compiler-gated item).
 
-**Reliability & concurrency (40%)**
+**Reliability & concurrency (35%)**
 - Single-threaded sequential accept (pin has no threads/select); 64
   concurrent works only because requests are short and queued by the OS.
-- **NEW C-PULSE-14 (Linux-only):** the request path retains ~48 KB RSS per
-  request on Linux v0.64.1 (30m soak 2.5 -> 146 MB, linear; Windows flat;
-  pure Vec churn flat; HEAD A/B identical). Filed with a runtime repro;
-  the Linux demo needs this fixed or a memory limit + restart cadence.
+- **C-PULSE-14 (cross-platform, corrected in wrap 6):** the request path
+  retains ~32 KB/req (Windows) / ~48 KB/req (Linux) RSS linearly; the
+  earlier "Windows flat" was a soak sampling bug (`cmd.exe` wrapper; now
+  fixed). Handles/fds flat; pure Vec churn flat. Candidate lane fix:
+  m235 "hoist loop-body static allocas" -- retest on the next archive.
+  Until then: memory limit + restart cadence for any unattended instance.
 - No transport timeouts; one stalled client blocks everyone.
 - No signal handling / graceful in-flight drain (test-only QUIT).
 - A trap anywhere kills the process (no supervisor/restart policy).

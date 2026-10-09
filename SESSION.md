@@ -57,12 +57,14 @@
   narrowed to Windows** -- Linux `probe_adopt_smoke` is green twice,
   Windows still crashes 0xC0000005 at the first cross-module access to a
   module-level `Vec[SessionStore]` (durable steps `1,2,3,4,5,11,6,7,8,9,10`);
-  local session store stands. **C-PULSE-14 NEW (Linux-only):** the
-  request path retains ~48 KB RSS per request (30m soak 2.5 -> 146 MB
-  linear; Windows flat; HEAD A/B + recv-size + Vec-churn controls all
-  exclude PULSE-side causes) -- release-gating for the Linux demo, NOT
-  for Phase-1 website work; interim ops mitigation: `MemoryMax` +
-  restart cadence.
+  local session store stands. **C-PULSE-14 (cross-platform, corrected in
+  wrap 6):** the request path retains RSS linearly at ~32 KB/req
+  (Windows) / ~48 KB/req (Linux); the earlier "Windows flat" was a soak
+  sampling bug (`soak_http.ps1` measured the `cmd.exe` wrapper -- fixed;
+  historical memory numbers invalid). Candidate lane fix: m235
+  loop-body-static-allocas -- retest the probes on the next archive.
+  Release-gating for any unattended demo (any OS), NOT for Phase-1
+  website work; interim ops mitigation: `MemoryMax` + restart cadence.
 - **`xiom.http` CLOSED (packages lane):** the 0.1.2 republish
   (eco-v0.1.103, unsafe-wrapped internals) fixed the v0.64.1 extern-unsafe
   breakage; `probe_pkg_http` is GREEN on Windows + Linux and the package
@@ -74,7 +76,8 @@
   platforms (test_http +11 parse cases, route cases in test_app);
   `xiom.toml` `source-roots` RETIRED -- the manifest has no machine
   paths (C-PULSE-02 closed). The fresh 30m Linux HTTP soak surfaced
-  **C-PULSE-14** (see bug gates); Windows v0.64.1 stays flat. Evidence:
+  **C-PULSE-14** (see bug gates; the "Windows flat" comparison there was
+  later invalidated by the wrap-6 soak-sampling bug). Evidence:
   `probe-logs/soak-http.summary.txt` + the progress curve; runtime repro
   `tests/probes/probe_alloc_loop.xi`.
 - **Wrap 5 (config validation):** invalid values now warn at startup and
@@ -86,6 +89,14 @@
   hashes; verified both platforms); `DEPLOYMENT.md` covers the kv store +
   snapshot/restore and the current Linux systemd guidance. Flip still
   gated on a longer kv soak (crash/reopen covered by `store_soak`).
+- **Wrap 6 (C-PULSE-14 correction + tools):** the Windows soak sampler
+  measured the `cmd.exe` wrapper, not the server -- all historical
+  "flat memory" numbers are invalid and the leak is **cross-platform**
+  (~32 KB/req Windows, ~48 KB/req Linux). Fixed `soak_http.ps1` +
+  `concurrent.ps1`; added `scripts/rss_probe.{sh,ps1}` (steady-state
+  growth per request in ~2 min, either OS). m235 in the compiler lane is
+  the candidate fix (loop-body static allocas) -- retest on the next
+  archive. Reliability 40 -> 35, Testing 82 -> 80.
 - **Showcase/site (owner decisions 2026-10-08):** `pulse.xiom-lang.org`
   DNS is live (no staging subdomain needed); `orbitdb.`/`xvector.` pages
   later (DNS records exist). Phase 1: the **website lane** owns the
@@ -109,7 +120,7 @@
   complete on both platforms** (Linux sweep green, incl. the 20m kv soak);
   ops answered (staging parked; Linux toolchain pin v0.64.1 recorded; CI
   on greenlight).
-- **Score:** ~56.1% production grade (`docs/PROGRESS.md`).
+- **Score:** ~55.5% production grade (`docs/PROGRESS.md`).
 - **NEXT (in order):** 1) watch the lanes: compiler (C-PULSE-09 Windows
   runtime fix -> session-swap retry on both platforms; **C-PULSE-14
   Linux request-path RSS retention -- runtime investigation, repro
@@ -578,8 +589,9 @@ TASK ORDER:
    build stamping on a compiler define flag (all filed).
 3. WATCH the lanes: compiler (C-PULSE-09 is Windows-only now -> retry
    the session-store swap with the bridge in git history 220f814 on BOTH
-   platforms; C-PULSE-14 Linux request-path RSS retention -> runtime
-   investigation, repro in tests\probes\probe_alloc_loop.xi; C-PULSE-13
+   platforms; C-PULSE-14 request-path RSS retention (cross-platform;
+   repros scripts\rss_probe.* + probe_alloc_loop; retest on the next
+   archive -- m235 candidate); C-PULSE-13
    resolver unification, routed via the packages lane; C-PULSE-12
    alias-shadowing ask), bindings (durable DB/KV
    binding behind the store seam). xiom.http 0.1.2 is closed -- no

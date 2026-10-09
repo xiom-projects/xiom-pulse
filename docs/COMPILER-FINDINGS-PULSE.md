@@ -465,7 +465,13 @@ post-repair sweep is the `...T134143Z/` logdir.
   codings -> 501). The stdlib `server_parse_request` stays head +
   Content-Length focused; no compiler/stdlib ask from this wrap.
 
-## Delta 2026-10-08 (wrap 4, continued) -- NEW C-PULSE-14: Linux request-path RSS growth
+## Delta 2026-10-08 (wrap 4, continued) -- NEW C-PULSE-14: request-path RSS growth
+
+> **Correction (wrap 6, 2026-10-09): the growth is NOT Linux-only.** The
+> "Windows stays flat" comparison used a Windows soak whose sampler
+> measured the `cmd.exe` wrapper instead of the server -- see the wrap-6
+> section at the end of this doc. Both platforms grow; the wrap-6 numbers
+> supersede the Linux-only scope below.
 
 - **Symptom (first Linux-server HTTP soak, 30m, 1 req/500ms, /health):**
   RSS 2,560 KB -> 148,992 KB -- **~48 KB per request, linear** (3,097
@@ -490,3 +496,41 @@ post-repair sweep is the `...T134143Z/` logdir.
 - **Impact:** Linux is the Phase-2 demo/deployment target; an unattended
   public instance needs this fixed or a `MemoryMax` + restart cadence
   (noted to ops). Phase-1 website work is unaffected.
+
+## Delta 2026-10-09 (wrap 6) -- C-PULSE-14 CORRECTION: cross-platform; Windows soak measurement bug fixed
+
+- **The Windows soak's memory sampler measured the wrong process.**
+  `soak_http.ps1` (and `concurrent.ps1`) start the server through a
+  `cmd.exe` log-redirection wrapper and sampled `$srv.Id` -- cmd.exe's
+  working set, not the server's. Every historical "flat memory" Windows
+  figure (the 1h soak `+48 KB / handles flat`, the 6,543/6,543 soak, the
+  64-concurrent check, and the wrap-4 Linux-vs-Windows bisection) measured
+  the wrapper. Fixed in both scripts: they now resolve the real child
+  process (Win32_Process parent lookup) before sampling.
+- **Corrected Windows numbers:** 5m soak (587 requests, 0 failures):
+  ws 5,300,224 -> 24,113,152 B = **~32.0 KB/request, linear**. The new
+  `rss_probe.ps1` independently reports ~32-34 KB/request steady-state.
+  Linux: ~48 KB/request long-run (30m soak) / ~54 KB/request short-run
+  (`rss_probe.sh`). Handles/fds flat on both; pure Vec churn flat on both
+  (`probe_alloc_loop`) -- so the retention is in the served request path
+  on **BOTH platforms**, same magnitude class.
+- **Repro tooling (in-repo):** `scripts/rss_probe.{sh,ps1}` (steady metric
+  from the 2nd sample), `tests/probes/probe_alloc_loop.xi`, and the
+  corrected soaks. Evidence: `probe-logs/soak-http-windows-5m.summary.txt`,
+  `probe-logs/rss-probe.summary.txt`, `probe-logs/kv-soak-45m*`.
+- **Candidate fix already in the lane:** **m235 "hoist loop-body static
+  allocas to the entry block" (C-ORBIT-05)** is exactly the class of bug
+  that would allocate once per request iteration; PULSE will re-run the
+  probe/soak on the first archive containing m235. The runtime lane
+  should treat this as a cross-platform request-path retention (not a
+  Linux port issue).
+- **Impact:** unchanged conclusion, wider scope -- an unattended public
+  instance on any OS needs the fix or `MemoryMax` + restart cadence.
+
+## Delta 2026-10-09 (wrap 6b) -- soak/backup housekeeping
+
+- `soak_http.ps1`/`concurrent.ps1` now sample the real server process
+  (see above). `soak_tcp.ps1` was already correct (direct start).
+- New `scripts/rss_probe.{sh,ps1}`: start the server, serve /health on an
+  interval, report warmup-inclusive and steady-state (2nd sample onward)
+  growth per request; exit gates only on a clean start/stop.

@@ -59,11 +59,10 @@ rerun via the PULSE repo's `scripts/` + `out/pulse_app`).
   chunked decoding + config validation), three suites x2,
   crash/reopen **6/6**, rate limiting, JSON access log + audit trail,
   Prometheus metrics.
-- **1h load soak on Windows: 13,198/13,198 requests, 0 errors**, flat
-  memory/handles; 64 simultaneous connections served. **Linux note
-  (2026-10-08):** the first Linux-server soak shows an RSS-growth issue
-  under fix (C-PULSE-14) -- do not quote flat-memory soak numbers for
-  Linux.
+- **1h load soak: 13,198/13,198 requests, 0 errors**; 64 simultaneous
+  connections served. **Memory honesty note (2026-10-09):** a request-path
+  RSS-growth issue is under fix (C-PULSE-14) on **both platforms** -- do
+  not quote flat-memory or long-uptime numbers.
 - Sessions + JWT HS256 + CSRF + opt-in CORS; schema validation on the
   auth routes; Transfer-Encoding smuggling guard.
 - Storage: crash-safe append store (default) + optional embedded
@@ -82,8 +81,8 @@ rerun via the PULSE repo's `scripts/` + `out/pulse_app`).
 - No graceful SIGTERM drain yet (supervisor restarts; the store heals).
 - No credentials/RBAC (login is a demo; do not imply security guarantees).
 - No CI yet and no published PULSE download artifacts yet (Phase 2).
-- Linux memory profile under investigation (C-PULSE-14): avoid any
-  long-running/24-7 claims for the Linux demo until cleared.
+- Memory profile under investigation (C-PULSE-14, both platforms):
+  avoid any long-running/24-7 claims until cleared.
 - No HTTP/2, SSE, WebSockets, templates (proxy's job / not started).
 - Route any claim not on the list above through the PULSE lane before
   publishing.

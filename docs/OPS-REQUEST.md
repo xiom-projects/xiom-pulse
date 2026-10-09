@@ -215,8 +215,9 @@ right now. When greenlit, ops executes the following (already specified):
    and the HTTP surface gained chunked request decoding (smoke 76/76 on
    both platforms). A clean CI checkout builds with `xiom pkg install`
    for the ten deps plus the D.1 bridge caveat on Unix layouts.
-8. **Linux demo gating (C-PULSE-14, wrap 4):** the Linux binary retains
-   ~48 KB RSS per HTTP request (30m soak 2.5 -> 146 MB linear; Windows
-   flat; repro filed). Before any unattended Linux demo, either wait for
-   the runtime fix or deploy with `MemoryMax=` + `Restart=always` in the
-   systemd unit plus an RSS alert in monitoring.
+8. **Demo gating (C-PULSE-14, corrected wrap 6):** the request path
+   retains ~32 KB/req (Windows) / ~48 KB/req (Linux) RSS linearly -- a
+   soak-sampler bug had hidden it on Windows (fixed). Before any
+   unattended demo (either OS), wait for the runtime fix (m235 candidate)
+   or deploy with `MemoryMax=` + `Restart=always` in the systemd unit
+   plus an RSS alert in monitoring.
