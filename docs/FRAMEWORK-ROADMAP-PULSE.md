@@ -113,10 +113,11 @@ When a compiler/stdlib pairing carries all three: set
    `pulse openapi` export; additive problem+json fields on the error
    envelope; pagination `Link` headers; idempotency keys on event
    writes; `/v1` prefix on new surfaces. **(OpenAPI served + CLI export
-   DONE 2026-10-09; the rest next.)**
+   + additive error `status` DONE 2026-10-09; pagination, idempotency
+   and `/v1` next.)**
 2. **CLI**: subcommands `openapi`, `routes`, `version`,
-   `check-config` (promoting the current flags). **(`openapi` +
-   `routes` DONE 2026-10-09; flag promotions next.)**
+   `check-config` (promoting the current flags). **(All four DONE
+   2026-10-09.)**
 3. **HTTP client base**: bump `xiom.http` to 0.1.4, add the
    SSRF-guarded outbound wrapper + probe (foundation for all
    integrations).

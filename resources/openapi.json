@@ -281,7 +281,12 @@
           "error": {
             "type": "object",
             "required": ["code", "message"],
-            "properties": { "code": { "type": "string" }, "message": { "type": "string" } }
+            "properties": {
+              "status": { "type": "integer", "description": "HTTP status, mirrored additively" },
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "rid": { "type": "string", "description": "request id when present" }
+            }
           }
         }
       }

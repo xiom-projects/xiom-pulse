@@ -242,6 +242,13 @@
   sha256-verifies it for release builds). Verified: exe +187,904 B,
   `ExtractAssociatedIcon` loads 32x32; suites x2 + smoke 84/84 on both
   platforms. `xiom --icon` is still absent in v0.64.2 -- ask stands.
+- **Wrap 13c (error status + CLI set):** every error path now mirrors the
+  HTTP status additively in the envelope (`{"error":{"status":N,...}}`;
+  the 405 Allow-header path uses the same shared helper); the CLI set is
+  complete -- `version` and `check-config` subcommands join
+  `openapi`/`routes`. test_app +3 checks; smoke 84 -> **89/89** on both
+  platforms (Linux pinned-stdlib). Roadmap 0.2 item 2 done, item 1
+  partially; pagination/idempotency/`/v1` next.
 - **Compiler relay received (2026-10-09, `docs/COMPILER-RELAY-2026-10-09-v0.64.2.md`):**
   **v0.64.2 is release-ready, tag held for the owner.** Fixes in batch:
   C-PULSE-09 (m223..m227; re-run `probe_adopt_smoke` on the archive),

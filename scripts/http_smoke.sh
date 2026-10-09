@@ -58,6 +58,14 @@ RT_OUT=$("$SERVER_EXE" routes 2>&1)
 RT_RC=$?
 pulse_check "cli routes text" "$RT_OUT" "GET /health"
 pulse_check_eq "cli routes rc" "$RT_RC" "0"
+V_OUT=$("$SERVER_EXE" version 2>&1)
+V_RC=$?
+pulse_check "cli version subcommand" "$V_OUT" "xiom-pulse"
+pulse_check_eq "cli version subcommand rc" "$V_RC" "0"
+CC_OUT=$("$SERVER_EXE" check-config 2>&1)
+CC_RC=$?
+pulse_check "cli check-config subcommand" "$CC_OUT" "port="
+pulse_check_eq "cli check-config subcommand rc" "$CC_RC" "0"
 
 LOG_DIR="$PULSE_REPO_ROOT/probe-logs"
 mkdir -p "$LOG_DIR"
@@ -108,6 +116,7 @@ pulse_check "te gzip rejected 501" "$R" "501 Not Implemented"
 R=$(http_get /nope)
 pulse_check "unknown 404" "$R" "404 Not Found"
 pulse_check "404 has rid" "$R" '"rid":"r-'
+pulse_check "404 error status" "$R" '"status":404'
 
 # --- 6. 405 -----------------------------------------------------------------
 R=$(curl -s -i -X DELETE "$(pulse_base)/health")

@@ -86,8 +86,19 @@ pub type HandlerOut = {
   body_bytes: Vec[UInt8];
 }
 
+// error_status_body injects the HTTP status into an error envelope
+// ({"error":{"status":N,"code":...,"message":...}}) -- RFC 9457-friendly
+// without changing the stable code/message contract; non-error bodies pass
+// through untouched.
+fn error_status_body(status: Int, body: Str) -> Str {
+  if string.str_starts_with(body, "{\"error\":{") {
+    return "{\"error\":{\"status\":" + status.to_str() + "," + string.str_slice(body, 10, body.len());
+  }
+  return body;
+}
+
 fn out_json(status: Int, body: Str) -> HandlerOut {
-  return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: Vec[(Str, Str)].new(); body: body; body_bytes: Vec[UInt8].new(); };
+  return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: Vec[(Str, Str)].new(); body: error_status_body(status, body); body_bytes: Vec[UInt8].new(); };
 }
 
 fn out_text(status: Int, body: Str) -> HandlerOut {
@@ -163,9 +174,9 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return out_json(404, envelope.error_body("not_found", "not found"));
   }
   if m.kind == 2 {
-    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-    hs.push(("Allow", m.allow));
-    return HandlerOut{ status: 405; content_type: CONTENT_JSON; headers: hs; body: envelope.error_body("method_not_allowed", "method not allowed"); body_bytes: Vec[UInt8].new(); };
+        var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+        hs.push(("Allow", m.allow));
+        return HandlerOut{ status: 405; content_type: CONTENT_JSON; headers: hs; body: error_status_body(405, envelope.error_body("method_not_allowed", "method not allowed")); body_bytes: Vec[UInt8].new(); };
   }
 
   if m.route_id == 1 {
@@ -558,7 +569,7 @@ pub fn main() -> Int {
   var ai: Int = 0;
   while ai < av.len() {
     let a = av[ai];
-    if a == "--version" || a == "-V" {
+    if a == "--version" || a == "-V" || a == "version" {
       io.println("xiom-pulse " + APP_VERSION);
       io.println("commit: " + env.var_or("PULSE_BUILD_COMMIT", "unknown"));
       io.println("build:  " + env.var_or("PULSE_BUILD_DATE", "unknown"));
@@ -566,13 +577,13 @@ pub fn main() -> Int {
     }
     if a == "--help" || a == "-h" {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
-      io.println("usage: pulse_app [--version] [--help] [--check-config] | routes | openapi");
+      io.println("usage: pulse_app [--version|--help|--check-config] | routes | openapi | version | check-config");
       io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       return 0;
     }
-    if a == "--check-config" {
+    if a == "--check-config" || a == "check-config" {
       // Pre-flight: load the config file (env wins) and dump effective
       // values without binding. Exit 1 only when a configured file is
       // unreadable/not a JSON object; the secret value is never printed.

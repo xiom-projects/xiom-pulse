@@ -81,6 +81,14 @@ $rtOut = (& $ServerExe routes 2>&1 | Out-String)
 $rtRc = $LASTEXITCODE
 Check "cli routes text" $rtOut "GET /health"
 Check "cli routes rc" "rc=$rtRc" "rc=0"
+$vOut = (& $ServerExe version 2>&1 | Out-String)
+$vRc = $LASTEXITCODE
+Check "cli version subcommand" $vOut "xiom-pulse"
+Check "cli version subcommand rc" "rc=$vRc" "rc=0"
+$ccOut = (& $ServerExe check-config 2>&1 | Out-String)
+$ccRc = $LASTEXITCODE
+Check "cli check-config subcommand" $ccOut "port="
+Check "cli check-config subcommand rc" "rc=$ccRc" "rc=0"
 
 function Invoke-CurlPost {
     param([string]$Path, [string]$Body, [string]$CookieJar = "", [string[]]$ExtraHeaders = @())
@@ -139,6 +147,7 @@ Check "te gzip rejected 501" $r "501 Not Implemented"
 $r = curl.exe -s -i "$base/nope" 2>&1 | Out-String
 Check "unknown 404" $r "404 Not Found"
 Check "404 has rid" $r '"rid":"r-'
+Check "404 error status" $r '"status":404'
 
 # 6. 405
 $r = curl.exe -s -i -X DELETE "$base/health" 2>&1 | Out-String

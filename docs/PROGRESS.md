@@ -131,6 +131,14 @@ substituted at request time; the first CLI subcommands (`openapi`,
 partially done -- problem+json, pagination, idempotency, `/v1`, flag
 promotions next. Score holds (~55.4%)._
 
+_Delta 2026-10-09 (wrap 13c): **error envelopes mirror the HTTP status
+additively** (`{"error":{"status":N,...}}`; shared helper also covers the
+405 Allow path) and the **CLI set is complete** (`version` +
+`check-config` subcommands). test_app +3 checks; smoke **89/89** on both
+platforms (Linux pinned-stdlib). Roadmap 0.2: item 2 done, item 1
+partially -- pagination `Link`, idempotency keys, `/v1`, the
+SSRF-guarded HTTP client and multipart next. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

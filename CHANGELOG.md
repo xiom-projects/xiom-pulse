@@ -8,6 +8,13 @@ GitHub release body.
 
 ### Added
 
+- Error envelopes carry the HTTP status additively
+  (`{"error":{"status":N,"code":...,"message":...}}` on every error path,
+  including 405 with its `Allow` header) -- RFC 9457-friendly without
+  changing the stable code/message contract.
+- CLI subcommands complete the documented set: `version` and
+  `check-config` now mirror their flags (`openapi` and `routes` already
+  ship).
 - **Official icon art adopted**: the owner-provided `pulse.ico` (187,396 B)
   replaces the older art at the canonical path `resources/img/pulse-ico.ico`
   (used by `/favicon.ico`), and is now **embedded in the Windows exe** via
@@ -21,7 +28,8 @@ GitHub release body.
   prints the contract document and `pulse_app routes` prints the route
   table (`METHOD PATH` per line).
 - `PULSE_OPENAPI_PATH` (default `resources/openapi.json`).
-- Smoke suite grew to 84 checks (contract route + CLI subcommands).
+- Smoke suite grew to 89 checks (contract route, CLI subcommands, error
+  status field).
 
 ## [0.1.2] - 2026-10-09
 

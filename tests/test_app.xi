@@ -376,6 +376,14 @@ pub fn main() -> Int {
   f = f + check("routes list has openapi", has_openapi);
   f = f + check("routes list size", rl.len() == 17);
 
+  // --- additive error status field (0.2) -------------------------------------
+  let nf = route_req("GET", "/nope", "");
+  f = f + check("error status field 404", nf.status == 404 && string.str_contains(nf.body, "\"status\":404"));
+  let m405b = route_req("DELETE", "/health", "");
+  f = f + check("error status field 405", m405b.status == 405 && string.str_contains(m405b.body, "\"status\":405"));
+  let okb = route_req("GET", "/api/items/7", "");
+  f = f + check("ok body untouched", okb.status == 200 && !string.str_contains(okb.body, "\"error\":"));
+
   if f == 0 {
     io.println("pulse-app: GREEN");
   } else {

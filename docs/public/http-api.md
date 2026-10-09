@@ -6,8 +6,9 @@ description: Endpoints, request limits, and response semantics.
 # HTTP API
 
 All responses are JSON unless noted. `GET /health` returns
-`{"status":"ok"}`. Errors use a stable envelope:
-`{"error":{"code":"...","message":"..."}}`.
+`{"status":"ok"}`. Errors use a stable envelope with the HTTP status
+mirrored additively:
+`{"error":{"status":404,"code":"not_found","message":"..."}}`.
 
 ## Public endpoints
 
@@ -62,5 +63,7 @@ Statuses: `200`, `204`, `400`, `401`, `403`, `404`, `405`, `413`, `500`,
 ## CLI
 
 `pulse_app openapi` prints the same contract document to stdout;
-`pulse_app routes` prints the route table (`METHOD PATH` per line). Both
-exit 0; `openapi` exits 1 when the document cannot be read.
+`pulse_app routes` prints the route table (`METHOD PATH` per line);
+`pulse_app version` and `pulse_app check-config` mirror the `--version`
+and `--check-config` flags. `openapi` exits 1 when the document cannot
+be read; `check-config` exits 1 when a configured file is unreadable.
