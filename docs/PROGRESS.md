@@ -185,7 +185,7 @@ fallbacks._
 | 4 | Configuration | 5% | 85% | 4.3 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; **value validation warnings** (bad port/uint/TTL/bool/enum -> startup + check-config warnings); no schema library |
 | 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 68% | 6.8 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+, verified on both platforms incl. a **20m kv soak** with hard-kill reopen), crash-safe append, `?limit`/`?kind`, compaction; no update/delete/index, no fsync |
+| 7 | Storage | 10% | 68% | 6.8 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.1+, verified on both platforms incl. a **45m kv soak** -- 977/0, compact + hard-kill reopen intact), crash-safe append, `?limit`/`?kind`, compaction; no update/delete/index, no fsync |
 | 8 | Security hardening | 12% | 46% | 5.5 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
@@ -315,8 +315,9 @@ handles flat; pure Vec churn flat). Filed as C-PULSE-14 with repros
 - Append + read last N (`?limit=1..100`) + `?kind=` field filter + count +
   compaction (temp file + atomic replace; drops torn lines); **10m soak:
   841 writes, 0 fail, compact/reopen counts intact, 0 mismatches**
-  (`scripts\store_soak.ps1`); **20m kv soak on Linux** (756/0, hard-kill
-  reopen + native compact intact). No update/delete, migrations framework,
+  (`scripts\store_soak.ps1`); **kv soaks on Linux 20m + 45m** (756/0 and
+  977/0, hard-kill reopen + native compact intact; single 90 KB segment).
+  No update/delete, migrations framework,
   or indexes (fine at small scale).
 - No `fsync` in the runtime: durability today = torn-tail healing, not
   power-loss safety (stdlib wishlist row added).

@@ -143,3 +143,53 @@ DISCIPLINE: follow the website lane's existing build/publish conventions;
 edit only the website repo; stop before any public deployment (owner +
 ops greenlight that).
 ```
+
+## 9. Phase 2 reply (PULSE -> website lane, 2026-10-09)
+
+**Status: the PULSE side is ready; the phase-2 sequence itself is
+owner-gated.** Answers to the four asks:
+
+1. **Greenlight.** The sequence in `docs/OPS-REQUEST.md` section E
+   (CI -> repo public -> rulesets -> dl -> ops deploy -> site wiring) is
+   the **owner's call** -- the PULSE lane does not greenlight it. PULSE
+   has the release tooling ready (`scripts/release.{sh,ps1}` verified) and
+   the CI/ruleset steps are specified; on the owner's go, ops executes
+   and the website lane wires the page.
+2. **Demo endpoints + binding facts** (verified on the current build):
+   - Bind: `PULSE_BIND=127.0.0.1` (loopback by design); `PULSE_PORT`
+     unit's choice on the host.
+   - Landing: `PULSE_LANDING_PATH=<checkout>/index.html` -- read **per
+     request**, so the hourly-pull edits flow with no restart.
+   - Assets: `PULSE_ASSETS_DIR` serves `/assets/<path>` (ETag +
+     If-None-Match 304, Range, traversal guard); nginx serving `/img/`
+     directly from the checkout is equally fine -- pick per asset layout.
+   - CORS: `PULSE_CORS_ORIGIN` is now a **comma-separated allowlist**
+     (exact match; `*` = any) -- use
+     `https://pulse.xiom-lang.org,https://xiom-lang.org` for the two-site
+     case. Note: the page fetching `/health` + `/api/version` from its
+     own origin is **same-origin and needs no CORS**; CORS matters only
+     if the hub embeds widgets cross-origin.
+   - Badge endpoints: `GET /health` -> `{"status":"ok"}`;
+     `GET /api/version` -> `{"name":"xiom-pulse","version":"0.1.0",...}`
+     (add `PULSE_BUILD_COMMIT` / `PULSE_BUILD_DATE` to the unit env so the
+     badge can show provenance; compile-time stamping still waits on a
+     compiler define flag). `/metrics` stays proxy-restricted.
+3. **Release tag + artifact naming:** tag `pulse-v<semver>` (first:
+   `pulse-v0.1.0`, parsed from `src/pulse.xi`); artifacts
+   `pulse-<ver>-<os>-<arch>.zip` + `.sha256` (e.g.
+   `pulse-0.1.0-linux-x64.zip`; contents: binary, icon, README,
+   LICENSE-*, NOTICE -- conventions in OPS-REQUEST section B). The dl URLs
+   exist once CI cuts the first release; keep the buttons disabled until
+   then.
+4. **Claim updates (delta since the Phase-1 build):**
+   - smoke **78/78** (was 73): request chunked decoding + config
+     validation checks;
+   - the "smuggling guard" bullet is now "chunked request decoding +
+     TE/CL smuggling guard";
+   - the upcoming list loses chunked decoding, configuration validation,
+     and the source-roots proof (all landed);
+   - **memory honesty (important):** do NOT quote flat-memory or
+     long-uptime numbers on any OS -- C-PULSE-14 (cross-platform
+     request-path RSS growth) is open and under fix; the beta banner
+     stays until the gap list clears;
+   - live badge fetch approved (same-origin), behind the beta banner.

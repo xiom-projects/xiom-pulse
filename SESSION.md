@@ -96,7 +96,16 @@
   `concurrent.ps1`; added `scripts/rss_probe.{sh,ps1}` (steady-state
   growth per request in ~2 min, either OS). m235 in the compiler lane is
   the candidate fix (loop-body static allocas) -- retest on the next
-  archive. Reliability 40 -> 35, Testing 82 -> 80.
+  archive. Reliability 40 -> 35, Testing 82 -> 80. Also: **45m kv soak
+  green** (977/0, compact + hard-kill reopen intact, single 90 KB
+  segment) -- the flip gate is now only the >= 24h aggregated bar.
+- **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
+  filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
+  facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),
+  claim deltas (smoke 78/78; no memory/long-uptime claims on any OS),
+  badge fetch approved (same-origin); **greenlight is owner-only**.
+  `PULSE_CORS_ORIGIN` is now a comma-separated allowlist (verified both
+  platforms) for the pulse-origin + hub-embed case.
 - **Showcase/site (owner decisions 2026-10-08):** `pulse.xiom-lang.org`
   DNS is live (no staging subdomain needed); `orbitdb.`/`xvector.` pages
   later (DNS records exist). Phase 1: the **website lane** owns the

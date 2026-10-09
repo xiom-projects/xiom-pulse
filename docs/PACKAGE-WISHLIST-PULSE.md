@@ -178,12 +178,12 @@ on v0.64.0 anyway.
   kv-aware (`--kv-dir`/`-KvDir`, env-driven default when
   `PULSE_STORE_BACKEND=kv`, whole-dir snapshot at `kv-store/` with
   per-file sizes+sha256 -- verified on both platforms); `DEPLOYMENT.md`
-  documents the kv store, snapshot and restore procedure. Remaining gate:
-  a longer (>= 24h aggregated) kv soak, and a decision on crash coverage
-  -- `store_soak` already provides the kv crash/reopen contract (hard
-  kill + reopen counts intact, 20m green), while `crash_test` keeps its
-  JSONL torn-tail contract and must pin `PULSE_STORE_BACKEND=jsonl` if
-  the default ever flips. Re-evaluate at the next compiler release.
+  documents the kv store, snapshot and restore procedure. Soak evidence:
+  Linux 20m (756/0) + **45m (977/0, compact + hard-kill reopen intact,
+  single 90 KB segment; `probe-logs/kv-soak-45m.summary.txt`)** + Windows
+  20s; aggregate Linux ~66 min. Remaining gate: the >= 24h aggregated bar
+  (and the `crash_test` jsonl-pin note -- `store_soak` is the kv
+  crash/reopen contract). Re-evaluate at the next compiler release.
 - Cosmetic consumer note: `store_soak.sh` prints a `store-soak.jsonl: No
   such file` stderr line in kv mode when computing `store_bytes` (fixed
   this wrap in the `.sh` twin to match the `.ps1` empty value).
