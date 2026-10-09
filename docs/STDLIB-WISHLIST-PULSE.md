@@ -157,6 +157,8 @@ the pin below.
   then enforce loopback and add a smoke check that the LISTEN socket's
   local address matches `PULSE_BIND`; `PULSE_BIND` already validates the
   address-only shape (config warning) and stays advisory until then.
+  **(Status 2026-10-09: not in v0.64.2; still awaited -- the macOS check
+  run and the next archive are the retest points.)**
 
 ### Delta 2026-10-09 (wrap 8b) -- macOS build blockers in the runtime C (dry-run evidence)
 
@@ -174,4 +176,8 @@ doc, wrap 8b):
 - (compiler side, also filed: darwin codegen emits an undeclared
   `@llvm.memset.p0i8.i64`.) PULSE re-runs the dry run as the acceptance
   test; macOS release legs stay gated on `RELEASE_BUILD_MACOS` until
-  green.
+  green. **(Re-checked on the v0.64.2 pins, 2026-10-09: both blockers
+  persist -- macos-x64 fails at `_SC_AVPHYS_PAGES`, macos-arm64 at
+  `fp128_helpers.c` inline asm; the codegen issue may or may not remain
+  behind the C errors. Variable reset to unset so the next tag is not
+  blocked.)**

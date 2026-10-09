@@ -606,3 +606,28 @@ workflows; the CI setup action's C-PULSE-13 bridge is removed).
   packages store mid-sweep** (looked like mass T001s until the store was
   re-checked); reinstalling via `xiom pkg install` restored everything.
   Not a compiler defect -- noted for reproducibility.
+
+## Delta 2026-10-09 (wrap 9b) -- lane response summary + open-ask index
+
+**Relay ask answered:** probe suites re-run on v0.64.2 with the
+obsolete workarounds reverted -- the fleet is 11/11 on **both**
+platforms, suites x2 + smoke 78/78, m212 gate green; the C-PULSE-13
+bridge is dropped from the box and the CI setup action (m232 verified);
+the session-store swap retry is PULSE's next unit (C-PULSE-09 closed).
+
+**Open asks to this lane (index):**
+
+1. **C-PULSE-16 -- address-aware bind** (`socket_bind`/`xiom_socket_bind`
+   take no address; PULSE_BIND is advisory). Needed before PULSE can
+   enforce loopback + add the LISTEN-address smoke check.
+2. **Darwin blockers** (stdlib runtime C: `_SC_AVPHYS_PAGES` is
+   Linux-only; `fp128_helpers.c` x86 asm on arm64; plus the darwin
+   codegen `llvm.memset` report) -- **re-confirmed on the v0.64.2 pins
+   2026-10-09**; macOS release legs stay gated until green.
+3. **C-PULSE-14 Linux memory**: Windows is flat on v0.64.2 (thanks --
+   confirmed), but **Linux still grows, now ~87 KB/req steady** (worse
+   than v0.64.1's ~48); m235 was not in this batch -- repros are
+   `scripts/rss_probe.{sh,ps1}` + `tests/probes/probe_alloc_loop.xi`.
+4. C-PULSE-12 alias ask (module last-segment shadowing) and the
+   triplicate-sibling-exports finding are tracked on the compiler side;
+   PULSE has no addendum.

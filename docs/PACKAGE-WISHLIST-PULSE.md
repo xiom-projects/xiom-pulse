@@ -98,7 +98,7 @@ append store and files `xiom.kv` above.
 | `xiom.http.middleware` 0.1.0 | `probe_pkg_middleware.xi` | CSRF token + constant-time validate (`src/session.xi`); CORS header block (`src/cors.xi`) |
 | `xiom.static` 0.1.0 | `probe_pkg_static.xi` | `/favicon.ico` through `static_serve`: mime, ETag/Last-Modified/Cache-Control, If-None-Match 304, Range 206/416, traversal guard |
 | `xiom.session` 0.1.0 | `probe_pkg_session.xi` (green) | **store integration deferred** -- C-PULSE-09 crash when driven from wrapper modules (inline green); local store retained |
-| `xiom.kv` 0.1.0 | `probe_pkg_kv.xi` (**green on v0.64.1**) | **adopted as the opt-in store backend** (`PULSE_STORE_BACKEND=kv`, `PULSE_KV_DIR`, `PULSE_KV_PREFIX`; sequence-keyed records, native compact; JSONL stays the default fallback). v0.64.0 defects (C-PULSE-10) were fixed by m217 |
+| `xiom.kv` 0.1.0 | `probe_pkg_kv.xi` (**green on v0.64.1 and v0.64.2**) | **adopted as the opt-in store backend** (`PULSE_STORE_BACKEND=kv`, `PULSE_KV_DIR`, `PULSE_KV_PREFIX`; sequence-keyed records, native compact; JSONL stays the default fallback). v0.64.0 defects (C-PULSE-10) were fixed by m217 |
 
 **API notes for the packages lane:**
 
@@ -195,6 +195,28 @@ All ten adopted packages' probes green on the Linux archive
 audit-rotate, kv, middleware, metrics, static, session). The `xiom.http`
 0.1.1 red gate (extern-unsafe enforcement on v0.64.1) was **closed by the
 0.1.2 republish** -- see the wrap-3 subsection below (package re-added).
+
+### Consumer-visible status on v0.64.2 (2026-10-09) -- all green, both platforms
+
+Re-run after the v0.64.2 adoption: the **full probe fleet is 11/11 on
+Windows AND Linux** (state-holder, session-inline, **adopt-smoke**
+(steps 1..10, exit 0 -- C-PULSE-09 closed), stdlib-server-parse, schema,
+audit-rotate, kv, middleware, metrics, static, session), plus the m212
+gate, suites x2, smoke 78/78, crash 6/6 on both platforms. No package
+reds remain; `xiom.http` 0.1.2, `xiom.kv` 0.1.0, `xiom.session` 0.1.0
+and the rest all consume cleanly on the v0.64.2 archive.
+
+### C-PULSE-13 CLOSED (v0.64.2, m232) -- verified 2026-10-09
+
+`xiom pkg install` now resolves the SAME home as the compiler
+(`xiom_graph::paths::xiom_home()`), so the Unix split is gone: verified
+on WSL (`xiom pkg install xiom.http@0.1.2` -> `~/.local/share/xiom/packages`,
+`xiom doctor` OK) and Windows (`%LOCALAPPDATA%\xiom\packages`). The local
+bridge was removed from the WSL box AND from the CI setup action
+(`.github/actions/setup-xiom`); installs + full builds work without it.
+Operational note kept: a toolchain re-extract/repair removes non-archive
+subdirs (like `packages/`) -- verify with `xiom doctor` and re-add with
+`xiom pkg install` after any toolchain maintenance.
 
 ### xiom.http 0.1.2 (eco-v0.1.103) -- republish verified, re-added (wrap 3)
 
