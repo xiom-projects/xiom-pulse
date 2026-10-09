@@ -1,0 +1,93 @@
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# Composite setup for every PULSE workflow: the pinned SHA256-verified
+# XIOM toolchain, the xiom-lang/stdlib checkout at STDLIB_VERSION, the
+# C-PULSE-13 store bridge on Unix, and the ten pinned registry dependency
+# installs. Requires the workflow-level env pins XIOM_TOOLCHAIN_VERSION,
+# XIOM_LINUX_SHA256, XIOM_WINDOWS_SHA256.
+name: Setup XIOM (pinned toolchain + stdlib + deps)
+description: Pinned XIOM toolchain, stdlib checkout and registry dependencies.
+
+inputs:
+  cross-repo-token:
+    description: Token for the stdlib checkout (both repos are public; pass github.token or an org PAT)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Read STDLIB_VERSION
+      id: pin
+      shell: bash
+      run: echo "ref=$(tr -d '\r\n ' < STDLIB_VERSION)" >> "$GITHUB_OUTPUT"
+
+    - name: Checkout stdlib at the pin
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        repository: xiom-lang/stdlib
+        ref: ${{ steps.pin.outputs.ref }}
+        path: stdlib
+        token: ${{ inputs.cross-repo-token }}
+
+    - name: Install XIOM toolchain (Linux, pinned + SHA256)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        ver="${XIOM_TOOLCHAIN_VERSION}"
+        url="https://dl.xiom-lang.org/releases/${ver}/xiom-${ver#v}-linux-x64.tar.gz"
+        curl -sSL "$url" -o /tmp/xiom-toolchain.tar.gz
+        echo "${XIOM_LINUX_SHA256}  /tmp/xiom-toolchain.tar.gz" | sha256sum -c -
+        mkdir -p "$HOME/.local/share/xiom"
+        tar -xzf /tmp/xiom-toolchain.tar.gz -C "$HOME/.local/share/xiom"
+        # C-PULSE-13 bridge: `xiom pkg` installs under ~/xiom/packages while
+        # the compiler resolves <install-root>/packages (see
+        # docs/COMPILER-FINDINGS-PULSE.md). Re-create it on every install.
+        mkdir -p "$HOME/xiom/packages"
+        ln -sfn "$HOME/xiom/packages" "$HOME/.local/share/xiom/packages"
+        echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
+        "$HOME/.local/share/xiom/bin/xiom" --version
+
+    - name: Install XIOM toolchain (Windows, pinned + SHA256)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $ver = $env:XIOM_TOOLCHAIN_VERSION
+        $url = "https://dl.xiom-lang.org/releases/$ver/xiom-$($ver.TrimStart('v'))-windows-x64.zip"
+        $zip = Join-Path $env:RUNNER_TEMP "xiom-toolchain.zip"
+        Invoke-WebRequest -Uri $url -OutFile $zip
+        $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+        if ($actual -ne $env:XIOM_WINDOWS_SHA256) { throw "toolchain SHA256 mismatch: $actual" }
+        $dir = Join-Path $env:LOCALAPPDATA "xiom-toolchain"
+        if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
+        Expand-Archive -Path $zip -DestinationPath $dir -Force
+        "$dir\bin" | Out-File -Append $env:GITHUB_PATH -Encoding ASCII
+        & "$dir\bin\xiom.exe" --version
+
+    - name: Install PULSE dependencies (pinned registry versions)
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          XIOM="$LOCALAPPDATA\\xiom-toolchain\\bin\\xiom.exe"
+        else
+          XIOM="$HOME/.local/share/xiom/bin/xiom"
+        fi
+        for p in "xiom.http@0.1.2" "xiom.cookie@0.1.1" "xiom.jwt@0.2.0" \
+                 "xiom.router@0.1.0" "xiom.rate@0.2.0" "xiom.metrics@0.2.0" \
+                 "xiom.http.middleware@0.1.0" "xiom.session@0.1.0" \
+                 "xiom.static@0.1.0" "xiom.kv@0.1.0"; do
+          "$XIOM" pkg install "$p"
+        done
+
+    - name: Export build environment
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          echo "XIOM_COMPILER=$LOCALAPPDATA\\xiom-toolchain\\bin\\xiom.exe" >> "$GITHUB_ENV"
+        else
+          echo "XIOM_COMPILER=$HOME/.local/share/xiom/bin/xiom" >> "$GITHUB_ENV"
+        fi
+        echo "XIOM_STDLIB=$GITHUB_WORKSPACE/stdlib" >> "$GITHUB_ENV"

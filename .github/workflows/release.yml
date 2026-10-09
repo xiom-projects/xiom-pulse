@@ -1,0 +1,205 @@
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: PULSE Release
+
+# Tag push (pulse-v*) publishes a GitHub Release with the packaged
+# binaries + checksums for the dl mirror. Manual dispatch builds the same
+# packages as workflow artifacts (dry run) without creating a release.
+#
+# The guard job (mirrors the xiom release model): the tag must equal the
+# project version in src/pulse.xi and be an ancestor of main. Toolchain and
+# stdlib are consumed at pinned, SHA256-verified revisions via
+# .github/actions/setup-xiom. C-PULSE-13 (the Unix store bridge) is applied
+# by the setup action, so C-HUNTING runs exactly like the local lanes.
+
+on:
+  push:
+    tags: ["pulse-v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Dry-run version label (default: project version from src/pulse.xi)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  XIOM_TOOLCHAIN_VERSION: "v0.64.1"
+  XIOM_LINUX_SHA256: "6f6787a3ff068929593270d849c21b1f597036f2152bc830e357b980c91b5601"
+  XIOM_WINDOWS_SHA256: "1b3122535b8ba9a7f26f753d8f2b1714d1c1ee688990884817f748a7773e9075"
+
+jobs:
+  guard:
+    name: release guard (tag == project version, tag on main)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Checkout (full history for the ancestry check)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Read project version (src/pulse.xi)
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' src/pulse.xi | head -n 1 | tr -d '"')"
+          [ -n "$ver" ] || { echo "::error::cannot read version from src/pulse.xi"; exit 1; }
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "project version: $ver"
+
+      - name: Tag gate (pulse-v<ver> == project version, tag is an ancestor of main)
+        if: startsWith(github.ref, 'refs/tags/pulse-v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#pulse-v}"
+          ver="${{ steps.ver.outputs.version }}"
+          if [ "$tag" != "$ver" ]; then
+            echo "::error::release tag $GITHUB_REF_NAME does not match the project version $ver -- bump src/pulse.xi in a PR first"
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "::error::tag $GITHUB_REF_NAME is not an ancestor of main"
+            exit 1
+          fi
+          echo "guard OK: $GITHUB_REF_NAME == $ver; tag is an ancestor of main"
+
+  build:
+    name: package ${{ matrix.platform }}
+    needs: [guard]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            os: ubuntu-latest
+          - platform: windows-x64
+            os: windows-latest
+    steps:
+      - name: Checkout PULSE
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup XIOM (toolchain + stdlib + deps)
+        uses: ./.github/actions/setup-xiom
+        with:
+          cross-repo-token: ${{ secrets.XIOM_CROSS_REPO_TOKEN || github.token }}
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
+
+      - name: "Fleet (Linux: suites x2, smoke, rate, crash, kv store soak)"
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for r in 1 2; do
+            for s in test_http test_app test_smoke; do
+              bash scripts/run.sh "tests/$s.xi" --quiet --timeout-sec 300
+            done
+          done
+          bash scripts/http_smoke.sh --port 18090
+          bash scripts/rate_smoke.sh
+          bash scripts/crash_test.sh
+          PULSE_STORE_BACKEND=kv PULSE_KV_DIR="$PWD/probe-logs/ci-kv-store" \
+            bash scripts/store_soak.sh --seconds 60 --port 18089
+
+      - name: "Fleet (Windows: suites x2 + smoke)"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          foreach ($r in 1, 2) {
+            foreach ($s in @("test_http", "test_app", "test_smoke")) {
+              & scripts\run.ps1 "tests\$s.xi" -Quiet
+              if ($LASTEXITCODE -ne 0) { throw "suite $s (round $r) failed with exit $LASTEXITCODE" }
+            }
+          }
+          & scripts\http_smoke.ps1 -Port 18090
+          if ($LASTEXITCODE -ne 0) { throw "smoke failed with exit $LASTEXITCODE" }
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && inputs.version || needs.guard.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash scripts/release.sh --no-build --version "${RELEASE_VERSION}"
+          ls -l dist/
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' && inputs.version || needs.guard.outputs.version }}
+        run: |
+          & scripts\release.ps1 -NoBuild -Version $env:RELEASE_VERSION
+          Get-ChildItem dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pulse-${{ matrix.platform }}-${{ github.run_id }}
+          path: |
+            dist/pulse-*.zip
+            dist/pulse-*.zip.sha256
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: "dist/pulse-*.zip"
+
+  release:
+    name: publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/pulse-v') && !failure() && !cancelled()
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Combine checksums and verify shipped files
+        run: |
+          set -euo pipefail
+          cd artifacts
+          ls -l
+          sha256sum *.zip | tee SHA256SUMS
+          while read -r _hash file; do
+            [ -f "$file" ] || { echo "::error::SHA256SUMS references a file that was not uploaded: $file"; exit 1; }
+          done < SHA256SUMS
+          echo "all checksummed files present"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.XIOM_RELEASE_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          cd artifacts
+          gh release create "$GITHUB_REF_NAME" *.zip *.zip.sha256 SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes

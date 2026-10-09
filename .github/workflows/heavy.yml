@@ -1,0 +1,69 @@
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: PULSE Heavy Soaks
+
+# Tier 2 (org model): the long soaks run weekly and on demand, off the PR
+# path, on both platforms. Soak/probe numbers are evidence, not gates; the
+# gates are 0 failures and a clean shutdown.
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  XIOM_TOOLCHAIN_VERSION: "v0.64.1"
+  XIOM_LINUX_SHA256: "6f6787a3ff068929593270d849c21b1f597036f2152bc830e357b980c91b5601"
+  XIOM_WINDOWS_SHA256: "1b3122535b8ba9a7f26f753d8f2b1714d1c1ee688990884817f748a7773e9075"
+
+jobs:
+  soak:
+    name: soak (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+    steps:
+      - name: Checkout PULSE
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup XIOM (toolchain + stdlib + deps)
+        uses: ./.github/actions/setup-xiom
+        with:
+          cross-repo-token: ${{ secrets.XIOM_CROSS_REPO_TOKEN || github.token }}
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
+
+      - name: "Soaks (Linux: 30m HTTP, 10m kv store, RSS probe)"
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/soak_http.sh --seconds 1800 --port 18092
+          PULSE_STORE_BACKEND=kv PULSE_KV_DIR="$PWD/probe-logs/heavy-kv-store" \
+            bash scripts/store_soak.sh --seconds 600 --port 18089
+          bash scripts/rss_probe.sh --seconds 120 --port 18096
+
+      - name: "Soaks (Windows: 30m HTTP, RSS probe)"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & scripts\soak_http.ps1 -Seconds 1800 -Port 18092
+          if ($LASTEXITCODE -ne 0) { throw "soak failed with exit $LASTEXITCODE" }
+          & scripts\rss_probe.ps1 -Seconds 120 -Port 18096
+          if ($LASTEXITCODE -ne 0) { throw "rss probe failed with exit $LASTEXITCODE" }

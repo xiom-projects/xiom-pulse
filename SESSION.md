@@ -99,6 +99,17 @@
   archive. Reliability 40 -> 35, Testing 82 -> 80. Also: **45m kv soak
   green** (977/0, compact + hard-kill reopen intact, single 90 KB
   segment) -- the flip gate is now only the >= 24h aggregated bar.
+- **Wrap 7 (release pipeline, owner-greenlit demo sequence):** CI infra
+  committed -- `.github/actions/setup-xiom` (pinned v0.64.1 toolchain,
+  SHA256-verified per platform, stdlib checkout at `STDLIB_VERSION`
+  `4dd884423ab7ea39a3962630d1ea2552bfd16a2d`, the C-PULSE-13 bridge, ten
+  pinned deps), `ci.yml` (PR tier: suites x2 + smoke on both OS),
+  `release.yml` (guard -> fleet -> `pulse-<ver>-<os>-<arch>.zip` +
+  `.sha256` + `SHA256SUMS` -> GitHub Release on `pulse-v*`), `heavy.yml`
+  (weekly 30m HTTP + kv soaks + RSS probe). Local packaging dry-runs
+  green both OS; YAML validated; `dev-env` explicit-env path pinned in
+  the setup action. Next: push main, apply the xiom-mirrored rulesets,
+  dry-run dispatch, tag `pulse-v0.1.0`, relay to ops for dl.
 - **Website lane relayed Phase-2 readiness (2026-10-09); PULSE reply
   filed** (`docs/WEBSITE-RELAY-PULSE.md` section 9): endpoint/binding
   facts, release naming (`pulse-v0.1.0`, `pulse-<ver>-<os>-<arch>.zip`),

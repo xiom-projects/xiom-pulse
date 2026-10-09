@@ -221,3 +221,17 @@ right now. When greenlit, ops executes the following (already specified):
    unattended demo (either OS), wait for the runtime fix (m235 candidate)
    or deploy with `MemoryMax=` + `Restart=always` in the systemd unit
    plus an RSS alert in monitoring.
+9. **CI/release implementation (wrap 7, committed):**
+   `.github/workflows/ci.yml` (PR tier: build + suites x2 + the 78-check
+   smoke on ubuntu and windows), `release.yml` (tag `pulse-v*` -> guard
+   [tag == `src/pulse.xi` version, ancestor of main] -> fleet [suites x2,
+   smoke, rate, crash, 60s kv store soak on Linux; suites + smoke on
+   Windows] -> `pulse-<ver>-<os>-<arch>.zip` + `.sha256` + combined
+   `SHA256SUMS` -> GitHub Release), `heavy.yml` (weekly 30m HTTP + 10m kv
+   soaks + RSS probe), and `.github/actions/setup-xiom` (pinned
+   SHA256-verified toolchain v0.64.1, stdlib checkout at `STDLIB_VERSION`
+   = 4dd8844..., the C-PULSE-13 bridge, ten pinned deps). Rulesets mirror
+   the xiom repo: `protect-main` (PR-only, linear history, required
+   checks `ubuntu-latest` + `windows-latest` + `DCO`) and
+   `protect-release-tags` (`pulse-v*`, no delete/force). dl publish: ops
+   pull-deploy from the GitHub Release assets.

@@ -1,0 +1,77 @@
+# Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: PULSE CI
+
+# Tier 1: every pull request + manual dispatch (the org model: heavy soaks
+# live in heavy.yml, releases in release.yml). Consumes the pinned,
+# SHA256-verified XIOM toolchain and the stdlib checkout at STDLIB_VERSION
+# via .github/actions/setup-xiom; the fleet is suites x2 + the 78-check
+# HTTP smoke on both platforms.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  XIOM_TOOLCHAIN_VERSION: "v0.64.1"
+  XIOM_LINUX_SHA256: "6f6787a3ff068929593270d849c21b1f597036f2152bc830e357b980c91b5601"
+  XIOM_WINDOWS_SHA256: "1b3122535b8ba9a7f26f753d8f2b1714d1c1ee688990884817f748a7773e9075"
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+    steps:
+      - name: Checkout PULSE
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup XIOM (toolchain + stdlib + deps)
+        uses: ./.github/actions/setup-xiom
+        with:
+          cross-repo-token: ${{ secrets.XIOM_CROSS_REPO_TOKEN || github.token }}
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
+
+      - name: Suites x2 + smoke (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for r in 1 2; do
+            for s in test_http test_app test_smoke; do
+              bash scripts/run.sh "tests/$s.xi" --quiet --timeout-sec 300
+            done
+          done
+          bash scripts/http_smoke.sh --port 18090
+
+      - name: Suites x2 + smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          foreach ($r in 1, 2) {
+            foreach ($s in @("test_http", "test_app", "test_smoke")) {
+              & scripts\run.ps1 "tests\$s.xi" -Quiet
+              if ($LASTEXITCODE -ne 0) { throw "suite $s (round $r) failed with exit $LASTEXITCODE" }
+            }
+          }
+          & scripts\http_smoke.ps1 -Port 18090
+          if ($LASTEXITCODE -ne 0) { throw "smoke failed with exit $LASTEXITCODE" }
