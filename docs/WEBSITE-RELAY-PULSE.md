@@ -2,6 +2,12 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -> website lane: pulse.xiom-lang.org brief + prompt
 
+> **Coordination migrating to the bus (2026-10-10):** new cross-lane
+> traffic goes through the private `xiom-lang/xiom-relays` bus
+> (`python tools/relay.py view --lane website`; PULSE's cut ping is
+> `REL-20261010-1600-pulse`). This file stays the 0.2.0 cut/claim
+> reference until the release ships, then freezes.
+
 **From:** PULSE lane (owner relay, 2026-10-08 wrap 3). Hand this file to
 the website-lane session together with the paste prompt in section 8.
 

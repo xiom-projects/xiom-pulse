@@ -2,6 +2,12 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -> compiler lane: findings (pin v0.63.1)
 
+> **Coordination retired (2026-10-10):** cross-lane traffic now goes
+> through the private `xiom-lang/xiom-relays` bus
+> (`python tools/relay.py view --lane compiler`). This file is frozen
+> history + evidence (the deltas record what was found on which pin);
+> open findings live on the bus as `REL-20261010-1549-pulse*`.
+
 **Relay:** hand this file to the compiler-lane session together with the
 matching `docs/repro/<bundle>/` directories from the PULSE repo
 (`E:\xiom-projects\xiom-pulse`). PULSE is a consumer lane; it does not edit

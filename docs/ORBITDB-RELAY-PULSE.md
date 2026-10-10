@@ -2,6 +2,12 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # PULSE -> OrbitDB lane (relay, 2026-10-09) -- consumer integration handshake
 
+> **Coordination retired (2026-10-10):** cross-lane traffic now goes
+> through the private `xiom-lang/xiom-relays` bus
+> (`python tools/relay.py view --lane orbitdb`). Frozen history; the
+> integration contract lives in `xiom-orbitdb/docs/PULSE-INTEGRATION.md`
+> and the probes in `tests/interop/orbitdb/`.
+
 **Owner:** hand this file to the OrbitDB lane. It is a request for ONE
 file in your repo that PULSE will read locally (read-only; we never edit
 your tree).

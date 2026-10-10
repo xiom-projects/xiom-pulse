@@ -44,7 +44,12 @@
   (`REL-20261010-1548-pulse`); migrated: darwin memset + C-PULSE-12/14/16
   -> compiler, C-PULSE-17/18 -> stdlib, darwin one-off notice ->
   stdlib (see `REL-20261010-1549-pulse*`). Wishlist-row migration
-  continues on the doorbell.
+  continues on the doorbell. **Legacy relay docs frozen (freeze headers
+  with bus pointers):** `COMPILER-FINDINGS-PULSE.md`,
+  `COMPILER-RELAY-2026-10-09-v0.64.2.md`, `ORBITDB-RELAY-PULSE.md`,
+  `XVECTOR-RELAY-PULSE.md`; `WEBSITE-RELAY-PULSE.md` stays the live
+  0.2.0 cut/claim reference (migrating), `OPS-REQUEST.md` stays the
+  standing ops spec. No deletions -- history + evidence stay in-repo.
 - **Live demo:** pulse.xiom-lang.org serves the website page **through
   PULSE** (nginx -> loopback; landing via `PULSE_LANDING_PATH`, JSON via
   `/health` + `/api/version`); currently running **0.1.0/cc3e741** -- ops

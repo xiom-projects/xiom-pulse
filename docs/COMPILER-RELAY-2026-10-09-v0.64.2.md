@@ -3,6 +3,11 @@
 
 # Compiler relay -- 2026-10-09: v0.64.2 release-ready (Pulse lane)
 
+> **Coordination retired (2026-10-10):** hand-carried relays are replaced
+> by the private `xiom-lang/xiom-relays` bus
+> (`python tools/relay.py view --lane compiler`). Frozen history +
+> evidence; the live asks are bus items.
+
 Status from the XIOM compiler lane.
 
 ## Release state
