@@ -154,54 +154,7 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
   return HandlerOut{ status: sr.status; content_type: ct; headers: hs; body: ""; body_bytes: sr.body; };
 }
 
-  /// site_candidate returns the site-relative file to serve for a URL
-  /// path: exact file, clean URL (`about` -> about.html), directory index
-  /// (`sub/` or `sub` -> sub/index.html); "" when nothing matches. The
-  /// static engine still owns traversal rejection. Complexity: O(fs).
-  fn site_candidate(dir: Str, path: Str) -> Str {
-    var p = path;
-    if p.len() > 0 && string.str_starts_with(p, "/") {
-      p = string.str_slice(p, 1, p.len());
-    }
-    if p.len() == 0 {
-      if io.file_exists(io.join_paths(dir, "index.html")) { return "index.html"; }
-      return "";
-    }
-    if string.str_ends_with(p, "/") {
-      let idx = p + "index.html";
-      if io.file_exists(io.join_paths(dir, idx)) { return idx; }
-      return "";
-    }
-    if io.file_exists(io.join_paths(dir, p)) { return p; }
-    let htm = p + ".html";
-    if io.file_exists(io.join_paths(dir, htm)) { return htm; }
-    let idx2 = p + "/index.html";
-    if io.file_exists(io.join_paths(dir, idx2)) { return idx2; }
-    return "";
-  }
-
-  /// serve_site_page serves one URL path from the site root (PULSE_SITE_DIR):
-  /// clean URLs + index resolution + a custom `404.html` (served with
-  /// status 404) + `application/wasm` for `.wasm`. Cache via
-  /// PULSE_SITE_MAX_AGE. Complexity: O(fs).
-  fn serve_site_page(dir: Str, path: Str, req: &PulseRequest) -> HandlerOut {
-    let cand = site_candidate(dir, path);
-    if cand.len() > 0 {
-      var out = serve_static_file(dir, cand, req, config.cfg_site_max_age());
-      if string.str_ends_with(cand, ".wasm") {
-        out.content_type = "application/wasm";
-      }
-      return out;
-    }
-    if io.file_exists(io.join_paths(dir, "404.html")) {
-      var nf = serve_static_file(dir, "404.html", req, config.cfg_site_max_age());
-      nf.status = 404;
-      return nf;
-    }
-    return out_json(404, envelope.error_body("not_found", "page not found"));
-  }
-
-  /// dispatch_one routes one request: `/assets/<path>` is served from
+/// dispatch_one routes one request: `/assets/<path>` is served from
 /// PULSE_ASSETS_DIR (showcase sites), everything else goes through the
 /// router + handle_route. GET and HEAD only; other methods fall through.
 /// The `/v1` alias prefix is stripped first (router.v1_path), so every
@@ -210,11 +163,6 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
 fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOut {
   let tgt = router.v1_path(req.target);
   if eff_method == "GET" && string.str_starts_with(tgt, "/assets/") {
-    let sd = config.cfg_site_dir();
-    if sd.len() > 0 {
-      let parts = router.split_target(tgt);
-      return serve_site_page(sd, parts.0, req);
-    }
     let parts = router.split_target(tgt);
     let rel = string.str_slice(parts.0, 8, parts.0.len());
     return serve_static_file(config.cfg_assets_dir(), rel, req, 3600);
@@ -241,14 +189,6 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     }
   }
   if m.kind == 0 {
-    // Site mode: unmatched GET/HEAD falls through to the static site tree
-    // (clean URLs, index resolution, custom 404); API routes always win.
-    // Traversal stays rejected by the static engine.
-    let sd = config.cfg_site_dir();
-    if sd.len() > 0 && (req.method == "GET" || req.method == "HEAD") {
-      let parts = router.split_target(router.v1_path(req.target));
-      return serve_site_page(sd, parts.0, req);
-    }
     return out_json(404, envelope.error_body("not_found", "not found"));
   }
   if m.kind == 2 {
@@ -544,10 +484,6 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     return serve_static_file(config.cfg_static_dir(), rel, req, 86400);
   }
   if m.route_id == 15 {
-    let sd0 = config.cfg_site_dir();
-    if sd0.len() > 0 {
-      return serve_site_page(sd0, "/", req);
-    }
     // Optional per-site landing content: PULSE_LANDING_PATH serves an HTML
     // file (read per request; low-traffic showcase sites), else the
     // built-in placeholder page.

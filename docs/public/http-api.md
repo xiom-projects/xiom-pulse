@@ -93,18 +93,6 @@ boundary_not_found` or `400 malformed` (broken framing), `413
 part_too_large` / `413 too_many_parts`. This is a 0.2 surface: it is
 reachable at `/api/uploads` and `/v1/api/uploads`.
 
-### Serving a site
-
-With `PULSE_SITE_DIR` set, the binary serves a pre-built static site:
-any `GET`/`HEAD` that matches no API route is resolved against the site
-root -- exact file, clean URL (`/about` -> `about.html`), directory
-index (`/docs/` -> `docs/index.html`). Missing paths serve `404.html`
-with status `404` (plain JSON when that file is absent), `.wasm` is
-served as `application/wasm`, and caching is controlled by
-`PULSE_SITE_MAX_AGE` (default 3600s). API routes (`/api/*`, `/v1/*`,
-`/health`, `/metrics`, `/openapi.json`, `/favicon.ico`) always take
-precedence, and path traversal is rejected by the static engine.
-
 ## Request limits and semantics
 
 - Body cap: 1 MiB decoded; over-cap chunked bodies get `413`.
