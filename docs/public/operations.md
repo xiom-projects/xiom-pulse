@@ -33,7 +33,8 @@ WantedBy=multi-user.target
 `PULSE_BIND=127.0.0.1` (address only -- the port goes in `PULSE_PORT`),
 `PULSE_STORE_PATH`, `PULSE_AUDIT_PATH`, `PULSE_JWT_SECRET` (from your
 secret store), `PULSE_LANDING_PATH` / `PULSE_ASSETS_DIR` when serving a
-showcase, and `PULSE_BUILD_COMMIT` / `PULSE_BUILD_DATE` for provenance.
+showcase, `PULSE_UPLOAD_DIR` when uploads are enabled, and
+`PULSE_BUILD_COMMIT` / `PULSE_BUILD_DATE` for provenance.
 There is no graceful SIGTERM drain yet: restarts drop in-flight requests
 briefly; `Restart=always` covers it.
 
@@ -66,6 +67,9 @@ TLS/HSTS at the proxy.
 - Restore: stop the service, copy the snapshot back over the store path
   (or the kv directory), start, and verify with `/api/events/count`.
   The JSONL store tolerates a torn tail, so a slightly-live copy is safe.
+- Uploads: `PULSE_UPLOAD_DIR` holds uploaded files (generated names) and
+  is **not** part of the built-in snapshot -- include it in your backup
+  policy when uploads are enabled.
 
 ## Monitoring
 

@@ -49,6 +49,11 @@ GitHub release body.
   `name`/`original`/`bytes`/`content_type`. Stable errors: `415
   unsupported_media_type`, `400 boundary_not_found`/`malformed`, `413
   part_too_large`/`too_many_parts`. Smoke suite at **119 checks**.
+- Config JSON file overlay completed: `store_backend`/`kv_dir`/
+  `kv_prefix` (documented but previously not applied) and the 0.2 keys
+  (`upload_dir`, `upload_max_bytes`, `upload_max_parts`,
+  `http_allowlist`, `http_max_bytes`) now load from `PULSE_CONFIG`
+  files; environment variables still win.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).

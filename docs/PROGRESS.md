@@ -234,6 +234,22 @@ are contract traps, not Err. Relay responses with probe results + the
 §6 answers appended to both relay docs. Hard-kill / filter / hybrid
 scenarios are the next tranche. Score holds (~55.4%)._
 
+_Delta 2026-10-10 (0.2 docs refresh + release prep): **docs/public-set
+refresh done** -- `index.md` lists the 0.2 surfaces; `configuration.md`
+documents the five new knobs (`PULSE_UPLOAD_*`, `PULSE_HTTP_*`) and the
+JSON overlay now actually applies the documented keys
+(`store_backend`/`kv_dir`/`kv_prefix` were doc-only before; the five new
+ones join them -- test_app +2 checks); `operations.md` covers the upload
+dir in the env file and the backup policy; `http-api.md`/`security.md`
+were refreshed with their units. Manifest drift fixed: `package.xi`
+version 0.1.0 -> 0.1.2, `xiom.http` dep 0.1.2 -> 0.1.4, module list
+completed (audit/openapi/schema/multipart/outbound + `sessions`
+spelling). New `docs/RELEASE-CHECKLIST.md` encodes the mechanical cut
+(every version literal incl. the twin `Server:` header occurrences,
+preconditions, verify, tag/CI/ops steps, and the 0.2.0 content list).
+Suites x2 + smoke **119/119** on both platforms after the config change
+(Linux pinned-stdlib). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

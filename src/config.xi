@@ -148,6 +148,14 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "rate_burst", "PULSE_RATE_BURST");
   cfg_apply_str(obj, "cors_origin", "PULSE_CORS_ORIGIN");
   cfg_apply_str(obj, "csrf", "PULSE_CSRF");
+  cfg_apply_str(obj, "store_backend", "PULSE_STORE_BACKEND");
+  cfg_apply_str(obj, "kv_dir", "PULSE_KV_DIR");
+  cfg_apply_str(obj, "kv_prefix", "PULSE_KV_PREFIX");
+  cfg_apply_str(obj, "upload_dir", "PULSE_UPLOAD_DIR");
+  cfg_apply_str(obj, "upload_max_bytes", "PULSE_UPLOAD_MAX_BYTES");
+  cfg_apply_str(obj, "upload_max_parts", "PULSE_UPLOAD_MAX_PARTS");
+  cfg_apply_str(obj, "http_allowlist", "PULSE_HTTP_ALLOWLIST");
+  cfg_apply_str(obj, "http_max_bytes", "PULSE_HTTP_MAX_BYTES");
   return true;
 }
 

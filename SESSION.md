@@ -70,8 +70,11 @@
   parser, per-part/part-count caps, generated on-disk names, stable
   415/400/413 errors); fleet **12/12**, smoke **119/119** on both
   platforms (Linux run with the pinned stdlib). **The 0.2 PULSE-side
-  slate is COMPLETE** -- next: docs/public-set refresh, then the 0.2.0
-  cut when macOS is green (upstream gates below).
+  slate is COMPLETE and the docs/public-set refresh is DONE** (wrap 14
+  follow-up: public pages refreshed; `docs/RELEASE-CHECKLIST.md` encodes
+  the mechanical cut incl. every version literal; `package.xi` manifest
+  drift fixed -- version, `xiom.http` 0.1.4, module list) -- next: the
+  0.2.0 cut when macOS is green (upstream gates below).
 - **0.3 interop (first tranche, wrap 14):** ORBITDB + XVector consumer
   conformance probes built and GREEN both platforms --
   `tests/interop/orbitdb/probe_pkg_orbitdb.xi` (**39/39**; roundtrip +
@@ -813,11 +816,10 @@ TASK ORDER:
 2. RELEASE 0.2.0 ("the release that matters") when macOS is green (or on
    the owner's call): the 0.2 PULSE-side slate is COMPLETE (pagination
    Link + seq cursor, idempotency keys, /v1 alias, outbound base +
-   SSRF guard, multipart uploads). Version bump checklist from SESSION
-   gotchas: EVERY expected-version literal (tests/test_app.xi openapi,
-   the smoke twins, package.xi/SESSION, docs), CHANGELOG entry, tag
-   pulse-v0.2.0, CI publishes, ops mirrors at :17, website lights the
-   macOS button.
+   SSRF guard, multipart uploads) and the docs/public refresh is done.
+   Follow docs\RELEASE-CHECKLIST.md (mechanical cut; every version
+   literal incl. the twin `Server:` header occurrences in src\http.xi,
+   preconditions, verify, tag, CI, ops, website).
 3. INTEROP / 0.3: next tranche of tests/interop/ -- orbitdb hard-kill
    harness (integration doc §5.2/3: writer/verify modes + kill), xvector
    filter combos (§5.2) + hybrid join (§5.9); then the 0.3 drivers

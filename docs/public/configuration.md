@@ -33,6 +33,11 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_RATE_BURST` | = limit | token-bucket capacity |
 | `PULSE_CSRF` | `1` | `0` disables CSRF checks |
 | `PULSE_CORS_ORIGIN` | (unset) | CORS allowlist: comma-separated origins, or `*` |
+| `PULSE_UPLOAD_DIR` | `uploads` | multipart upload target (generated names) |
+| `PULSE_UPLOAD_MAX_BYTES` | `1048576` | per-part upload cap (1 MiB) |
+| `PULSE_UPLOAD_MAX_PARTS` | `8` | parts per upload request (clamped 1..64) |
+| `PULSE_HTTP_ALLOWLIST` | (unset) | outbound SSRF allowlist (comma-separated hosts, exact or subdomain); unset = blocklist mode |
+| `PULSE_HTTP_MAX_BYTES` | `262144` | outbound HTTP response size cap |
 
 `PULSE_BIND` takes the **address only** (`127.0.0.1`, `::1`, `0.0.0.0`
 in containers); the port belongs to `PULSE_PORT`. A combined value such
@@ -48,8 +53,9 @@ Any of the documented keys can be set in the JSON file (`port`,
 `bind`, `log`, `store_backend`, `store_path`, `kv_dir`, `kv_prefix`,
 `audit_path`, `audit_max_bytes`, `config`, `icon_path`, `assets_dir`,
 `landing_path`, `jwt_secret`, `session_ttl`, `rate_limit`,
-`rate_burst`, `csrf`, `cors_origin`). Environment variables override the
-file.
+`rate_burst`, `csrf`, `cors_origin`, `upload_dir`, `upload_max_bytes`,
+`upload_max_parts`, `http_allowlist`, `http_max_bytes`). Environment
+variables override the file.
 
 ## Store backends
 

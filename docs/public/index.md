@@ -25,6 +25,14 @@ crash-safe append store with an audit trail.
 - An events API over a crash-safe store (JSONL by default; an embedded
   `xiom.kv` backend is available), an audit log with rotation, Prometheus
   metrics, and a structured access log.
+- An OpenAPI 3.1 contract served at `/openapi.json` plus a full CLI
+  (`openapi`, `routes`, `version`, `check-config`), and a `/v1` alias
+  for every route.
+- Paginated event listing (durable `seq` cursor, RFC 8288
+  `Link: rel="next"`), idempotent event writes (`Idempotency-Key`), and
+  bounded `multipart/form-data` uploads (`POST /api/uploads`).
+- An outbound HTTP client base with an SSRF guard (blocklist by default,
+  `PULSE_HTTP_ALLOWLIST` for strict egress) for integrations.
 - Showcase serving: a per-site landing page (`PULSE_LANDING_PATH`) and
   `/assets/*` static files with ETag/304/Range support.
 
