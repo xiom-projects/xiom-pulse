@@ -86,8 +86,12 @@
   composition (nested `xiom.toml` + relative `source-roots`; lanes'
   pattern), local-only until the packages publish. Trap note filed in
   both relays: `search(k=0)` / `create_collection(dim=0)` are contract
-  traps, not Err. NEXT tranche: orbitdb hard-kill harness (§5.2/3),
-  xvector filters (§5.2) + hybrid join (§5.9), then the 0.3 drivers.
+  traps, not Err. **Follow-up (2026-10-10): XVector filters (scenario 2,
+  +12 checks -> 42/42) and the ORBITDB hard-kill harness (scenarios 2/3:
+  writer/uncommitted-txn -> marker -> SIGKILL -> verify) are GREEN on
+  both platforms** (`scripts/interop_orbitdb_crash.{ps1,sh}`); the
+  hybrid join stays with the ORBITDB lane's `probe_hybrid` until the
+  0.3 drivers compose it.
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
   (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
   (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14
@@ -97,7 +101,10 @@
   demo firewalled); C-PULSE-12 open (rename workaround used twice;
   import-alias syntax ask); **C-PULSE-17 NEW** (`io.list_dir` returns
   dangling names on v0.64.2 -- repro
-  `docs/repro/io-list-dir-dangling/`; PULSE avoids list_dir entirely).
+  `docs/repro/io-list-dir-dangling/`; PULSE avoids list_dir entirely);
+  **C-PULSE-18 NEW** (`time.sleep_ms` is a NO-OP on v0.64.2, both
+  platforms -- repro `docs/repro/time-sleep-noop/`; harness writers
+  busy-wait on monotonic deadlines).
 - **Score:** ~55.4% production grade (`docs/PROGRESS.md`).
 - **Stores:** jsonl = default; kv = verified opt-in both platforms
   (20m + 45m Linux soaks); flip still gated on the recorded

@@ -712,3 +712,17 @@ smoke 78/78. Two notes for this lane:
 - Everything else in the 0.2 uploads unit is green on both platforms
   (suites x2 + smoke **119/119**, Linux pinned stdlib); nothing else
   blocked.
+
+## Delta 2026-10-10 (wrap 14 follow-up) -- NEW C-PULSE-18: `time.sleep_ms` is a no-op
+
+- On v0.64.2 (BOTH platforms: Windows lane stdlib + Linux pinned
+  `4dd8844`), `time.sleep_ms(500)` returns immediately:
+  `time.monotonic_ms()` deltas across the call are **0**
+  (`slept_delta_ms=0`). Consumers that pace loops (retry backoff,
+  harness writers, rate shaping) degenerate into busy spins or race past
+  their wait. PULSE hit it in the ORBITDB hard-kill harness writer,
+  which "timed out" in milliseconds; the writer now busy-waits on a
+  monotonic deadline. Expect the same shape for `time.sleep(Duration)`
+  if the runtime clock wait is the root cause.
+- **Repro:** `docs/repro/time-sleep-noop/probe.xi` (exit 1 =
+  reproduced, 0 = fixed at >= 450ms).

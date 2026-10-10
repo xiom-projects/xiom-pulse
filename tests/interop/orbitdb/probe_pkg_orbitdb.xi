@@ -8,16 +8,19 @@
 //
 // Scenarios implemented (from xiom-orbitdb/docs/PULSE-INTEGRATION.md §5):
 //   1. roundtrip + reopen (N=1k, checkpoint, fresh handle, x2)
+//   2. hard-kill recovery + txn classification (writer/uncommitted/
+//      verify modes, driven by scripts/interop_orbitdb_crash.{ps1,sh})
 //   4. query edges (range, value filter offset/limit, empty results)
 //   5. error paths (bad path, order < 3, stale second-handle writes)
-//   plus transaction commit/abort classification (scenario 3 in-process
-//   form; hard-kill variants stay with the runner-level harness).
+//   plus transaction commit/abort classification (in-process form).
 //
 // Run (sibling tree present): .\scripts\run.ps1 tests\interop\orbitdb\probe_pkg_orbitdb.xi
 // Exit code = failure count (0 = green).
 module pulse_probe_pkg_orbitdb
 
 use xiom.io;
+use xiom.env;
+use xiom.time;
 use xiom.convert;
 use xiom.db.engine;
 
@@ -32,7 +35,74 @@ fn expect(name: Str, ok: Bool) {
   }
 }
 
+// --- hard-kill modes (docs/PULSE-INTEGRATION.md §5.2/3) ----------------------
+// Driven by scripts/interop_orbitdb_crash.{ps1,sh}, which start the writer,
+// wait for the marker file, hard-kill the tree, then run verify.
+
+fn crash_writer() -> Int {
+  let dir = "tests/interop/orbitdb/.tmp";
+  if !io.is_dir(dir) {
+    let _mk = io.create_dir(dir);
+  }
+  let wal = dir + "/crash.wal";
+  let _r1 = io.remove_file(wal);
+  let _r2 = io.remove_file(wal + ".snap");
+  let _rm = io.remove_file(dir + "/crash-ready.marker");
+  var db = db_file_open(wal, 4);
+  var i: Int = 0;
+  while i < 999 {
+    let _p = db_file_put(&mut db, i, i);
+    i = i + 1;
+  }
+  let _tb = db_file_txn_begin(&mut db);
+  let _tp = db_file_txn_put(&mut db, 2000, 9);
+  let wm = io.write_file(dir + "/crash-ready.marker", "ready");
+  io.println("writer-ready puts=999 txn-uncommitted=2000 marker=" + wm.is_ok.to_str());
+  // C-PULSE-18: time.sleep_ms is a NO-OP on v0.64.2, so wait on a monotonic
+  // deadline (busy) -- the runner hard-kills us within a second of the
+  // marker; the deadline is only the watchdog backstop.
+  let t0 = time.monotonic_ms();
+  while (time.monotonic_ms() - t0) < 60000 {
+    // spin; nothing to do until the kill arrives
+  }
+  io.println("writer-timeout (no hard kill arrived)");
+  return 3;
+}
+
+fn crash_verify() -> Int {
+  let dir = "tests/interop/orbitdb/.tmp";
+  let wal = dir + "/crash.wal";
+  var db = db_file_open(wal, 4);
+  var prefix_ok: Bool = true;
+  var i: Int = 0;
+  while i < 999 {
+    let v = db_file_get(&db, i);
+    if v.is_none || v.value != i { prefix_ok = false; }
+    i = i + 1;
+  }
+  let uncommitted = db_file_get(&db, 2000);
+  let p2 = db_file_put(&mut db, 2001, 9);
+  let ck = db_file_checkpoint(&mut db);
+  var db2 = db_file_open(wal, 4);
+  let n1 = db_file_get(&db2, 2001);
+  let reopened: Bool = (!n1.is_none) && n1.value == 9;
+  io.println("verify: prefix_ok=" + prefix_ok.to_str() + " uncommitted_absent=" + uncommitted.is_none.to_str() + " append=" + p2.to_str() + " reopen=" + reopened.to_str());
+  if prefix_ok && uncommitted.is_none && p2 && ck >= 0 && reopened {
+    io.println("[PASS] probe_pkg_orbitdb crash verify");
+    return 0;
+  }
+  io.println("[FAIL] probe_pkg_orbitdb crash verify");
+  return 1;
+}
+
 pub fn main() -> Int {
+  let mode = env.var_or("ORBITDB_PROBE_MODE", "full");
+  if mode == "writer" { return crash_writer(); }
+  if mode == "verify" { return crash_verify(); }
+  return main_full();
+}
+
+fn main_full() -> Int {
   let dir = "tests/interop/orbitdb/.tmp";
   // io.create_dir REQUIRES the path to not exist (contract); guard it so
   // the probe is rerunnable on the same (shared Windows/Linux) tree.

@@ -250,6 +250,27 @@ preconditions, verify, tag/CI/ops steps, and the 0.2.0 content list).
 Suites x2 + smoke **119/119** on both platforms after the config change
 (Linux pinned-stdlib). Score holds (~55.4%)._
 
+_Delta 2026-10-10 (wrap 14 follow-up 2: remaining interop + release
+prep): **XVector filters (scenario 2) and the ORBITDB hard-kill harness
+(scenarios 2/3) landed.** `probe_pkg_xvector` +12 checks (Eq / Range /
+In / And / Or / Not / Exists vs the unfiltered scan, no-payload
+semantics) -> **42/42**. The ORBITDB probe gains writer/verify modes
+(`ORBITDB_PROBE_MODE`) driven by new twin runners
+`scripts/interop_orbitdb_crash.{ps1,sh}`: 999 committed puts + one
+uncommitted txn -> marker file -> SIGKILL of the whole tree -> verify
+(`prefix_ok=true uncommitted_absent=1 append=true reopen=true`)
+**GREEN on both platforms**. Found + filed **C-PULSE-18** while building
+it: `time.sleep_ms` is a NO-OP on v0.64.2 (both platforms; repro
+`docs/repro/time-sleep-noop/`; the writer busy-waits on a monotonic
+deadline). The hybrid join stays with the ORBITDB lane's `probe_hybrid`
+(green x2 on their side) until the 0.3 drivers compose it. Release prep:
+`releases.md` gained the missing **0.1.2** entry, `install.md` examples
+moved to 0.1.2, and the website relay gained **§14 -- the 0.2.0 cut
+plan** (content deltas, four-leg artifacts, macOS button auto, ops
+actions) for the website lane to relay to ops. A release-pipeline dry
+run was dispatched on main (run 38062166534) to validate the
+linux+windows legs ahead of the cut. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

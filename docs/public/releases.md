@@ -9,6 +9,25 @@ The full changelog lives in `CHANGELOG.md` in the repository root; each
 GitHub release also carries highlights. The download mirror lists the
 current tag in `https://dl.xiom-lang.org/pulse/latest.json`.
 
+## 0.1.2 - 2026-10-09
+
+Maintenance release on the v0.64.2 toolchain (the session store swapped
+to the registry `xiom.session`, Windows request-path memory growth fixed,
+`PULSE_BIND` address-only validation, official icon embedded in the
+Windows exe).
+
+Artifacts (each with a `.sha256`, plus a combined `SHA256SUMS`):
+
+- `pulse-0.1.2-linux-x64.zip`
+- `pulse-0.1.2-windows-x64.zip`
+
+Download: `https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/` and
+`https://github.com/xiom-projects/xiom-pulse/releases/tag/pulse-v0.1.2`.
+
+Notes: `pulse-v0.1.1` was tagged but never released (its CI gate tripped
+on a stale version literal; tags are immutable, so the fixed cut shipped
+as 0.1.2). macOS is not published yet.
+
 ## 0.1.0 - 2026-10-09
 
 First public release (beta).

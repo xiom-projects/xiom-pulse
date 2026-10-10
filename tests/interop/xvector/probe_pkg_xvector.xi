@@ -24,6 +24,8 @@ use xiom.convert;
 use xiom.vector.engine;
 use xiom.vector.engine.core;
 use xiom.vector.durability.wal_file;
+use xiom.vector.payload.payload;
+use xiom.vector.payload.filter_ast;
 use xiom.vector.query.search_service;
 use xiom.vector.types.dense_vector;
 use xiom.vector.types.metric;
@@ -146,6 +148,48 @@ pub fn main() -> Int {
   expect("duplicate id once", nine_count == 1);
   let sall = search(&eng, &q42, 10000);
   expect("live size unchanged", !sall.is_err && sall.value.items.len() == 100);
+
+  // --- 2. payload filters ---------------------------------------------------
+  var pep = payload_new();
+  payload_set(&mut pep, "bucket", FieldValue.IntVal(1));
+  payload_set(&mut pep, "price", FieldValue.FloatVal(50.0));
+  expect("set_payload 10", !set_payload(&mut eng, 10, pep).is_err);
+  var pe2 = payload_new();
+  payload_set(&mut pe2, "bucket", FieldValue.IntVal(1));
+  payload_set(&mut pe2, "price", FieldValue.FloatVal(5.0));
+  expect("set_payload 11", !set_payload(&mut eng, 11, pe2).is_err);
+  var pe7 = payload_new();
+  payload_set(&mut pe7, "bucket", FieldValue.IntVal(7));
+  expect("set_payload 9", !set_payload(&mut eng, 9, pe7).is_err);
+  let f_eq = search_filtered(&eng, &q42, 10000, &filter_eq("bucket", FieldValue.IntVal(1)));
+  expect("filter eq ok", !f_eq.is_err);
+  expect("filter eq subset", !f_eq.is_err && f_eq.value.items.len() == 2);
+  var and_clauses: Vec[FilterExpr] = Vec[FilterExpr].new();
+  and_clauses.push(filter_eq("bucket", FieldValue.IntVal(1)));
+  and_clauses.push(filter_range("price", 10.0, 99.0));
+  let f_and = search_filtered(&eng, &q42, 10000, &filter_and(and_clauses));
+  expect("filter and ok", !f_and.is_err);
+  var and_id10: Bool = false;
+  if !f_and.is_err {
+    expect("filter and subset", f_and.value.items.len() == 1);
+    if f_and.value.items.len() == 1 && f_and.value.items[0].id == 10 { and_id10 = true; }
+  }
+  expect("filter and identity", and_id10);
+  var in_vals: Vec[FieldValue] = Vec[FieldValue].new();
+  in_vals.push(FieldValue.IntVal(1));
+  in_vals.push(FieldValue.IntVal(7));
+  let f_in = search_filtered(&eng, &q42, 10000, &filter_in("bucket", in_vals));
+  expect("filter in subset", !f_in.is_err && f_in.value.items.len() == 3);
+  var or_clauses: Vec[FilterExpr] = Vec[FilterExpr].new();
+  or_clauses.push(filter_eq("bucket", FieldValue.IntVal(7)));
+  or_clauses.push(filter_range("price", 0.0, 10.0));
+  let f_or = search_filtered(&eng, &q42, 10000, &filter_or(or_clauses));
+  expect("filter or subset", !f_or.is_err && f_or.value.items.len() == 2);
+  let f_not = search_filtered(&eng, &q42, 10000, &filter_not(filter_eq("bucket", FieldValue.IntVal(1))));
+  // no-payload points (98 of them) satisfy NOT-eq(1): never a duplicate match.
+  expect("filter not subset", !f_not.is_err && f_not.value.items.len() == 98);
+  let f_ex = search_filtered(&eng, &q42, 10000, &filter_exists("price"));
+  expect("filter exists subset", !f_ex.is_err && f_ex.value.items.len() == 2);
 
   // --- 3. reopen: checkpoint + recover --------------------------------------
   let wp = wal_persist(&eng.wal, walpath);

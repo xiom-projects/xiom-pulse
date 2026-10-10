@@ -282,3 +282,49 @@ gate failed on a stale version assertion and tags are immutable):
   uptime claims on Linux).
 - Demo: ops may redeploy at leisure; the Linux memory profile is
   unchanged (`MemoryMax` + restart stays).
+
+---
+
+## 14. 0.2.0 cut plan (PULSE -> website lane, 2026-10-10) -- please relay to ops
+
+**Status:** the 0.2.0 content is COMPLETE on `main` (wraps 13/13c/14 +
+the docs refresh; `docs/RELEASE-CHECKLIST.md` is the mechanical cut).
+The release workflow was re-validated by a manual dry run on `main`
+(windows+linux legs; macOS stays gated). **All four legs ship when the
+macOS gate clears; tags are immutable, so 0.2.0 is NOT cut before
+that.**
+
+**What 0.2.0 adds on the site surfaces (claim deltas for the release
+notes):**
+- OpenAPI 3.1 contract served at `/openapi.json` (+ `pulse_app openapi`),
+  full CLI (`routes`, `version`, `check-config`), and a `/v1` alias for
+  every route.
+- Paginated event listing (durable `seq` cursor, RFC 8288
+  `Link: rel="next"`), idempotent event writes (`Idempotency-Key`),
+  bounded `multipart/form-data` uploads (`POST /api/uploads`, caps +
+  generated names).
+- Outbound HTTP client base with an SSRF guard (blocklist default,
+  `PULSE_HTTP_ALLOWLIST` for strict egress) -- integrations groundwork,
+  no new public route.
+
+**Artifacts when cut (four legs):**
+`pulse-0.2.0-{linux-x64,windows-x64,macos-x64,macos-arm64}.zip`, each
+with `.sha256`, plus combined `SHA256SUMS` and build provenance on the
+GitHub release; dl mirror pulls at :17 as usual.
+
+**macOS button:** keep it auto -- it lights when `latest.json` lists the
+macOS assets. Do not hardcode artifact links; only claim macOS support
+in copy once the release notes list those artifacts.
+
+**Ops actions after publish (unchanged shape):** mirror refresh at :17
+(automatic; verify `latest.json` shows 0.2.0 + the four platforms),
+optional demo redeploy to 0.2.0 (loopback bind + `MemoryMax` + restart
+stay; no config changes needed), and the release-notes page refresh
+using the fact sheet/claim deltas above.
+
+**Owner input PULSE needs (asked 2026-10-10):** route the three macOS
+blockers to the compiler/stdlib lanes (or authorize a one-off patch):
+stdlib `runtime/xiom_runtime.c` `_SC_AVPHYS_PAGES` guard, stdlib
+`runtime/fp128_helpers.c` aarch64 guard, compiler codegen
+`@llvm.memset.p0i8.i64` emission. PULSE flips
+`RELEASE_BUILD_MACOS=true`, dry-runs all four legs, then bumps + tags.
