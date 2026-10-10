@@ -71,6 +71,10 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/resources/img"
 cp "$PULSE_REPO_ROOT/out/pulse_app" "$STAGE/pulse_app"
 cp "$PULSE_REPO_ROOT/resources/img/pulse-ico.ico" "$STAGE/resources/img/pulse-ico.ico"
+# Serve-critical resources: the OpenAPI contract (/openapi.json 500'd without
+# it -- REL-20261010-1658-website) and the default showcase assets dir.
+cp "$PULSE_REPO_ROOT/resources/openapi.json" "$STAGE/resources/openapi.json"
+cp -R "$PULSE_REPO_ROOT/resources/public" "$STAGE/resources/public"
 cp "$PULSE_REPO_ROOT/README.md" "$STAGE/README.md"
 cp "$PULSE_REPO_ROOT/LICENSE-APACHE" "$STAGE/LICENSE-APACHE"
 cp "$PULSE_REPO_ROOT/LICENSE-MIT" "$STAGE/LICENSE-MIT"

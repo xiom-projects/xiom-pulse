@@ -44,6 +44,10 @@ if (Test-Path -LiteralPath $stage) { Remove-Item -Recurse -Force -LiteralPath $s
 New-Item -ItemType Directory -Path (Join-Path $stage "resources\img") -Force | Out-Null
 Copy-Item -LiteralPath $exe -Destination (Join-Path $stage "pulse_app.exe")
 Copy-Item -LiteralPath (Join-Path $repoRoot "resources\img\pulse-ico.ico") -Destination (Join-Path $stage "resources\img\pulse-ico.ico")
+# Serve-critical resources: the OpenAPI contract (/openapi.json 500'd without
+# it -- REL-20261010-1658-website) and the default showcase assets dir.
+Copy-Item -LiteralPath (Join-Path $repoRoot "resources\openapi.json") -Destination (Join-Path $stage "resources\openapi.json")
+Copy-Item -LiteralPath (Join-Path $repoRoot "resources\public") -Destination (Join-Path $stage "resources\public") -Recurse
 Copy-Item -LiteralPath (Join-Path $repoRoot "README.md") -Destination (Join-Path $stage "README.md")
 Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE-APACHE") -Destination (Join-Path $stage "LICENSE-APACHE")
 Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE-MIT") -Destination (Join-Path $stage "LICENSE-MIT")
