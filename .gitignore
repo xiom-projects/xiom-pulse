@@ -37,6 +37,9 @@ a.out
 # interop probe state (tests/interop/<lane>/, sibling source trees)
 /tests/interop/*/.tmp/
 
+# site-mode test fixtures (tests/test_app.xi)
+/pulse-test-site/
+
 # xiom.kv probe segments (tests/probes/probe_pkg_kv.xi, best-effort cleanup)
 /kvprobe-*.kv
 
