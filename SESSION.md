@@ -60,14 +60,20 @@
   at pulse.xiom-lang.org/docs/; registry.xiom-lang.org live (490 pkgs;
   GitHub sign-in / SQLite social layer implemented in the registry lane).
 - **Current focus: 0.2.0 "the release that matters"** (owner direction):
-  **macOS x64 + arm64 artifacts plus the gap slate.** macOS gate (all
-  upstream; patch-precise fix sketches filed): stdlib
-  `runtime/xiom_runtime.c:4222` (`_SC_AVPHYS_PAGES` Linux-only), stdlib
-  `runtime/fp128_helpers.c` (x86 asm on arm64), compiler
-  `@llvm.memset.p0i8.i64` emission (`xiom-codegen` emitter.rs:859,
-  expr.rs:3774, stmt.rs:713/1131; also warns on Linux CI/llvm-16). When a
-  compiler/stdlib pairing carries them: set
-  `RELEASE_BUILD_MACOS=true`, dry-run all four legs, then 0.2.0.
+  **macOS x64 + arm64 artifacts plus the gap slate.** Dry run
+  `38066169081` (2026-10-10, all four legs): **linux-x64 + windows-x64
+  GREEN**; remaining macOS blockers are two distinct items, both filed
+  high on the bus (2026-10-10 16:09):
+  1. **macos-arm64**: compiler codegen `@llvm.memset.p0i8.i64` emission
+     dies at IR verify (`use of undefined value`, 65536-byte zero) --
+     needs a NEW compiler archive (v0.64.3); item to `compiler`.
+  2. **macos-x64**: `Undefined symbols ___addtf3...` -- the fp128
+     naked-asm tf shims do not materialize under Apple clang x86_64;
+     proposal: plain C wrappers over the value-form impls on
+     `__APPLE__ && __x86_64__`; item to `stdlib`.
+  Already fixed by PULSE one-off + pinned: `_SC_AVPHYS_PAGES` guard and
+  arm64 asm-compile (stdlib `48850df`, owner-authorized). When the two
+  items land: `RELEASE_BUILD_MACOS=true`, four-leg dry run, bump, tag.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
