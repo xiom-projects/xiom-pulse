@@ -89,11 +89,6 @@ fn json_field(body: Str, field: Str) -> Str {
   return string.str_slice(body, start, start + end.value);
 }
 
-fn out_text(o: &HandlerOut) -> Str {
-  // Static responses carry bytes (body_bytes), JSON carries body.
-  if o.body.len() > 0 { return o.body; }
-  return http.bytes_to_str(&o.body_bytes, 0, o.body_bytes.len());
-}
 
 pub fn main() -> Int {
   var f: Int = 0;
@@ -512,23 +507,23 @@ pub fn main() -> Int {
   let _sw7 = io.write_file("pulse-site-secret.txt", "SECRET");
   env.set_var("PULSE_SITE_DIR", sdir);
   let s1 = route_req("GET", "/", "");
-  f = f + check("site index 200", s1.status == 200 && string.str_contains(out_text(&s1), "SITE_INDEX"));
+  f = f + check("site index 200", s1.status == 200 && string.str_contains(http.bytes_to_str(&s1.body_bytes, 0, s1.body_bytes.len()), "SITE_INDEX"));
   let s2 = route_req("GET", "/about", "");
-  f = f + check("site clean url", s2.status == 200 && string.str_contains(out_text(&s2), "SITE_ABOUT"));
+  f = f + check("site clean url", s2.status == 200 && string.str_contains(http.bytes_to_str(&s2.body_bytes, 0, s2.body_bytes.len()), "SITE_ABOUT"));
   let s3 = route_req("GET", "/sub/", "");
-  f = f + check("site dir index", s3.status == 200 && string.str_contains(out_text(&s3), "SITE_SUB"));
+  f = f + check("site dir index", s3.status == 200 && string.str_contains(http.bytes_to_str(&s3.body_bytes, 0, s3.body_bytes.len()), "SITE_SUB"));
   let s4 = route_req("GET", "/assets/app.js", "");
-  f = f + check("site assets", s4.status == 200 && string.str_contains(out_text(&s4), "SITE_JS"));
+  f = f + check("site assets", s4.status == 200 && string.str_contains(http.bytes_to_str(&s4.body_bytes, 0, s4.body_bytes.len()), "SITE_JS"));
   let s5 = route_req("GET", "/assets/bundle.wasm", "");
-  f = f + check("site wasm mime", s5.status == 200 && s5.content_type == "application/wasm" && string.str_contains(out_text(&s5), "SITE_WASM"));
+  f = f + check("site wasm mime", s5.status == 200 && s5.content_type == "application/wasm" && string.str_contains(http.bytes_to_str(&s5.body_bytes, 0, s5.body_bytes.len()), "SITE_WASM"));
   let s6 = route_req("GET", "/nope", "");
-  f = f + check("site 404 page", s6.status == 404 && string.str_contains(out_text(&s6), "SITE_404"));
+  f = f + check("site 404 page", s6.status == 404 && string.str_contains(http.bytes_to_str(&s6.body_bytes, 0, s6.body_bytes.len()), "SITE_404"));
   let s7 = route_req("GET", "/health", "");
   f = f + check("site api wins", s7.status == 200 && string.str_contains(s7.body, "\"status\":\"ok\""));
   let s7b = route_req("GET", "/api/version", "");
   f = f + check("site api version wins", s7b.status == 200 && string.str_contains(s7b.body, "\"version\":\"0.2.0\""));
   let s8 = route_req("GET", "/../pulse-site-secret.txt", "");
-  f = f + check("site traversal blocked", s8.status != 200 && !string.str_contains(out_text(&s8), "SECRET"));
+  f = f + check("site traversal blocked", s8.status != 200 && !string.str_contains(http.bytes_to_str(&s8.body_bytes, 0, s8.body_bytes.len()), "SECRET"));
   env.remove_var("PULSE_SITE_DIR");
   let _sc1 = io.remove_file(sdir + "/index.html");
   let _sc2 = io.remove_file(sdir + "/about.html");
