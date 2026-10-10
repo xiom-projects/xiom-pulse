@@ -110,16 +110,17 @@ right now. When greenlit, ops executes the following (already specified):
 
 1. **Linux toolchain source (was the open question):**
    `https://dl.xiom-lang.org/releases/<tag>/` carries `SHA256SUMS` +
-   `xiom-<ver>-linux-x64.tar.gz`. Current: **v0.64.2, published
-   2026-10-09, sha256 `bc2026af...e6a0ed25` (linux) /
-   `05d54f4b...5c40c4c` (windows) / `0564d09b...fc2a53a` (macos-x64) /
-   `b2401c0e...24d3bb44` (macos-arm64)** (`latest.json` names it).
+   `xiom-<ver>-linux-x64.tar.gz`. Current: **v0.64.3, published
+   2026-10-10, sha256 `791abe25...5442a594` (linux) /
+   `5140b863...40794c9c` (windows) / `7df5e62d...3ee46a6` (macos-x64) /
+   `34875c42...eb2cb43c` (macos-arm64)** (`latest.json` names it).
    Archive root is `bin/xiom` + `lib/`; set `XIOM_BIN=<dir>/bin/xiom` and
    `XIOM_STDLIB=<dir>/lib`. Pinning pattern: version file + download
    `SHA256SUMS` + asset, `sha256sum -c`, extract; dl assets are immutable
    so old pins keep working; update = bump the pin and re-fetch.
-   **WSL + Windows installs are on v0.64.2 (2026-10-09); CI pins v0.64.2
-   in every workflow.** **C-PULSE-13 provisioning caveat is CLOSED
+   **CI pins v0.64.3 in every workflow (2026-10-10); the local WSL +
+   Windows installs remain on v0.64.2 until the next toolchain
+   maintenance window (package store re-verify).** **C-PULSE-13 provisioning caveat is CLOSED
    (m232):** `xiom pkg` now resolves the same home as the compiler
    (`<install-root>/packages`), so no bridge/symlink is needed; after any
    toolchain maintenance verify the store with `xiom doctor` (a
