@@ -267,9 +267,11 @@ deadline). The hybrid join stays with the ORBITDB lane's `probe_hybrid`
 `releases.md` gained the missing **0.1.2** entry, `install.md` examples
 moved to 0.1.2, and the website relay gained **§14 -- the 0.2.0 cut
 plan** (content deltas, four-leg artifacts, macOS button auto, ops
-actions) for the website lane to relay to ops. A release-pipeline dry
-run was dispatched on main (run 38062166534) to validate the
-linux+windows legs ahead of the cut. Score holds (~55.4%)._
+actions) for the website lane to relay to ops. The release pipeline was
+**validated GREEN on main** by a manual dry run (run 38062166534:
+guard + linux-x64 + windows-x64 package legs; macOS job skipped as
+gated; publish skipped as expected for a dry run). Score holds
+(~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
