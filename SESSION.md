@@ -16,9 +16,12 @@
   commit on top (see `git log`); wrap-14 commits: pagination `9301052`,
   idempotency `a6a55b9`, `/v1` `602c9e6`, outbound `bf6d9b0`, uploads
   `130a54b`, interop `6171304`.
-- **Toolchain:** **v0.64.2 on BOTH Windows and Linux/WSL** (dl live; pins
-  in `docs/OPS-REQUEST.md` D.1 and every workflow; macOS shas pinned for
-  the gated legs). **C-PULSE-13 CLOSED (m232):** package home unified, no
+- **Toolchain:** **v0.64.3 pinned + VALIDATED in CI** (2026-10-10; dry run
+  `38075327683` green on linux-x64 + windows-x64 with the pinned stdlib
+  `48850df`; dl synced; pins in `docs/OPS-REQUEST.md` D.1 and every
+  workflow; macOS shas pinned for the gated legs). **Local Windows/WSL
+  installs are still v0.64.2** until the next toolchain maintenance
+  window. **C-PULSE-13 CLOSED (m232):** package home unified, no
   bridge anywhere (CI included); after any toolchain maintenance verify
   the store (`xiom doctor`; re-add with `xiom pkg install` -- a re-extract
   removes non-archive subdirs like `packages/`). Stdlib lane `d54929d`
