@@ -290,6 +290,19 @@ Linux**. Harness lessons folded in: cmd `/c` first-token quoting trap
 RESOLVED; only the general C-consumption hook (auto `port.args.json`)
 stays upstream. Score holds (~55.4%)._
 
+_Delta 2026-10-10 (0.2.0 SHIPPED): **`pulse-v0.2.0` published** (tag on
+`e31d396`, release run 38067869734 green; linux-x64 + windows-x64 zips +
+sha256 + SHA256SUMS + provenance). Owner's call: macOS artifacts defer
+to the next release, gated on two active bus items (arm64 memset codegen
+-> compiler; Darwin x64 fp128 tf shims -> stdlib; four-leg dry run
+38066169081 is the evidence). Content: the full 0.2 contract slate --
+pagination `Link` + seq cursor, idempotency keys, `/v1` alias, OpenAPI
+3.1 + CLI, multipart uploads, `xiom.http` 0.1.5 with the real SSRF-guarded
+outbound client; smoke 119/119, suites x2 both platforms post-bump;
+docs/public refreshed at the cut (releases.md 0.2.0, install.md
+examples). Cut ping on the bus (`REL-20261010-1633-pulse` website,
+`-2` owner). Score: API-contract row moves to shipped. (~56.0%.)_
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
