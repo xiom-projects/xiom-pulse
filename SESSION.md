@@ -65,10 +65,13 @@
   go `/v1` first; `Link` preserves the client's prefix); **outbound
   client base** (`xiom.http` **0.1.4**, SSRF guard
   `xiom.pulse.outbound` + `probe_outbound_guard` in the fleet;
-  libcurl transport seam isolated pending the `--c-source` build hook);
+  libcurl transport seam proven end-to-end via the 0.1.5 recipe, below);
   **multipart uploads** (`POST /api/uploads` + `/v1` alias; PULSE-side
   parser, per-part/part-count caps, generated on-disk names, stable
-  415/400/413 errors); fleet **12/12**, smoke **119/119** on both
+  415/400/413 errors); **outbound client REAL** (`xiom.http` **0.1.5**
+  adopted 2026-10-10: bridge shims + recipe; `scripts/outbound_transport_probe.{ps1,sh}`
+  proves guard-block -> allowlist -> real GET 200 on both platforms);
+  fleet **12/12**, smoke **119/119** on both
   platforms (Linux run with the pinned stdlib). **The 0.2 PULSE-side
   slate is COMPLETE and the docs/public-set refresh is DONE** (wrap 14
   follow-up: public pages refreshed; `docs/RELEASE-CHECKLIST.md` encodes
@@ -108,9 +111,10 @@
 - **Score:** ~55.4% production grade (`docs/PROGRESS.md`).
 - **Stores:** jsonl = default; kv = verified opt-in both platforms
   (20m + 45m Linux soaks); flip still gated on the recorded
-  prerequisites. **`xiom.http` 0.1.4 in-repo** (bumped in the 0.2
-  outbound unit; client calls still need the `--c-source` bridge, see
-  the wishlist); all ten package gates green.
+  prerequisites. **`xiom.http` 0.1.5 in-repo** (bumped on the 0.1.5
+  adoption; real client proven via `scripts/outbound_transport_probe.*`;
+  see the wishlist for the remaining auto-hook ask); all ten package
+  gates green.
 - **Wrap 4 (chunked + manifest + soak):** `Transfer-Encoding: chunked`
   REQUEST decoding landed (caps, extensions ignored, trailers validated;
   TE+CL -> 400; other codings -> 501) with smoke **76/76** on both

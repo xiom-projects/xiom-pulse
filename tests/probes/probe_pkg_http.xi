@@ -9,12 +9,16 @@
 // xiom.toml/package.xi (C-PULSE-13 stays routed to the compiler/installer
 // lane; it was never a package defect).
 //
-// 2026-10-10: pinned at **0.1.4** (eco-v0.1.120; printable-ASCII
-// rendering + variadic LONG options). Consumer notes: importing the root
-// module links clean (verified), but CALLING the client (http_get/http_post)
-// needs the `--c-source <bridge.c> --link curl --link-path ..` build hook
-// -- PULSE's guard half lives in xiom.pulse.outbound (probe_outbound_guard)
-// and the libcurl transport seam in src/outbound_transport.xi.
+// 2026-10-10 (later): pinned at **0.1.5** (eco-v0.1.125) -- ships the
+// curl-free `bridge/xiom_http_shims.c` + the verified consumer recipe, so
+// the REAL client is live: `scripts/outbound_transport_probe.{ps1,sh}`
+// builds `probe_outbound_transport.xi` with
+// `--c-source <installed>\bridge\xiom_http_shims.c --link curl
+// --link-path <scratch>` and proves guard-block -> allowlist -> real GET
+// 200 against a local PULSE server (GREEN on Windows + Linux; curl-for-win
+// 8.22.0 / system libcurl). PULSE's guard half stays in
+// `xiom.pulse.outbound` (`probe_outbound_guard` in the fleet); the libcurl
+// seam is `src/outbound_transport.xi`.
 //
 // Consumes the installed registry package (no vendoring): parser + status.
 // Run: .\scripts\run.ps1 tests\probes\probe_pkg_http.xi

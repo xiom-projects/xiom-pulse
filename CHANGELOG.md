@@ -54,6 +54,12 @@ GitHub release body.
   (`upload_dir`, `upload_max_bytes`, `upload_max_parts`,
   `http_allowlist`, `http_max_bytes`) now load from `PULSE_CONFIG`
   files; environment variables still win.
+- **Outbound client is real**: `xiom.http` bumped to **0.1.5** (ships the
+  curl-free bridge shims + the verified consumer recipe). The libcurl
+  transport (`src/outbound_transport.xi`) is proven end-to-end on both
+  platforms with `scripts/outbound_transport_probe.{ps1,sh}` (guard
+  blocks loopback -> `PULSE_HTTP_ALLOWLIST` opt-in -> real GET 200
+  through libcurl 8.22.0); evidence-only, not in the standard fleet.
 - CLI subcommands complete the documented set: `version` and
   `check-config` now mirror their flags (`openapi` and `routes` already
   ship).

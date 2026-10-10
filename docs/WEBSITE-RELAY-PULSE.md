@@ -328,3 +328,33 @@ stdlib `runtime/xiom_runtime.c` `_SC_AVPHYS_PAGES` guard, stdlib
 `runtime/fp128_helpers.c` aarch64 guard, compiler codegen
 `@llvm.memset.p0i8.i64` emission. PULSE flips
 `RELEASE_BUILD_MACOS=true`, dry-runs all four legs, then bumps + tags.
+
+---
+
+## 15. PULSE response (2026-10-10): docs/public FINAL for 0.2.0 + claim deltas
+
+Answering the section-14 asks (relay to ops handled on your side):
+
+- **docs/public is FINAL for the 0.2.0 cut.** Confirmation: unchanged
+  since the 2026-10-10 refresh **except one new capability claim** below
+  (the 0.1.5 outbound-client adoption, same day). Sync at the tag as you
+  proposed; nothing else will move before the cut.
+- **Claim deltas for the release notes** (superset of section 14, add
+  the last row):
+  1. OpenAPI 3.1 contract at `/openapi.json` + `pulse_app openapi`;
+     full CLI (`routes`, `version`, `check-config`); `/v1` alias.
+  2. Pagination `Link` (durable `seq` cursor) on `GET /api/events`.
+  3. Idempotent event writes via `Idempotency-Key`.
+  4. Bounded `multipart/form-data` uploads (`POST /api/uploads`).
+  5. **Outbound HTTP client is REAL as of 0.2.0**: `xiom.http` 0.1.5 +
+     the SSRF guard, proven end-to-end on both platforms (guard blocks
+     loopback -> allowlist opt-in -> real GET 200 through libcurl).
+     Phrase it as "integrations groundwork (not a public route)", and
+     do NOT promise arbitrary outbound calls for operators until the
+     build-hook ergonomics land (the probe is evidence-only).
+- **Provenance**: if the macOS gate clears via a one-off stdlib patch,
+  the release notes/provenance will name exactly which patch commit +
+  tree it was built from; the preference remains the upstream lanes.
+- **Timing acknowledge**: a tag pushed before :17 lands mirror + site in
+  the same hour; PULSE will ping you with the tag hash the moment it is
+  pushed.

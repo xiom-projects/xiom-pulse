@@ -273,6 +273,23 @@ guard + linux-x64 + windows-x64 package legs; macOS job skipped as
 gated; publish skipped as expected for a dry run). Score holds
 (~55.4%)._
 
+_Delta 2026-10-10 (xiom.http 0.1.5 adoption -- outbound client REAL):
+package-lane relay arrived: **0.1.5 (eco-v0.1.125) ships the curl-free
+`bridge/xiom_http_shims.c` + the verified consumer recipe and closes the
+link finding**. PULSE bumped the pin everywhere (xiom.toml,
+package.xi, CI setup-action), installed both platforms, and built the
+evidence-only runner `scripts/outbound_transport_probe.{ps1,sh}` +
+`tests/probes/probe_outbound_transport.xi`: the probe compiles through
+the recipe (`--c-source <installed>\bridge\xiom_http_shims.c --link curl
+--link-path <scratch>`, curl-for-win 8.22.0 copy as `curl.lib`, kit DLL
+beside the exe) and proves **guard blocks loopback -> allowlist opt-in
+-> real GET 200** from a live PULSE server -- **GREEN on Windows and
+Linux**. Harness lessons folded in: cmd `/c` first-token quoting trap
+(generated `.cmd` files), `Start-Process -PassThru` empty `ExitCode`
+(file-presence gate + `%errorlevel%` file). The wishlist entry is
+RESOLVED; only the general C-consumption hook (auto `port.args.json`)
+stays upstream. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
