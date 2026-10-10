@@ -91,7 +91,7 @@ pulse_check "date header" "$R" "Date: "
 R=$(http_get /api/version)
 pulse_check "version 200" "$R" "200 OK"
 pulse_check "version name" "$R" '"name":"xiom-pulse"'
-pulse_check "version value" "$R" '"version":"0.1.2"'
+pulse_check "version value" "$R" '"version":"0.2.0"'
 
 # --- 3. POST /api/echo valid ------------------------------------------------
 R=$(post_json /api/echo '{"a":1}')

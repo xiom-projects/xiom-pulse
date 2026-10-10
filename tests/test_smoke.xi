@@ -26,7 +26,7 @@ fn check(name: Str, ok: Bool) -> Int {
 pub fn main() -> Int {
   var failures: Int = 0;
 
-  failures = failures + expect_eq("pulse_version", pulse_version(), "0.1.2");
+  failures = failures + expect_eq("pulse_version", pulse_version(), "0.2.0");
   failures = failures + check("str_concat", "a" + "b" == "ab");
   failures = failures + check("int_arith", 2 + 3 * 4 == 14);
   failures = failures + check("str_len", "hello".len() == 5);

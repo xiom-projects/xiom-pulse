@@ -102,7 +102,7 @@ pub fn main() -> Int {
   f = f + check("route /health 405", h405.status == 405);
   let v = route_req("GET", "/api/version", "");
   f = f + check("route /api/version 200", v.status == 200 && string.str_contains(v.body, "\"name\":\"xiom-pulse\""));
-  f = f + check("route /api/version version", string.str_contains(v.body, "\"version\":\"0.1.2\""));
+  f = f + check("route /api/version version", string.str_contains(v.body, "\"version\":\"0.2.0\""));
   let nf = route_req("GET", "/nope", "");
   f = f + check("route 404", nf.status == 404);
   let e = route_req("POST", "/api/echo", "{\"a\":1}");

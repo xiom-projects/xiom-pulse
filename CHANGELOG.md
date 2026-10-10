@@ -4,7 +4,7 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-10
 
 ### Added
 

@@ -513,7 +513,7 @@ pub fn main() -> Int {
   f = f + check("openapi 200", oa.status == 200);
   f = f + check("openapi marker", string.str_contains(oa.body, "\"3.1.0\""));
   f = f + check("openapi title", string.str_contains(oa.body, "XIOM PULSE"));
-  f = f + check("openapi version", string.str_contains(oa.body, "\"version\": \"0.1.2\""));
+  f = f + check("openapi version", string.str_contains(oa.body, "\"version\": \"0.2.0\""));
   f = f + check("route openapi matched", router.route_match("GET", "/openapi.json").route_id == 17);
   let rl = router.routes_list();
   var has_openapi: Bool = false;

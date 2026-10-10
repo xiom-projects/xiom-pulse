@@ -15,13 +15,13 @@ The canonical mirror is `dl.xiom-lang.org`; the GitHub release page
 carries the same files.
 
 ```
-https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/pulse-0.1.2-linux-x64.zip
-https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/pulse-0.1.2-windows-x64.zip
+https://dl.xiom-lang.org/pulse/releases/pulse-v0.2.0/pulse-0.2.0-linux-x64.zip
+https://dl.xiom-lang.org/pulse/releases/pulse-v0.2.0/pulse-0.2.0-windows-x64.zip
 ```
 
 Substitute the tag reported by
 `https://dl.xiom-lang.org/pulse/latest.json` for your platform -- the
-examples below use `0.1.2`, the current release.
+examples below use `0.2.0`, the current release.
 
 Each archive contains `pulse_app` (Linux) or `pulse_app.exe` (Windows),
 `resources/img/pulse-ico.ico`, `README.md`, `LICENSE-MIT`,
@@ -33,21 +33,21 @@ Each archive contains `pulse_app` (Linux) or `pulse_app.exe` (Windows),
 Linux:
 
 ```bash
-curl -LO https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/pulse-0.1.2-linux-x64.zip
-curl -LO https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/SHA256SUMS
+curl -LO https://dl.xiom-lang.org/pulse/releases/pulse-v0.2.0/pulse-0.2.0-linux-x64.zip
+curl -LO https://dl.xiom-lang.org/pulse/releases/pulse-v0.2.0/SHA256SUMS
 sha256sum -c --ignore-missing SHA256SUMS
-unzip pulse-0.1.2-linux-x64.zip -d pulse-0.1.2
-./pulse-0.1.2/pulse_app --version
+unzip pulse-0.2.0-linux-x64.zip -d pulse-0.2.0
+./pulse-0.2.0/pulse_app --version
 ```
 
 Windows (PowerShell):
 
 ```powershell
-Invoke-WebRequest -Uri "https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/pulse-0.1.2-windows-x64.zip" -OutFile pulse.zip
-Invoke-WebRequest -Uri "https://dl.xiom-lang.org/pulse/releases/pulse-v0.1.2/SHA256SUMS" -OutFile SHA256SUMS
+Invoke-WebRequest -Uri "https://dl.xiom-lang.org/pulse/releases/pulse-v0.2.0/pulse-0.2.0-windows-x64.zip" -OutFile pulse.zip
+Invoke-WebRequest -Uri "https://dl.xiom-lang.org/pulse/releases/pulse-v0.2.0/SHA256SUMS" -OutFile SHA256SUMS
 # compare the listed hash with (Get-FileHash pulse.zip -Algorithm SHA256).Hash
-Expand-Archive pulse.zip -DestinationPath pulse-0.1.2
-.\pulse-0.1.2\pulse_app.exe --version
+Expand-Archive pulse.zip -DestinationPath pulse-0.2.0
+.\pulse-0.2.0\pulse_app.exe --version
 ```
 
 `latest.json` at `https://dl.xiom-lang.org/pulse/latest.json` names the

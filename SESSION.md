@@ -27,6 +27,13 @@
   `_SC_AVPHYS_PAGES` guard + fp128 asm x86-only). Exact/CI checks use the
   pin (`export XIOM_STDLIB=<pinned checkout>`). `dev-env.{ps1,sh}` respect
   explicit overrides; `dev-env.sh` finds `~/.local/bin/xiom`.
+- **Shipped release: 0.2.0** (tag `pulse-v0.2.0`, 2026-10-10; linux-x64
+  + windows-x64 -- owner's call: macOS artifacts ship in the follow-up
+  once the arm64 memset codegen + Darwin x64 fp128 items land). The full
+  0.2 contract slate (pagination, idempotency, `/v1`, OpenAPI, multipart
+  uploads, real outbound client); smoke 119/119, four-leg dry run
+  `38066169081` green on linux+windows; docs/public refreshed for the
+  cut.
 - **Shipped release: 0.1.2** (tag `pulse-v0.1.2`, 2026-10-09): session
   store swapped to registry `xiom.session` 0.1.0, v0.64.2 rebuild
   (Windows request-path memory flat), `PULSE_BIND` address-only

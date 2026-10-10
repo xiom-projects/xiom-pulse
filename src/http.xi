@@ -507,7 +507,7 @@ pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(
   head = head + "Referrer-Policy: no-referrer\r\n";
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
   head = head + "Connection: close\r\n";
-  head = head + "Server: xiom-pulse/0.1.2\r\n";
+  head = head + "Server: xiom-pulse/0.2.0\r\n";
   head = head + "\r\n";
   var out: Vec[UInt8] = str_to_bytes(head);
   var body_bytes: Vec[UInt8] = str_to_bytes(body);
@@ -535,7 +535,7 @@ pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[
   head = head + "Referrer-Policy: no-referrer\r\n";
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
   head = head + "Connection: close\r\n";
-  head = head + "Server: xiom-pulse/0.1.2\r\n";
+  head = head + "Server: xiom-pulse/0.2.0\r\n";
   head = head + "\r\n";
   var out: Vec[UInt8] = str_to_bytes(head);
   var j: Int = 0;

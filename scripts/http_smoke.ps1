@@ -132,7 +132,7 @@ Check "date header" $r "Date: "
 $r = curl.exe -s -i "$base/api/version" 2>&1 | Out-String
 Check "version 200" $r "200 OK"
 Check "version name" $r '"name":"xiom-pulse"'
-Check "version value" $r '"version":"0.1.2"'
+Check "version value" $r '"version":"0.2.0"'
 
 # 3. POST /api/echo valid
 $r = Invoke-CurlPost "/api/echo" '{"a":1}'
