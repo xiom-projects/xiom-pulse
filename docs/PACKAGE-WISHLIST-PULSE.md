@@ -273,3 +273,5 @@ continues on the next sector (accelerators unlock after the
 - **C-PULSE-13 routing:** the packages lane routed the Unix pkg-home
   mismatch to the **compiler/installer lane** (not a package defect);
   recorded in `docs/COMPILER-FINDINGS-PULSE.md`.
+
+> **Migrated (2026-10-10):** cross-lane coordination moved to the private xiom-relays bus (`python tools/relay.py view --lane packages`). The remaining open rows migrate there on the doorbell; this file is frozen history.

@@ -22,7 +22,9 @@
   bridge anywhere (CI included); after any toolchain maintenance verify
   the store (`xiom doctor`; re-add with `xiom pkg install` -- a re-extract
   removes non-archive subdirs like `packages/`). Stdlib lane `d54929d`
-  (wave 97); the v0.64.2 pairing is `4dd8844` -- exact/CI checks use the
+  (wave 97); the v0.64.2 pairing is `4dd8844`; **PULSE's 0.2.0 darwin
+  verification pins `48850df`** (owner-authorized one-off: runtime
+  `_SC_AVPHYS_PAGES` guard + fp128 asm x86-only). Exact/CI checks use the
   pin (`export XIOM_STDLIB=<pinned checkout>`). `dev-env.{ps1,sh}` respect
   explicit overrides; `dev-env.sh` finds `~/.local/bin/xiom`.
 - **Shipped release: 0.1.2** (tag `pulse-v0.1.2`, 2026-10-09): session
@@ -33,6 +35,16 @@
   stale version literal; tags are immutable) -- documented in
   CHANGELOG.md. dl mirror live (`dl.xiom-lang.org/pulse/...`), GitHub
   Release has assets + `SHA256SUMS` + provenance.
+- **Relay bus (xiom-relays, owner rollout 2026-10-10):** cross-lane
+  coordination goes through the private `xiom-lang/xiom-relays` repo
+  (cloned at `E:\xiom-lang\xiom-relays`; `python tools/relay.py`). At
+  session start **and** before finishing any task: pull it and process
+  items addressed to this lane (`relay.py view --lane pulse`); never
+  edit another lane's item -- open a new one. Pulse is acked on the bus
+  (`REL-20261010-1548-pulse`); migrated: darwin memset + C-PULSE-12/14/16
+  -> compiler, C-PULSE-17/18 -> stdlib, darwin one-off notice ->
+  stdlib (see `REL-20261010-1549-pulse*`). Wishlist-row migration
+  continues on the doorbell.
 - **Live demo:** pulse.xiom-lang.org serves the website page **through
   PULSE** (nginx -> loopback; landing via `PULSE_LANDING_PATH`, JSON via
   `/health` + `/api/version`); currently running **0.1.0/cc3e741** -- ops
@@ -815,9 +827,14 @@ E:\xiom-packages\bindings). Identity "Lefteris Notas
 contains quotes or slash-paths use git commit -F <file> (PS mangles
 native-arg quoting). Toolchain: v0.64.2 on BOTH Windows and Linux/WSL
 (pins in docs\OPS-REQUEST.md D.1 and every workflow); Linux
-verification uses the PINNED stdlib (4dd8844) -- export
-XIOM_STDLIB=$HOME/.cache/xiom-pin/stdlib-4dd8844 (the WSL tmp cleaner
+verification uses the PINNED stdlib (now `48850df`) -- export
+XIOM_STDLIB=$HOME/.cache/xiom-pin/stdlib-48850df (the WSL tmp cleaner
 wipes /tmp on distro restarts, so the pin cache lives in ~/.cache).
+Coordination: the xiom-relays bus (private `xiom-lang/xiom-relays`,
+cloned at `E:\xiom-lang\xiom-relays`); at session start and before
+finishing any task pull it and process items addressed to pulse
+(`python tools/relay.py view --lane pulse`); never edit another lane's
+item -- open a new one.
 
 TASK ORDER:
 1. FIRST: quick regression on the existing binaries -- probe fleet
