@@ -28,6 +28,18 @@ trigger the crash.
    positive lock (the site-mode workaround was inlining; no other
    re-land is pending).
 
+## Executed results
+
+- 2026-10-11 (pre-fix, v0.64.3): **RED** -- suite exit `-1073741819`
+  (0xC0000005) after compiling (`probe-logs/repro-2122-20261011.log`).
+- 2026-10-11 (post-fix, m271/v0.64.4 build, pin `dd352f6`): **GREEN** --
+  suite exit 0 including the helper check
+  (`probe-logs/witness5-m271-reverify.log`).
+- Permanent re-land status: **deferred until the CI toolchain pin moves
+  to >= v0.64.4** -- v0.64.3 still crashes on this shape, so re-landing
+  the helper into `tests/test_app.xi` before the pin moves would red the
+  CI fleet. The patch remains the frozen artifact until then.
+
 ## Evidence trail
 
 - `witness.patch` -- the exact suite edit (helper + one call).

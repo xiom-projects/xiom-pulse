@@ -444,6 +444,20 @@ generation remainder; the paths-emission generator stays open. Full
 sweep both platforms + smoke 119/119 (probe-logs/openapi-check-20261011);
 CI dry run dispatched with the push. Score holds (~55.4%)._
 
+_Delta 2026-10-11 (doorbell: compiler batch 5 + v0.64.4 side-checks):
+**batch-5 items closed** -- the frozen `&HandlerOut` witness runs GREEN
+on m271/v0.64.4 (suite exit 0, incl. the helper check;
+`probe-logs/witness5-m271-reverify.log`); `REL-20261010-1854/2122` moved
+fixed->verified->closed (relay `6ce8946`). Permanent helper re-land
+deferred until the CI toolchain pin moves to >= v0.64.4 (v0.64.3 still
+red; patch frozen). **SIGILL 1615 negative side-check:** its repro still
+dies 0xC000001D on m271 and v0.64.3 (A/B, isolated workdirs,
+`probe-logs/sigill-check/`) -- the six batches do not cover it; **0.2.1
+stays gated** on that fix; evidence filed to compiler
+(`REL-20261011-1904-pulse`, high). `openapi --check` dry run
+`38157843890` green (unit fully closed). Compiler cutting v0.64.4
+(m271; all six batches). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

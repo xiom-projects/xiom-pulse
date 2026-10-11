@@ -188,6 +188,18 @@
   Remaining on the openapi item: generate the `paths` object from the
   table (overlay for prose/refs) and retire the hand-written paths
   block.
+- **Batch-5 closed; SIGILL still open (2026-10-11 doorbell):** compiler
+  batch 5 shipped -- the frozen witness is **GREEN on m271/v0.64.4**
+  (suite exit 0; `probe-logs/witness5-m271-reverify.log`) so
+  `REL-20261010-1854/2122` moved fixed->verified->**closed** (relay
+  `6ce8946`). The permanent helper re-land is **deferred until the CI
+  toolchain pin moves to >= v0.64.4** (v0.64.3 still red on the shape;
+  patch frozen in `docs/repro/handlerout-helper/`). **SIGILL check:
+  `REL-20261010-1615`'s repro still dies 0xC000001D on m271 AND v0.64.3
+  (A/B, isolated workdirs) -- the v0.64.4 wave does not cover it, so
+  **0.2.1 stays gated**; negative evidence filed (`REL-20261011-1904-pulse`).**
+  Compiler repo is cutting v0.64.4 (all six batches, m271); the
+  `openapi --check` unit's dry run `38157843890` is green.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
