@@ -35,6 +35,10 @@ crash-safe append store with an audit trail.
   `PULSE_HTTP_ALLOWLIST` for strict egress) for integrations.
 - Showcase serving: a per-site landing page (`PULSE_LANDING_PATH`) and
   `/assets/*` static files with ETag/304/Range support.
+- **Static site mode** (`PULSE_SITE_DIR`): serve a whole pre-built site
+  -- clean URLs, directory indexes, a custom `404.html`,
+  `application/wasm` for the playground/editor bundle, configurable
+  cache (`PULSE_SITE_MAX_AGE`). API routes always win.
 
 ## Beta status
 

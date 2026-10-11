@@ -63,6 +63,11 @@ numbers published, and the demo running the same build.
   green on all shipped OSs; upstream asks listed per feature.
 
 ### 0.3 -- data drivers
+- **Static site mode** (whole-tree serving for the website cutover +
+  the playground bundle): **LANDED 2026-10-11** -- `PULSE_SITE_DIR`,
+  clean URLs, directory indexes, `404.html`, `application/wasm`,
+  `PULSE_SITE_MAX_AGE`; verified by CI dry run `38098415021`
+  (linux+windows fleet).
 - **OrbitDB driver** (embedded default candidate; B-tree/WAL/query
   engine): conformance probe + soak + crash/reopen.
 - **XVector driver** (vector index): upsert/search/filter probe; a
