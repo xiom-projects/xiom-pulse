@@ -381,6 +381,18 @@ explicit claim table for what PULSE may assert when. Doc-only unit; no
 server change, no CI dry run. Next backlog item: SQL migrations design
 (knex). Score holds (~55.4%)._
 
+_Delta 2026-10-11 (SQL migrations design -- knex discipline, backlog
+order 4): **`docs/DESIGN-SQL-MIGRATIONS.md` landed** -- the knex model
+(lock table + applied tracking + batches + UTC-lexicographic names +
+strict up/down) plus PULSE corrections for its known weaknesses
+(lock heartbeat + stale detection instead of the destructive unlock,
+idempotent first-run DDL, strict applied-but-missing validation,
+per-migration transaction rule incl. sqlite/MySQL caveats); runner
+contract `pulse_app migrate status|up|down|create|break-lock`
+(explicit CLI step, `PULSE_SQL_DSN`, backup-fence gate). Gated on a SQL
+driver package (packages lane pinged). Next backlog item: OpenAPI
+generation from route metadata. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

@@ -239,7 +239,14 @@ socket-timeout bus asks.
   mode safety). Evidence: test_http +12 checks (74 green, both builders),
   csp-check integration run (header set/absent wired end to end),
   `probe-logs/regress-20261011/`.
-- [0.3.x] **SQL class migrations discipline** (knex lock/applied).
+- [x] **SQL class migrations discipline** (knex lock/applied). --
+  **DESIGN LANDED 2026-10-11** (`docs/DESIGN-SQL-MIGRATIONS.md`): knex
+  model (lock table + applied tracking + batches + UTC-lexicographic
+  names) with PULSE corrections (stale-lock heartbeat instead of
+  destructive unlock, idempotent first-run DDL, strict missing-file
+  validation, per-migration transaction rule incl. sqlite/MySQL
+  caveats), explicit CLI runner + backup-fence gate. Gated on a SQL
+  driver package (vendored sqlite).
 - [0.3/0.4] **OpenAPI generation from route metadata**
   (fastapi/fastify direction) -- eventually retires the hand-maintained
   document.

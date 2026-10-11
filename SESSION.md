@@ -138,6 +138,17 @@
   marker, backup fence manifests (`fence_seq` + mode), explicit claim
   table, phases A/B/C. Interface notes filed to stdlib. **Next backlog:
   SQL migrations design (knex).**
+- **SQL migrations design DONE (backlog order 4, 2026-10-11):**
+  `docs/DESIGN-SQL-MIGRATIONS.md` -- knex model (lock table, applied
+  tracking, batches, lexicographic UTC names, up/down) plus PULSE
+  corrections (live/stale lock heartbeat instead of destructive unlock,
+  idempotent first-run DDL, strict applied-but-missing validation,
+  per-migration transaction rule incl. sqlite/MySQL caveats), runner
+  contract (`pulse_app migrate status|up|down|create|break-lock`,
+  explicit CLI step never at startup, `PULSE_SQL_DSN`, backup-fence
+  gate). Implementation gated on a SQL driver package (vendored sqlite,
+  bindings-11). **Next backlog: OpenAPI generation from route
+  metadata.**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
