@@ -15,6 +15,17 @@ Cloned and studied so far (all verified MIT):
 | `E:\repos\h11` | HTTP/1.1 protocol state machine, sans-IO (python-hyper) | the reference for connection state, keep-alive and framing edge cases |
 | `E:\repos\bbolt` | embedded B+tree KV, crash-safe commit (etcd) | the reference for durable commit ordering (store/audit/`xiom.kv`/orbitdb) |
 | `E:\repos\gin` | Go HTTP framework | the reference for middleware chains, context lifecycle, recovery |
+| `E:\repos\fasthttp` | high-performance Go HTTP server | server runtime mechanics: named timeouts, concurrency caps, buffer reuse |
+| `E:\repos\fastify` | Node HTTP framework | hook taxonomy, encapsulation, schema-driven validation/serialization |
+| `E:\repos\fastapi` | Python framework | dependency injection, OpenAPI generated from route types, background tasks |
+| `E:\repos\chi` | Go router | route groups with isolated middleware; declare-then-freeze ordering |
+| `E:\repos\jose` | JOSE/JWT library (panva) | token verification hardening options (alg allowlist, claims, age) |
+| `E:\repos\helmet` | security headers middleware | the named policy set for our security headers |
+| `E:\repos\knex` | SQL query builder + migrations | migration lock table + applied-tracking discipline for the SQL class |
+| `E:\repos\bullmq` | Redis-backed job queue | jobs mechanics: attempts/backoff, delayed jobs, stalled-lock renewal |
+
+All MIT-verified at clone time (light clones, `--depth 1`, no history;
+owner-authorized policy on this shelf).
 
 ---
 
@@ -98,14 +109,126 @@ precomputation path; nothing blocking today.
 
 ---
 
+## fasthttp -- server runtime mechanics
+
+- **Three named timeouts, explicit semantics**: `ReadTimeout`
+  (headers+body), `WriteTimeout`, `IdleTimeout` -- and **IdleTimeout
+  falls back to ReadTimeout when zero**. Plus `MaxRequestBodySize` and
+  concurrency caps (`DefaultConcurrency`, per-IP). Adopt these names and
+  the fallback rule when PULSE adds keep-alive/deadlines; our config
+  surface should expose all three, not one.
+- **Per-worker pooled buffers / zero-alloc handlers**: reuse over
+  allocation, with explicit reuse boundaries. XIOM can't mirror the
+  unsafe pooling, but the discipline maps to explicit buffer clears.
+
+**Maps to:** keep-alive/deadlines design (0.3.x) with the stdlib
+socket-timeout bus asks.
+
+## fastify -- hooks, encapsulation, schemas
+
+- **Hook taxonomy** (use this list as our middleware stage names):
+  `onRequest`, `preParsing`, `preValidation`, `preHandler`,
+  `preSerialization`, `onSend`, `onResponse`, `onError`, plus
+  application hooks (`onRoute`, `onRegister`, `onReady`) and per-route
+  hooks. Custom properties are injected per scope.
+- **Encapsulation**: plugins get isolated contexts; children inherit
+  parents' hooks -- route groups that can add middleware without
+  leaking sideways.
+- **Schema-driven validation + serialization**: one schema validates
+  input and speeds serialization. Pairs directly with our OpenAPI
+  contract: derive runtime validation from the same schema (validation
+  unit, later).
+
+**Maps to:** 0.4 middleware chain; validation/contract unit.
+
+## fastapi -- DI and OpenAPI-from-types
+
+- **Dependency injection** (`Depends`) with per-test overrides -- the
+  grown-up version of our `reqctx`; services (config, store, session)
+  become injectable and test-swappable.
+- **OpenAPI is generated from route signatures/models** (operation ids,
+  components). We hand-maintain `resources/openapi.json` today; the
+  direction of travel is generating it from route metadata.
+- **Background tasks** bound to the response lifecycle -- the small-job
+  seam ahead of the full queue.
+
+**Maps to:** contract generation; DI for the 0.4 services layer.
+
+## chi -- router groups and middleware ordering
+
+- Middleware is **appended then frozen**: `Use()` after routes panics
+  ("all middlewares must be defined before routes"). PULSE rebuilds its
+  router per call (fine now) but should adopt declare-once/freeze when
+  the table stabilizes.
+- **Groups** create sub-routers with their own middleware, composed
+  with parents -- the shape for `/v1`, `/api`, and future admin
+  surfaces.
+
+**Maps to:** router precomputation + route groups (0.3/0.4).
+
+## jose -- JWT/JOSE verification hardening
+
+- Verify options worth mirroring in our token path: **algorithm
+  allowlist** (never accept `none`), `issuer`/`audience` checks,
+  `clockTolerance`, **`maxTokenAge`**, `requiredClaims`; per-algorithm
+  key binding.
+- Errors are typed by cause (expired vs signature vs claim) -- better
+  401/403 distinctions for clients.
+
+**Maps to:** `xiom.jwt` 0.2.0 consumer hardening + auth unit.
+
+## helmet -- security header policy
+
+- The named policy set to adopt as PULSE's reviewed defaults:
+  **CSP** (+ directives), **HSTS** (includeSubDomains/preload),
+  `X-Content-Type-Options: nosniff`, frameguard
+  (`X-Frame-Options`/CSP frame-ancestors), `Referrer-Policy`, and the
+  cross-origin family (COOP/COEP/CORP). We ship minimal headers today;
+  this is a small, high-value unit.
+
+**Maps to:** security-headers unit (0.2.x/0.3.x).
+
+## knex -- migrations discipline (SQL class)
+
+- **Migration lock table** (`knex_migrations_lock` via
+  `getLockTableName`) + a typed `MigrationLocked` error + an explicit
+  `forceFreeMigrationsLock()` escape hatch; applied migrations tracked
+  in `knex_migrations`. Blueprint for the sqlite-backed SQL class:
+  lock row, applied table, deliberate force-free.
+- Immutable query-builder chains compiled to SQL -- the shape for our
+  query layer.
+
+**Maps to:** SQL class migrations (0.3, after the `--c-source` story).
+
+## bullmq -- jobs/queue mechanics
+
+- **attempts/`attemptsMade` + backoff classes**; delayed jobs;
+  `removeOnComplete/Fail` policies; **stalled-job detection via
+  periodic lock renewal**; atomic state moves via scripts. Use as the
+  blueprint for the 0.4 kv-backed jobs/scheduler: named states
+  (waiting/delayed/active/completed/failed), attempts+backoff, and a
+  lock-renewal watchdog.
+
+**Maps to:** 0.4 jobs/queue + webhook retries.
+
+---
+
 ## Adopt backlog (PULSE-side, version-ordered)
 
-- [0.3.x] **Keep-alive/deadlines design doc** using the h11 checklist;
-  pairs with the stdlib socket-timeout/deadline bus asks.
+- [0.3.x] **Keep-alive/deadlines design doc** using the h11 checklist
+  and fasthttp's three-timeout model; pairs with the stdlib
+  socket-timeout/deadline bus asks.
 - [0.3.x] **Store durability design**: bbolt ordering discipline for the
   store seam + backup story; pairs with the `fsync` bus ask and the
   orbitdb driver unit.
-- [0.4] **Middleware chain** (gin pattern) + recovery guard + context
-  reset discipline; precompute chains at registration.
+- [0.2.x/0.3.x] **Security headers unit** (helmet checklist).
+- [0.3.x] **SQL class migrations discipline** (knex lock/applied).
+- [0.3/0.4] **OpenAPI generation from route metadata**
+  (fastapi/fastify direction) -- eventually retires the hand-maintained
+  document.
+- [0.4] **Middleware chain** (gin pattern + fastify stage names) +
+  recovery guard + context reset discipline; precompute chains.
+- [0.4] **Jobs/queue mechanics** (bullmq) for retries/backoff/stalled
+  locks.
 - Watch: when upstream threads land, gin-style pooling becomes directly
   applicable.

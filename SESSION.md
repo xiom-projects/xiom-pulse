@@ -60,10 +60,15 @@
   0.2.0 cut/claim reference (migrating), `OPS-REQUEST.md` stays the
   standing ops spec. No deletions -- history + evidence stay in-repo.
 - **Production references (owner-authorized, 2026-10-11):** MIT-only
-  clones under `E:\repos` to mine battle-tested patterns -- `h11`
-  (HTTP/1.1 connection state machine), `bbolt` (crash-safe commit
-  ordering), `gin` (middleware chain / context lifecycle / recovery);
-  findings + the adopt backlog live in `docs/PRODUCTION-REFERENCES.md`.
+  light clones (`--depth 1`) under `E:\repos` to mine battle-tested
+  patterns for a full backend framework -- `h11` (HTTP/1.1 connection
+  state machine), `bbolt` (crash-safe commit ordering), `gin`
+  (middleware chain / context lifecycle / recovery), plus `fasthttp`
+  (timeout model), `fastify` (hook taxonomy/schemas), `fastapi` (DI +
+  OpenAPI-from-types), `chi` (route groups), `jose` (JWT hardening),
+  `helmet` (security headers), `knex` (migration locks), `bullmq`
+  (jobs/retries/stalled locks); findings + the version-ordered adopt
+  backlog live in `docs/PRODUCTION-REFERENCES.md`.
 - **Live demo:** pulse.xiom-lang.org serves the website page **through
   PULSE** (nginx -> loopback; landing via `PULSE_LANDING_PATH`, JSON via
   `/health` + `/api/version`); currently running **0.1.0/cc3e741** -- ops
