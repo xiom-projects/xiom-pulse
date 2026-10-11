@@ -149,6 +149,18 @@
   gate). Implementation gated on a SQL driver package (vendored sqlite,
   bindings-11). **Next backlog: OpenAPI generation from route
   metadata.**
+- **OpenAPI route-drift guard + single route table (backlog order 5,
+  partial, 2026-10-11):** `router.xi` now has one source of truth
+  (`route_defs()` -- dispatch, the CLI list and the guards all derive
+  from it; the two hand-synced literal blocks are gone).
+  `openapi.xi` gains `openapi_template()` and
+  `openapi_missing_routes()` (structural JSON check: every route must
+  appear as a templated path key with its lowercase method verb);
+  test_app asserts zero drift, the undeclared `uploads` tag is fixed,
+  CHANGELOG notes it. Remaining for the item: emit the `paths` object
+  from the table (static overlay for prose/refs) + `openapi --check`
+  mode; the hand-written document stays the source until then.
+  **Next backlog: 0.4 middleware chain + jobs design (gin/fastify/bullmq).**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -939,7 +951,7 @@ reschedule every 2-4 hours.
 TOOLCHAIN: v0.64.3 everywhere (pins in every workflow +
 docs\OPS-REQUEST.md D.1; local Windows/WSL installs upgraded 2026-10-10
 -- after ANY toolchain maintenance `xiom doctor` and re-add with
-`xiom pkg install`, the re-extract wipes non-archive dirs). Stdlib pin =
+`xiom pkg install`, the re-extract wipes non-archive dirs). Ops hygiene (REL-20261011-1134-ops / TOOLCHAIN_HYGIENE.md): never delete or downgrade the shared homes (%LOCALAPPDATA%\xiom*, ~/.local/share/xiom, ~/xiom); install/uninstall/cleanup tests must use an isolated XIOM_HOME + a lane-local extraction and announce destructive windows to:all first; unresolved-package T001s that recover on a rerun get reported to ops with timestamps. Stdlib pin =
 dd352f6 (STDLIB_VERSION, wave 105.1). Local Windows pin cache:
 %LOCALAPPDATA%\xiom-pins\stdlib-dd352f6; export via `git -C
 E:\xiom-lang\stdlib archive -o file.tar <sha>` + tar -x (NEVER pipe git
