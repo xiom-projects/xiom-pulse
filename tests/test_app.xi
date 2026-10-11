@@ -25,6 +25,7 @@ use xiom.pulse.ratelimit;
 use xiom.pulse.validate;
 use xiom.pulse.reqctx;
 use xiom.pulse.outbound;
+use xiom.pulse.openapi;
 use xiom.pulse.app;
 
 fn check(name: Str, ok: Bool) -> Int {
@@ -580,6 +581,13 @@ pub fn main() -> Int {
   }
   f = f + check("routes list has uploads", has_uploads);
   f = f + check("routes list size", rl.len() == 18);
+  let oa_missing = openapi.openapi_missing_routes(oa.body);
+  var oam: Int = 0;
+  while oam < oa_missing.len() {
+    io.println("[openapi-drift] " + oa_missing[oam]);
+    oam = oam + 1;
+  }
+  f = f + check("openapi matches route table", oa_missing.len() == 0);
 
   // --- additive error status field (0.2) -------------------------------------
   let nf = route_req("GET", "/nope", "");

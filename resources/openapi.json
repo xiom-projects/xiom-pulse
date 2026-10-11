@@ -18,7 +18,8 @@
     { "name": "sessions", "description": "cookie sessions and CSRF" },
     { "name": "tokens", "description": "JWT issue and verify" },
     { "name": "events", "description": "event store" },
-    { "name": "ops", "description": "metrics and contract" }
+    { "name": "ops", "description": "metrics and contract" },
+    { "name": "uploads", "description": "multipart file uploads" }
   ],
   "paths": {
     "/health": {

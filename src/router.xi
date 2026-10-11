@@ -7,7 +7,9 @@
 // This module owns the app's route-id mapping, query-string splitting and
 // percent-decoding, and the PULSE-shaped outcome.
 //
-// Route ids: 1 GET /health, 2 GET /api/version, 3 POST /api/echo,
+// Route ids are the 1-based index of route_defs() (the single source of
+// truth for dispatch, `routes_list` and the OpenAPI drift guard):
+// 1 GET /health, 2 GET /api/version, 3 POST /api/echo,
 // 4 POST /api/session/login, 5 GET /api/me, 6 POST /api/session/logout,
 // 7 POST /api/token, 8 POST /api/token/verify, 9 GET /metrics,
 // 10 GET /api/items/:id, 11 POST /api/events, 12 GET /api/events/count,
@@ -136,10 +138,12 @@ fn join_methods(ms: &Vec[Str]) -> Str {
   return out;
 }
 
-/// routes_list returns the app route table as (method, path) pairs in
-/// registration order (the `routes` CLI and the openapi contract test use
-/// it). Complexity: O(1).
-pub fn routes_list() -> Vec[(Str, Str)] {
+/// route_defs returns the single source of truth for the app route table:
+/// (method, pattern) pairs in registration order; the app route id is the
+/// 1-based index in this list. `routes_list` (CLI) and `route_match`
+/// (dispatch) both derive from it, and the OpenAPI drift guard walks it.
+/// Complexity: O(1).
+pub fn route_defs() -> Vec[(Str, Str)] {
   var out: Vec[(Str, Str)] = Vec[(Str, Str)].new();
   out.push(("GET", "/health"));
   out.push(("GET", "/api/version"));
@@ -162,10 +166,17 @@ pub fn routes_list() -> Vec[(Str, Str)] {
   return out;
 }
 
-/// route_match builds the app table, matches (method, target) via the
-/// registry router and maps the registration index to the app route id.
-/// The table is rebuilt per call (18 registrations; negligible at current
-/// load and avoids module-global mutable struct state).
+/// routes_list returns the app route table as (method, path) pairs in
+/// registration order (the `routes` CLI and the openapi contract test use
+/// it). Complexity: O(1).
+pub fn routes_list() -> Vec[(Str, Str)] {
+  return route_defs();
+}
+
+/// route_match builds the app table from route_defs(), matches
+/// (method, target) via the registry router and maps the registration
+/// index to the app route id (index + 1). The table is rebuilt per call
+/// (negligible at current load and avoids module-global mutable state).
 /// Complexity: O(routes).
 pub fn route_match(method: Str, target: Str) -> PulseRoute {
   var m: PulseRoute = PulseRoute{
@@ -184,25 +195,13 @@ pub fn route_match(method: Str, target: Str) -> PulseRoute {
   m.query_values = qp.1;
 
   var t = router.router_new();
-  var ids: Vec[Int] = Vec[Int].new();
-  let _r1 = router.router_add(&mut t, "GET", "/health");            ids.push(1);
-  let _r2 = router.router_add(&mut t, "GET", "/api/version");       ids.push(2);
-  let _r3 = router.router_add(&mut t, "POST", "/api/echo");         ids.push(3);
-  let _r4 = router.router_add(&mut t, "POST", "/api/session/login"); ids.push(4);
-  let _r5 = router.router_add(&mut t, "GET", "/api/me");            ids.push(5);
-  let _r6 = router.router_add(&mut t, "POST", "/api/session/logout"); ids.push(6);
-  let _r7 = router.router_add(&mut t, "POST", "/api/token");        ids.push(7);
-  let _r8 = router.router_add(&mut t, "POST", "/api/token/verify"); ids.push(8);
-  let _r9 = router.router_add(&mut t, "GET", "/metrics");           ids.push(9);
-  let _r10 = router.router_add(&mut t, "GET", "/api/items/:id");    ids.push(10);
-  let _r11 = router.router_add(&mut t, "POST", "/api/events");      ids.push(11);
-  let _r12 = router.router_add(&mut t, "GET", "/api/events/count"); ids.push(12);
-  let _r13 = router.router_add(&mut t, "GET", "/api/events");       ids.push(13);
-  let _r14 = router.router_add(&mut t, "GET", "/favicon.ico");      ids.push(14);
-  let _r15 = router.router_add(&mut t, "GET", "/");                 ids.push(15);
-  let _r16 = router.router_add(&mut t, "POST", "/api/events/compact"); ids.push(16);
-  let _r17 = router.router_add(&mut t, "GET", "/openapi.json");    ids.push(17);
-  let _r18 = router.router_add(&mut t, "POST", "/api/uploads");    ids.push(18);
+  let defs = route_defs();
+  var di: Int = 0;
+  while di < defs.len() {
+    let d = defs[di];
+    let _r = router.router_add(&mut t, d.0, d.1);
+    di = di + 1;
+  }
 
   let rm = router.router_match(&t, method, path);
   if rm.code == 404 {
@@ -215,8 +214,8 @@ pub fn route_match(method: Str, target: Str) -> PulseRoute {
     return m;
   }
   m.kind = 1;
-  if rm.index >= 0 && rm.index < ids.len() {
-    m.route_id = ids[rm.index];
+  if rm.index >= 0 && rm.index < defs.len() {
+    m.route_id = rm.index + 1;
   }
   var i: Int = 0;
   while i < rm.params.len() {

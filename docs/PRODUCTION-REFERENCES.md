@@ -249,7 +249,13 @@ socket-timeout bus asks.
   driver package (vendored sqlite).
 - [0.3/0.4] **OpenAPI generation from route metadata**
   (fastapi/fastify direction) -- eventually retires the hand-maintained
-  document.
+  document. -- **PARTIAL 2026-10-11**: route table is now single-source
+  (`router.route_defs()`; dispatch, CLI and guards derive from it), a
+  structural drift guard (`openapi.openapi_missing_routes`, run by
+  test_app) fails the suite when a route never reaches the contract, and
+  the undeclared `uploads` tag is fixed. Remaining: emit the `paths`
+  object from the table (static overlay for prose/refs), `openapi
+  --check` CLI mode, retire the hand-written paths block.
 - [0.4] **Middleware chain** (gin pattern + fastify stage names) +
   recovery guard + context reset discipline; precompute chains.
 - [0.4] **Jobs/queue mechanics** (bullmq) for retries/backoff/stalled

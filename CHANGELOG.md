@@ -26,6 +26,15 @@ GitHub release body.
   the static engine. Configured by env or the `site_dir`/`site_max_age`
   JSON keys.
 
+### Fixed
+
+- The OpenAPI document declared an `uploads` path tagged `uploads`
+  without declaring the tag; the tag is now present. A new route-table
+  drift guard in the test suite fails when a router route never reaches
+  the served contract, so the document can no longer silently lag the
+  router (the route table itself is now single-source in
+  `router.route_defs()`).
+
 ## [0.2.0] - 2026-10-10
 
 ### Added

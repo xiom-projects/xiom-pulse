@@ -393,6 +393,20 @@ contract `pulse_app migrate status|up|down|create|break-lock`
 driver package (packages lane pinged). Next backlog item: OpenAPI
 generation from route metadata. Score holds (~55.4%)._
 
+_Delta 2026-10-11 (OpenAPI route-drift guard + single route table,
+backlog order 5 -- partial): **the route table is now single-source**
+(`router.route_defs()`; `route_match`, `routes_list` and the new guard
+all derive from it -- the two hand-synced literal blocks are gone) and
+**a structural drift guard fails the suite when a route never reaches
+the contract** (`openapi.openapi_missing_routes()`: parses the served
+document, walks every route, requires the templated path key + method
+verb; test_app asserts zero drift). The undeclared `uploads` tag is
+fixed; CHANGELOG notes the guard. Remaining for the item: emit the
+`paths` object from the table (static overlay for prose/refs),
+`openapi --check` CLI mode, retire the hand-written paths block. Next
+backlog item: 0.4 middleware chain + jobs design. Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
