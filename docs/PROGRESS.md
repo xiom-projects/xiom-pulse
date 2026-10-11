@@ -355,6 +355,20 @@ Info to website `REL-20261011-1124-pulse`. Next backlog item:
 keep-alive/deadlines design doc (h11 + fasthttp three-timeout model).
 Score holds (~55.4%)._
 
+_Delta 2026-10-11 (keep-alive/deadlines design doc, backlog order 2):
+**`docs/DESIGN-KEEPALIVE-DEADLINES.md` landed** -- adopts fasthttp's
+named three-timeout model (`PULSE_READ_TIMEOUT` / `PULSE_WRITE_TIMEOUT`
+/ `PULSE_IDLE_TIMEOUT`; 408 on read expiry, silent close on idle expiry,
+write-expiry drop) and the h11 keep-alive state rules (decision table,
+start_next_cycle gating, MUST_CLOSE, trailing-buffer pipelining,
+half-close coupling, per-request framing, bounded incomplete head).
+Two-phase plan: A = deadlines (blocked on the stdlib runtime wave --
+`REL-20261011-0317-pulse`/-pulse-2, plus the filed interface notes);
+B = keep-alive on top of A (12 mapped tests, incl. the idle-expiry
+silent close). Doc-only unit; no server change, no CI dry run needed.
+Next backlog item: store durability design (bbolt). Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

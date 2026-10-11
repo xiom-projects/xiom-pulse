@@ -120,6 +120,16 @@
   smoke 119/119 (probe-logs/security-headers-20261011); CI dry run
   `38135447649` green; info to website `REL-20261011-1124-pulse`.
   **Next backlog: keep-alive/deadlines design doc (h11 + fasthttp).**
+- **Keep-alive/deadlines design doc DONE (backlog order 2, 2026-10-11):**
+  `docs/DESIGN-KEEPALIVE-DEADLINES.md` -- fasthttp's three named timeouts
+  (read/write/idle; 408 on read expiry, silent close on idle expiry) +
+  the h11 keep-alive state model and 10 adopted rules (keep-alive
+  decision, MUST_CLOSE, trailing-buffer pipelining, half-close
+  coupling, per-request framing, 16 KiB incomplete-head cap), two-phase
+  plan (A: deadlines -- blocked on stdlib `0317-pulse`/`-pulse-2`;
+  B: keep-alive on top), per-phase test plan, source index. Interface
+  notes filed to stdlib (`REL-20261011-*`). **Next backlog: store
+  durability design (bbolt).**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

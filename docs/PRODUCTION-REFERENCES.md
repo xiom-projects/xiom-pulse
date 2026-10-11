@@ -215,9 +215,14 @@ socket-timeout bus asks.
 
 ## Adopt backlog (PULSE-side, version-ordered)
 
-- [0.3.x] **Keep-alive/deadlines design doc** using the h11 checklist
+- [x] **Keep-alive/deadlines design doc** using the h11 checklist
   and fasthttp's three-timeout model; pairs with the stdlib
-  socket-timeout/deadline bus asks.
+  socket-timeout/deadline bus asks. -- **DESIGN LANDED 2026-10-11**
+  (`docs/DESIGN-KEEPALIVE-DEADLINES.md`): three named timeouts
+  (`PULSE_{READ,WRITE,IDLE}_TIMEOUT`; 408 on read expiry, silent close on
+  idle expiry), the h11 keep-alive state rules, and a two-phase
+  implementation plan (A: deadlines -- blocked on the stdlib runtime
+  wave; B: keep-alive on top).
 - [0.3.x] **Store durability design**: bbolt ordering discipline for the
   store seam + backup story; pairs with the `fsync` bus ask and the
   orbitdb driver unit.
