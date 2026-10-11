@@ -109,6 +109,17 @@
   (TcpStream.write_all) **verified + CLOSED** as reporter -- both already
   shipped in `ec64dec` (ancestor of the pin; locked by the fleet probe
   11/11 and stdlib `p_pulse_shapes` exit 0 on win+linux).
+- **Security headers unit ADOPTED (backlog order 1, 2026-10-11):**
+  `c1b3618` ships the helmet-derived set on every response (nosniff,
+  frame DENY, no-referrer, COOP/CORP `same-origin`,
+  `Origin-Agent-Cluster: ?1`, HSTS `max-age=15552000; includeSubDomains`,
+  DNS-prefetch off, cross-domain none, XSS-filter 0) via
+  `http.security_head_lines()` in both builders; CSP is opt-in
+  (`PULSE_CSP` / `csp` JSON key -- site mode safety; default off).
+  test_http 74 checks green; full sweep FAILED=0 both platforms +
+  smoke 119/119 (probe-logs/security-headers-20261011); CI dry run
+  `38135447649` green; info to website `REL-20261011-1124-pulse`.
+  **Next backlog: keep-alive/deadlines design doc (h11 + fasthttp).**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

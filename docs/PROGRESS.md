@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-11 (post-wrap-15 checkpoint: sweep on `496b568` green both platforms with pin `dd352f6`; bus `0317-pulse-3/4` verified + closed)
+**Last updated:** 2026-10-11 (security headers unit adopted: helmet set on every response, CSP opt-in; CI dry run green)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -335,6 +335,25 @@ via `ec64dec`; locked by `probe_stdlib_server_parse` (11/11 both
 platforms) and the stdlib `p_pulse_shapes` probe (exit 0 win+linux,
 100000-byte loopback). Next: the framework backlog (security headers
 first). Score holds (~55.4%)._
+
+_Delta 2026-10-11 (security headers unit -- helmet adopt, backlog order
+1): **every response now carries the reviewed security-header set** --
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+`Referrer-Policy: no-referrer`, COOP/CORP `same-origin`,
+`Origin-Agent-Cluster: ?1`, HSTS
+(`max-age=15552000; includeSubDomains`), `X-DNS-Prefetch-Control: off`,
+`X-Permitted-Cross-Domain-Policies: none`, `X-XSS-Protection: 0` --
+emitted by both response builders via `http.security_head_lines()` at a
+single assembly point (`with_std_headers`). `Content-Security-Policy` is
+opt-in via `PULSE_CSP` / the `csp` JSON key (default off: site mode
+serves pre-built trees whose inline scripts a strict default would
+break). Evidence: test_http +12 checks (74 green, both builders incl.
+CSP-absent default), full sweep FAILED=0 both platforms + smoke 119/119
+(probe-logs/security-headers-20261011), csp-check integration run (env
+wired end to end), CI dry run `38135447649` green (both package jobs).
+Info to website `REL-20261011-1124-pulse`. Next backlog item:
+keep-alive/deadlines design doc (h11 + fasthttp three-timeout model).
+Score holds (~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
