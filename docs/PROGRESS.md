@@ -369,6 +369,18 @@ silent close). Doc-only unit; no server change, no CI dry run needed.
 Next backlog item: store durability design (bbolt). Score holds
 (~55.4%)._
 
+_Delta 2026-10-11 (store durability design -- bbolt ordering, backlog
+order 3): **`docs/DESIGN-STORE-DURABILITY.md` landed** -- bbolt's
+data-before-pointer discipline mapped to the store seam: sync-before-ack
+commit points for event appends and audit lines
+(`PULSE_STORE_SYNC`/`PULSE_AUDIT_SYNC`), compaction/rotation rename
+ordering with a new `fsync_dir` ask to stdlib, seq-in-record as the
+commit marker (monotonic, newest-valid-wins analog), backup fence
+manifests (`fence_seq` + live-heal vs compacted-fence mode), and an
+explicit claim table for what PULSE may assert when. Doc-only unit; no
+server change, no CI dry run. Next backlog item: SQL migrations design
+(knex). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

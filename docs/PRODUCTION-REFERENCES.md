@@ -223,9 +223,13 @@ socket-timeout bus asks.
   idle expiry), the h11 keep-alive state rules, and a two-phase
   implementation plan (A: deadlines -- blocked on the stdlib runtime
   wave; B: keep-alive on top).
-- [0.3.x] **Store durability design**: bbolt ordering discipline for the
+- [x] **Store durability design**: bbolt ordering discipline for the
   store seam + backup story; pairs with the `fsync` bus ask and the
-  orbitdb driver unit.
+  orbitdb driver unit. -- **DESIGN LANDED 2026-10-11**
+  (`docs/DESIGN-STORE-DURABILITY.md`): sync-before-ack commit points
+  (store + audit, `PULSE_STORE_SYNC`/`PULSE_AUDIT_SYNC`), compaction
+  rename ordering + `fsync_dir` ask, seq-in-record as the commit marker,
+  backup fence manifests, explicit claim table; three-phase plan.
 - [x] **Security headers unit** (helmet checklist) -- **ADOPTED
   2026-10-11**: the reviewed default set ships in both response builders
   (`X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`,

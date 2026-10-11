@@ -130,6 +130,14 @@
   B: keep-alive on top), per-phase test plan, source index. Interface
   notes filed to stdlib (`REL-20261011-*`). **Next backlog: store
   durability design (bbolt).**
+- **Store durability design DONE (backlog order 3, 2026-10-11):**
+  `docs/DESIGN-STORE-DURABILITY.md` -- bbolt ordering discipline mapped
+  to the store seam: sync-before-ack commit points (jsonl append +
+  audit; `PULSE_STORE_SYNC`/`PULSE_AUDIT_SYNC`), compaction rename
+  ordering with a new `fsync_dir` ask, seq-in-record as the commit
+  marker, backup fence manifests (`fence_seq` + mode), explicit claim
+  table, phases A/B/C. Interface notes filed to stdlib. **Next backlog:
+  SQL migrations design (knex).**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
