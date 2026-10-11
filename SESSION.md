@@ -26,8 +26,7 @@
   the store (`xiom doctor`; re-add with `xiom pkg install` -- a re-extract
   removes non-archive subdirs like `packages/`). Stdlib lane `d54929d`
   (wave 97); the v0.64.2 pairing is `4dd8844`; **PULSE's 0.2.0 darwin
-  verification pins `48850df`** (owner-authorized one-off: runtime
-  `_SC_AVPHYS_PAGES` guard + fp128 asm x86-only). Exact/CI checks use the
+  verification pins `dd352f6`** (wave 105.1: `read_file_bytes` payload-free clause + the owner-authorized darwin one-off in history). Exact/CI checks use the
   pin (`export XIOM_STDLIB=<pinned checkout>`). `dev-env.{ps1,sh}` respect
   explicit overrides; `dev-env.sh` finds `~/.local/bin/xiom`.
 - **Shipped release: 0.2.0** (tag `pulse-v0.2.0`, 2026-10-10; linux-x64
@@ -127,7 +126,11 @@
   writer/uncommitted-txn -> marker -> SIGKILL -> verify) are GREEN on
   both platforms** (`scripts/interop_orbitdb_crash.{ps1,sh}`); the
   hybrid join stays with the ORBITDB lane's `probe_hybrid` until the
-  0.3 drivers compose it.
+  0.3 drivers compose it. **Site mode (2026-10-11): `PULSE_SITE_DIR`
+  LANDED + CI-verified** (commit `41e4ace`, dry run `38098415021` green
+  on linux+windows with the stdlib pin `dd352f6`) -- whole-tree serving,
+  clean URLs, `404.html`, `application/wasm`; the website cutover and
+  the playground static bundle can ride it.
 - **Bug gates:** C-PULSE-08/10/11 CLOSED; **C-PULSE-02 CLOSED**
   (no-source-roots build verified); **C-PULSE-09 CLOSED + swap shipped**
   (fleet 11/11 both platforms); **C-PULSE-13 CLOSED (m232)**; **C-PULSE-14
