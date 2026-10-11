@@ -174,6 +174,13 @@
   designs (keep-alive, store durability, SQL migrations, middleware
   chain, jobs) waiting on their gates (stdlib runtime wave / SQL
   driver package).**
+- **Batch-5 witness ready (2026-10-11):** `docs/repro/handlerout-helper/`
+  (witness.patch + protocol) reproduces the `&HandlerOut` ref-param
+  helper crash as 0xC0000005 on v0.64.3 (`probe-logs/repro-2122-20261011.log`);
+  re-verify = apply patch -> run test_app -> expect GREEN once the
+  compiler batch 5 lands, then re-land the helper as a permanent lock
+  (no other site-mode re-land pending). Witness-ready note filed to
+  compiler.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

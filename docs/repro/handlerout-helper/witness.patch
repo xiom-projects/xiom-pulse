@@ -1,0 +1,28 @@
+diff --git a/tests/test_app.xi b/tests/test_app.xi
+index b7e4d12..faf33f9 100644
+--- a/tests/test_app.xi
++++ b/tests/test_app.xi
+@@ -78,6 +78,15 @@ fn route_req_v1(method: Str, target: Str, body: Str) -> HandlerOut {
+   return app.handle_route(m, &req, body);
+ }
+ 
++fn out_text(o: &HandlerOut) -> Str {
++  // Batch-5 witness (REL-20261010-1854/2122): the &HandlerOut ref-param
++  // Str-return helper shape that crashed the suite build/run before the
++  // compiler fix. Remove via docs/repro/handlerout-helper after the fix
++  // ships; this edit is kept out of main as a patch.
++  if o.body.len() > 0 { return o.body; }
++  return http.bytes_to_str(&o.body_bytes, 0, o.body_bytes.len());
++}
++
+ fn json_field(body: Str, field: Str) -> Str {
+   // First "field":"value" string value in a small JSON body (upload names).
+   let needle = "\"" + field + "\":\"";
+@@ -561,6 +570,7 @@ pub fn main() -> Int {
+   // --- openapi contract (0.2) ------------------------------------------------
+   let oa = route_req("GET", "/openapi.json", "");
+   f = f + check("openapi 200", oa.status == 200);
++  f = f + check("batch5 witness helper", out_text(&oa).len() > 0);
+   f = f + check("openapi marker", string.str_contains(oa.body, "\"3.1.0\""));
+   f = f + check("openapi title", string.str_contains(oa.body, "XIOM PULSE"));
+   f = f + check("openapi version", string.str_contains(oa.body, "\"version\": \"0.2.0\""));

@@ -425,6 +425,15 @@ Next work when gates open: implement keep-alive Phase A (deadlines),
 durability Phase A (sync points), and the middleware refactor (order
 tests first). Score holds (~55.4%)._
 
+_Delta 2026-10-11 (batch-5 witness ready): `docs/repro/handlerout-helper/`
+landed -- witness.patch (the exact `&HandlerOut` ref-param Str-return
+helper + one suite call, from REL-20261010-2122) and the re-verify
+protocol. Re-run today on v0.64.3: suite exits -1073741819 (0xC0000005)
+after compiling -- red confirmed in suite context (helper alone still
+passes). Post-fix expectation: GREEN + `batch5 witness helper` PASS,
+then re-land the helper permanently as the positive lock. Witness-ready
+note filed to compiler. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
