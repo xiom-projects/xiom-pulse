@@ -200,6 +200,11 @@
   **0.2.1 stays gated**; negative evidence filed (`REL-20261011-1904-pulse`).**
   Compiler repo is cutting v0.64.4 (all six batches, m271); the
   `openapi --check` unit's dry run `38157843890` is green.
+- **`0317-pulse-7` verified + closed (2026-10-11):** module-scope
+  fn-pointer reassignment (m265/`fde5548e`) -- witness
+  `docs/repro/fnptr-harness/` exits 0 on m271; v0.64.3 control fails
+  `error[C001] unresolved 'handler'`. Suites keep dispatch-by-id; the
+  harness capability is available for later test-runner work.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

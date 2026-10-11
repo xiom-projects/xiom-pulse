@@ -456,7 +456,9 @@ dies 0xC000001D on m271 and v0.64.3 (A/B, isolated workdirs,
 stays gated** on that fix; evidence filed to compiler
 (`REL-20261011-1904-pulse`, high). `openapi --check` dry run
 `38157843890` green (unit fully closed). Compiler cutting v0.64.4
-(m271; all six batches). Score holds (~55.4%)._
+(m271; all six batches). Also closed `REL-20261011-0317-pulse-7`
+(module-scope fn-ptr, m265): witness `docs/repro/fnptr-harness/` exits 0
+on m271, v0.64.3 control fails `error[C001]`. Score holds (~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
