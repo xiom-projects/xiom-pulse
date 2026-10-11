@@ -125,6 +125,8 @@ Statuses: `200`, `204`, `400`, `401`, `403`, `404`, `405`, `413`, `500`,
 ## CLI
 
 `pulse_app openapi` prints the same contract document to stdout;
+`pulse_app openapi --check` verifies the document still covers every
+router route (exit 1 and the missing list on drift);
 `pulse_app routes` prints the route table (`METHOD PATH` per line);
 `pulse_app version` and `pulse_app check-config` mirror the `--version`
 and `--check-config` flags. `openapi` exits 1 when the document cannot

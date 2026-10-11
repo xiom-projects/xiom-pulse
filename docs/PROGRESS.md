@@ -434,6 +434,16 @@ passes). Post-fix expectation: GREEN + `batch5 witness helper` PASS,
 then re-land the helper permanently as the positive lock. Witness-ready
 note filed to compiler. Score holds (~55.4%)._
 
+_Delta 2026-10-11 (OpenAPI `--check` CLI): `pulse_app openapi --check`
+landed -- runs the route-drift guard (`openapi_missing_routes`) against
+the served document: exit 0 + OK; exit 1 + the missing list on drift.
+Wired into the RELEASE-CHECKLIST verify step and documented in
+http-api.md; verified locally green (rc 0) and drift-red (renamed
+`/health` key -> `missing GET /health`, rc 1). Part of the openapi
+generation remainder; the paths-emission generator stays open. Full
+sweep both platforms + smoke 119/119 (probe-logs/openapi-check-20261011);
+CI dry run dispatched with the push. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

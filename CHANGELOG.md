@@ -8,6 +8,9 @@ GitHub release body.
 
 ### Added
 
+- **`pulse_app openapi --check`**: verifies the served OpenAPI contract
+  still covers every router route (exit 1 with the missing list on
+  drift) -- the release-gate companion to the route-table drift guard.
 - **Security headers (helmet-derived reviewed defaults)**: every response
   now carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`,

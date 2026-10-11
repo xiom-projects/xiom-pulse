@@ -69,6 +69,8 @@ in CHANGELOG/history/relay prose -- never in `src/`, `tests/`,
 
 - `pulse_app --version`, `GET /api/version`, `/openapi.json` version
   token, and the `Server:` header all report the new version.
+- `pulse_app openapi --check` reports OK (the contract covers every
+  router route; exit 1 lists drift).
 - Full fleet AGAIN post-bump with the pinned stdlib on both platforms
   (suites x2 + smoke at minimum; the tag gate in CI re-runs it).
 - `--check-config` output sane; JSON config overlay keys all load.

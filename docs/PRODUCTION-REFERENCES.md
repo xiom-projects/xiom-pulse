@@ -253,9 +253,10 @@ socket-timeout bus asks.
   (`router.route_defs()`; dispatch, CLI and guards derive from it), a
   structural drift guard (`openapi.openapi_missing_routes`, run by
   test_app) fails the suite when a route never reaches the contract, and
-  the undeclared `uploads` tag is fixed. Remaining: emit the `paths`
-  object from the table (static overlay for prose/refs), `openapi
-  --check` CLI mode, retire the hand-written paths block.
+  the undeclared `uploads` tag is fixed. `pulse_app openapi --check`
+  (2026-10-11) exposes the guard for release verification. Remaining:
+  emit the `paths` object from the table (static overlay for
+  prose/refs), retire the hand-written paths block.
 - [x] **Middleware chain** (gin pattern + fastify stage names) +
   recovery guard + context reset discipline; precompute chains. --
   **DESIGN LANDED 2026-10-11** (`docs/DESIGN-MIDDLEWARE-JOBS.md`): nine

@@ -181,6 +181,13 @@
   compiler batch 5 lands, then re-land the helper as a permanent lock
   (no other site-mode re-land pending). Witness-ready note filed to
   compiler.
+- **OpenAPI `--check` CLI (2026-10-11):** `pulse_app openapi --check`
+  runs the route-drift guard against the served document -- exit 0 with
+  OK, exit 1 with the missing list on drift; added to the
+  RELEASE-CHECKLIST verify step; verified green + drift-red locally.
+  Remaining on the openapi item: generate the `paths` object from the
+  table (overlay for prose/refs) and retire the hand-written paths
+  block.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

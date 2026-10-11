@@ -742,6 +742,26 @@ pub fn main() -> Int {
         io.println("openapi: document not readable at " + config.cfg_openapi_path());
         return 1;
       }
+      var want_check: Bool = false;
+      var ck: Int = 0;
+      while ck < av.len() {
+        if av[ck] == "--check" { want_check = true; }
+        ck = ck + 1;
+      }
+      if want_check {
+        let missing = openapi.openapi_missing_routes(doc);
+        if missing.len() > 0 {
+          io.println("openapi --check: contract drift vs the route table:");
+          var mi: Int = 0;
+          while mi < missing.len() {
+            io.println("  missing " + missing[mi]);
+            mi = mi + 1;
+          }
+          return 1;
+        }
+        io.println("openapi --check: OK -- every route appears in the contract");
+        return 0;
+      }
       io.println(doc);
       return 0;
     }
@@ -758,7 +778,7 @@ pub fn main() -> Int {
     }
     if a == "--help" || a == "-h" {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
-      io.println("usage: pulse_app [--version|--help|--check-config] | routes | openapi | version | check-config");
+      io.println("usage: pulse_app [--version|--help|--check-config] | routes | openapi [--check] | version | check-config");
       io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
