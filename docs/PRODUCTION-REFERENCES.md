@@ -221,7 +221,15 @@ socket-timeout bus asks.
 - [0.3.x] **Store durability design**: bbolt ordering discipline for the
   store seam + backup story; pairs with the `fsync` bus ask and the
   orbitdb driver unit.
-- [0.2.x/0.3.x] **Security headers unit** (helmet checklist).
+- [x] **Security headers unit** (helmet checklist) -- **ADOPTED
+  2026-10-11**: the reviewed default set ships in both response builders
+  (`X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`,
+  COOP/CORP `same-origin`, `Origin-Agent-Cluster`, HSTS 180d
+  includeSubDomains, X-DNS-Prefetch-Control off, X-Permitted-Cross-Domain
+  none, X-XSS-Protection 0); CSP is opt-in via `PULSE_CSP`/`csp` (site
+  mode safety). Evidence: test_http +12 checks (74 green, both builders),
+  csp-check integration run (header set/absent wired end to end),
+  `probe-logs/regress-20261011/`.
 - [0.3.x] **SQL class migrations discipline** (knex lock/applied).
 - [0.3/0.4] **OpenAPI generation from route metadata**
   (fastapi/fastify direction) -- eventually retires the hand-maintained

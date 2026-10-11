@@ -16,6 +16,15 @@ the known gaps; do not deploy it as a hard production service yet.
   deployment (the built-in default is for local development only).
 - Sessions are CSRF-protected by default (`PULSE_CSRF=0` disables it
   only for controlled testing).
+- Every response carries a reviewed security-header set (helmet-derived):
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy/CORP`
+  `same-origin`, `Origin-Agent-Cluster`, HSTS
+  (`max-age=15552000; includeSubDomains`), `X-DNS-Prefetch-Control: off`,
+  `X-Permitted-Cross-Domain-Policies: none`, and the legacy
+  `X-XSS-Protection` set to `0`. `Content-Security-Policy` is off by
+  default because site mode serves pre-built trees; set `PULSE_CSP` to a
+  policy string to enable one (see [Configuration](./configuration.md)).
 - CORS is opt-in and exact-match (comma-separated allowlist, or `*` for
   open demos); it is off by default.
 - A global token-bucket rate limit is available (`PULSE_RATE_LIMIT`,

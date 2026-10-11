@@ -661,11 +661,17 @@ fn is_mutating(method: Str) -> Bool {
   return method == "POST" || method == "PUT" || method == "DELETE" || method == "PATCH";
 }
 
-/// with_date appends the Date header (RFC 1123 / IMF-fixdate) right after
-/// the status line; assembled here at the app layer, reusing the static
-/// package's formatter. Complexity: O(n).
-fn with_date(resp: Vec[UInt8]) -> Vec[UInt8] {
-  return http.with_header_line(&resp, "Date: " + static.static_http_date(time.unix_timestamp()));
+/// with_std_headers appends the Date header (RFC 1123 / IMF-fixdate) right
+/// after the status line, plus the configured CSP when PULSE_CSP is set;
+/// assembled here at the app layer, reusing the static package's
+/// formatter. Complexity: O(n).
+fn with_std_headers(resp: Vec[UInt8]) -> Vec[UInt8] {
+  var out = http.with_header_line(&resp, "Date: " + static.static_http_date(time.unix_timestamp()));
+  let policy = config.cfg_csp();
+  if policy.len() > 0 {
+    out = http.with_header_line(&out, "Content-Security-Policy: " + policy);
+  }
+  return out;
 }
 
 /// with_cors injects CORS headers into a built response when the request
@@ -893,7 +899,7 @@ pub fn main() -> Int {
         }
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, "bad request"));
-        resp = with_date(with_cors(resp, &req));
+        resp = with_std_headers(with_cors(resp, &req));
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (" + status.to_str() + ")"); io.flush_stdout(); }
         socket.socket_close(client);
@@ -907,7 +913,7 @@ pub fn main() -> Int {
       } else if req.method == "OPTIONS" && cors.cors_enabled() {
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "");
-        resp = with_date(with_cors(resp, &req));
+        resp = with_std_headers(with_cors(resp, &req));
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (204)"); io.flush_stdout(); }
         socket.socket_close(client);
@@ -919,7 +925,7 @@ pub fn main() -> Int {
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
         var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody);
-        resp = with_date(with_cors(resp, &req));
+        resp = with_std_headers(with_cors(resp, &req));
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (403)"); io.flush_stdout(); }
         socket.socket_close(client);
@@ -936,7 +942,7 @@ pub fn main() -> Int {
         hs.push(("Retry-After", secs.to_str()));
         let rbody = envelope.error_body("rate_limited", "too many requests");
         var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody);
-        resp = with_date(with_cors(resp, &req));
+        resp = with_std_headers(with_cors(resp, &req));
         let w_ok = send_all(client, &resp);
         if !w_ok { io.println("pulse: send failed (429)"); io.flush_stdout(); }
         socket.socket_close(client);
@@ -969,7 +975,7 @@ pub fn main() -> Int {
             resp = trimmed;
           }
         }
-        resp = with_date(with_cors(resp, &req));
+        resp = with_std_headers(with_cors(resp, &req));
         let w_ok = send_all(client, &resp);
         if !w_ok {
           io.println("pulse: send failed");

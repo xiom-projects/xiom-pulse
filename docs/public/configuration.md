@@ -40,6 +40,7 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_HTTP_MAX_BYTES` | `262144` | outbound HTTP response size cap |
 | `PULSE_SITE_DIR` | (unset) | static-site root; serves unmatched GET/HEAD + `/assets/*` (clean URLs, `404.html`, `application/wasm`) |
 | `PULSE_SITE_MAX_AGE` | `3600` | site `Cache-Control` max-age seconds |
+| `PULSE_CSP` | (unset) | `Content-Security-Policy` header value; unset = no CSP header |
 
 `PULSE_BIND` takes the **address only** (`127.0.0.1`, `::1`, `0.0.0.0`
 in containers); the port belongs to `PULSE_PORT`. A combined value such
@@ -57,7 +58,7 @@ Any of the documented keys can be set in the JSON file (`port`,
 `landing_path`, `jwt_secret`, `session_ttl`, `rate_limit`,
 `rate_burst`, `csrf`, `cors_origin`, `upload_dir`, `upload_max_bytes`,
 `upload_max_parts`, `http_allowlist`, `http_max_bytes`, `site_dir`,
-`site_max_age`). Environment variables override the file.
+`site_max_age`, `csp`). Environment variables override the file.
 
 ## Store backends
 

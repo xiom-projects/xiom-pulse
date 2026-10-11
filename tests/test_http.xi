@@ -155,6 +155,20 @@ pub fn main() -> Int {
   f = f + check("too many headers rejected", !pmany.ok);
   f = f + check("security nosniff", string.str_contains(resp_str, "X-Content-Type-Options: nosniff"));
   f = f + check("security frame deny", string.str_contains(resp_str, "X-Frame-Options: DENY"));
+  f = f + check("security referrer no-referrer", string.str_contains(resp_str, "Referrer-Policy: no-referrer"));
+  f = f + check("security coop", string.str_contains(resp_str, "Cross-Origin-Opener-Policy: same-origin"));
+  f = f + check("security corp", string.str_contains(resp_str, "Cross-Origin-Resource-Policy: same-origin"));
+  f = f + check("security origin agent cluster", string.str_contains(resp_str, "Origin-Agent-Cluster: ?1"));
+  f = f + check("security hsts", string.str_contains(resp_str, "Strict-Transport-Security: max-age=15552000; includeSubDomains"));
+  f = f + check("security dns prefetch off", string.str_contains(resp_str, "X-DNS-Prefetch-Control: off"));
+  f = f + check("security cross-domain none", string.str_contains(resp_str, "X-Permitted-Cross-Domain-Policies: none"));
+  f = f + check("security xss filter off", string.str_contains(resp_str, "X-XSS-Protection: 0"));
+  f = f + check("security csp absent by default", !string.str_contains(resp_str, "Content-Security-Policy:"));
+  var no_hdrs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  var empty_body: Vec[UInt8] = Vec[UInt8].new();
+  let rbytes = http.build_response_bytes(200, "image/x-icon", &no_hdrs, &empty_body);
+  let rbytes_str = http.bytes_to_str(&rbytes, 0, rbytes.len());
+  f = f + check("security block on bytes path", string.str_contains(rbytes_str, "X-Content-Type-Options: nosniff") && string.str_contains(rbytes_str, "Cross-Origin-Opener-Policy: same-origin"));
 
   // --- chunked transfer-encoding (2026-10-08) ------------------------------
   let ck1 = req_bytes("POST /api/echo HTTP/1.1\r\nHost: t\r\nTransfer-Encoding: chunked\r\n\r\n4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n");

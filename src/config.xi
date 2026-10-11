@@ -171,6 +171,7 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "http_max_bytes", "PULSE_HTTP_MAX_BYTES");
   cfg_apply_str(obj, "site_dir", "PULSE_SITE_DIR");
   cfg_apply_str(obj, "site_max_age", "PULSE_SITE_MAX_AGE");
+  cfg_apply_str(obj, "csp", "PULSE_CSP");
   return true;
 }
 
@@ -265,6 +266,15 @@ pub fn cfg_assets_dir() -> Str {
 /// Complexity: O(1). Pure.
 pub fn cfg_landing_path() -> Str {
   return env.var_or("PULSE_LANDING_PATH", "");
+}
+
+/// cfg_csp returns the Content-Security-Policy header value to send
+/// (PULSE_CSP, default "" = no CSP header: site mode serves pre-built
+/// trees whose inline scripts a strict default policy would break; set a
+/// policy string to enable it, e.g. "default-src 'self'").
+/// Complexity: O(1). Pure.
+pub fn cfg_csp() -> Str {
+  return env.var_or("PULSE_CSP", "");
 }
 
 /// cfg_session_ttl_secs returns the session lifetime (PULSE_SESSION_TTL,

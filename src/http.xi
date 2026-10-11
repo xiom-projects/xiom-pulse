@@ -491,6 +491,27 @@ pub fn status_text(code: Int) -> Str {
   return "Unknown";
 }
 
+/// security_head_lines returns the reviewed security-header block
+/// (helmet-derived policy set; fixed values). CSP is deliberately NOT part
+/// of the fixed block -- it is configurable (PULSE_CSP) and injected at
+/// the server assembly point, because site mode serves arbitrary pre-built
+/// trees whose inline scripts a default policy would break.
+/// Complexity: O(1). Pure.
+pub fn security_head_lines() -> Str {
+  var s: Str = "";
+  s = s + "X-Content-Type-Options: nosniff\r\n";
+  s = s + "X-Frame-Options: DENY\r\n";
+  s = s + "Referrer-Policy: no-referrer\r\n";
+  s = s + "Cross-Origin-Opener-Policy: same-origin\r\n";
+  s = s + "Cross-Origin-Resource-Policy: same-origin\r\n";
+  s = s + "Origin-Agent-Cluster: ?1\r\n";
+  s = s + "Strict-Transport-Security: max-age=15552000; includeSubDomains\r\n";
+  s = s + "X-DNS-Prefetch-Control: off\r\n";
+  s = s + "X-Permitted-Cross-Domain-Policies: none\r\n";
+  s = s + "X-XSS-Protection: 0\r\n";
+  return s;
+}
+
 /// build_response_full builds a response with a custom content type and
 /// extra headers (Set-Cookie, Allow, ...). Complexity: O(n). Pure.
 pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: Str) -> Vec[UInt8] {
@@ -502,9 +523,7 @@ pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(
     head = head + h.0 + ": " + h.1 + "\r\n";
     i = i + 1;
   }
-  head = head + "X-Content-Type-Options: nosniff\r\n";
-  head = head + "X-Frame-Options: DENY\r\n";
-  head = head + "Referrer-Policy: no-referrer\r\n";
+  head = head + security_head_lines();
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
   head = head + "Connection: close\r\n";
   head = head + "Server: xiom-pulse/0.2.0\r\n";
@@ -530,9 +549,7 @@ pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[
     head = head + h.0 + ": " + h.1 + "\r\n";
     i = i + 1;
   }
-  head = head + "X-Content-Type-Options: nosniff\r\n";
-  head = head + "X-Frame-Options: DENY\r\n";
-  head = head + "Referrer-Policy: no-referrer\r\n";
+  head = head + security_head_lines();
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
   head = head + "Connection: close\r\n";
   head = head + "Server: xiom-pulse/0.2.0\r\n";

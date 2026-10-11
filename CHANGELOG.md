@@ -8,6 +8,15 @@ GitHub release body.
 
 ### Added
 
+- **Security headers (helmet-derived reviewed defaults)**: every response
+  now carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`,
+  `Cross-Origin-Resource-Policy: same-origin`, `Origin-Agent-Cluster: ?1`,
+  `Strict-Transport-Security: max-age=15552000; includeSubDomains`,
+  `X-DNS-Prefetch-Control: off`, `X-Permitted-Cross-Domain-Policies: none`,
+  and `X-XSS-Protection: 0`. `Content-Security-Policy` is opt-in via
+  `PULSE_CSP` (or the `csp` JSON key): site mode serves pre-built trees
+  whose inline scripts a strict default policy would break.
 - **Static site mode** (`PULSE_SITE_DIR`): serves a whole pre-built
   directory tree for unmatched `GET`/`HEAD` and `/assets/*` -- index
   resolution, clean URLs (`/about` -> `about.html`), a custom `404.html`
