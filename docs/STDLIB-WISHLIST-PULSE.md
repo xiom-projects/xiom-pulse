@@ -190,4 +190,4 @@ doc, wrap 8b):
   with a portable/aarch64 fallback. These two plus the compiler
   `llvm.memset` item are the macOS gate for PULSE 0.2.0.)**
 
-> **Migrated (2026-10-10):** cross-lane coordination moved to the private xiom-relays bus (`python tools/relay.py view --lane stdlib`). PULSE's open compiler/stdlib bugs are on the bus (REL-20261010-1549-pulse*); the remaining wishlist rows migrate there on the doorbell. Open a bus item for anything new; this file is frozen history.
+> **Migrated (2026-10-10):** cross-lane coordination moved to the private xiom-relays bus (`python tools/relay.py view --lane stdlib`). PULSE's open compiler/stdlib bugs are on the bus (REL-20261010-1549-pulse*); the open rows migrated to the bus on 2026-10-11 (REL-20261011-0317-pulse*). Open a bus item for anything new; this file is frozen history.

@@ -274,4 +274,4 @@ continues on the next sector (accelerators unlock after the
   mismatch to the **compiler/installer lane** (not a package defect);
   recorded in `docs/COMPILER-FINDINGS-PULSE.md`.
 
-> **Migrated (2026-10-10):** cross-lane coordination moved to the private xiom-relays bus (`python tools/relay.py view --lane packages`). The remaining open rows migrate there on the doorbell; this file is frozen history.
+> **Migrated (2026-10-10):** cross-lane coordination moved to the private xiom-relays bus (`python tools/relay.py view --lane packages`). All proposed packages are done/adopted; this file is frozen history (the socket/io asks live on the bus as REL-20261011-0317-pulse*).
