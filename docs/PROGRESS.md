@@ -407,6 +407,24 @@ fixed; CHANGELOG notes the guard. Remaining for the item: emit the
 backlog item: 0.4 middleware chain + jobs design. Score holds
 (~55.4%)._
 
+_Delta 2026-10-11 (middleware chain + jobs design -- backlog order 6,
+ordered backlog complete): **`docs/DESIGN-MIDDLEWARE-JOBS.md` landed** --
+nine named stages (request / parse / validate / beforeHandler / handler /
+beforeSerialize / beforeSend / afterResponse / error) mapped onto the
+current accept-loop ladder with the gate order preserved and the error
+stage reachable from every stage; gin + fastify mechanics (precomputed
+static tables, sent-guard short-circuit, reset contract, per-route
+precompute escape hatch); bullmq portable core (attempts + fixed/
+exponential backoff, due-time delayed heap, lock/heartbeat ownership,
+two-phase stalled sweep, ownership-checked terminal writes) on a bounded
+loop-boundary runner that never blocks accept. **Ordered framework
+backlog now fully landed**: security headers shipped (c1b3618); designs
+for keep-alive, store durability, SQL migrations, middleware and jobs
+all in docs/, gated on the stdlib runtime wave / SQL driver package.
+Next work when gates open: implement keep-alive Phase A (deadlines),
+durability Phase A (sync points), and the middleware refactor (order
+tests first). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

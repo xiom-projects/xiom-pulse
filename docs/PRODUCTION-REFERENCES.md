@@ -256,9 +256,18 @@ socket-timeout bus asks.
   the undeclared `uploads` tag is fixed. Remaining: emit the `paths`
   object from the table (static overlay for prose/refs), `openapi
   --check` CLI mode, retire the hand-written paths block.
-- [0.4] **Middleware chain** (gin pattern + fastify stage names) +
-  recovery guard + context reset discipline; precompute chains.
-- [0.4] **Jobs/queue mechanics** (bullmq) for retries/backoff/stalled
-  locks.
+- [x] **Middleware chain** (gin pattern + fastify stage names) +
+  recovery guard + context reset discipline; precompute chains. --
+  **DESIGN LANDED 2026-10-11** (`docs/DESIGN-MIDDLEWARE-JOBS.md`): nine
+  named stages mapped onto the current ladder with the gate order
+  preserved, error stage reachable from every stage, precomputed static
+  tables, explicit per-request reset contract, and the order tests to
+  add before refactoring.
+- [x] **Jobs/queue mechanics** (bullmq) for retries/backoff/stalled
+  locks. -- **DESIGN LANDED 2026-10-11** (same doc): portable core
+  (attempts + fixed/exponential backoff, due-time delayed heap,
+  lock/heartbeat ownership, two-phase stalled sweep, ownership-checked
+  terminal writes) on a bounded, never-blocking loop-boundary runner;
+  Redis-specific parts (scripts, markers, streams, schedulers) excluded.
 - Watch: when upstream threads land, gin-style pooling becomes directly
   applicable.

@@ -161,6 +161,19 @@
   from the table (static overlay for prose/refs) + `openapi --check`
   mode; the hand-written document stays the source until then.
   **Next backlog: 0.4 middleware chain + jobs design (gin/fastify/bullmq).**
+- **Middleware chain + jobs design DONE (backlog order 6, 2026-10-11 --
+  ordered backlog complete):** `docs/DESIGN-MIDDLEWARE-JOBS.md` -- nine
+  named stages mapped onto today's ladder (gate order preserved; error
+  stage reachable from every stage; order tests to add first), gin +
+  fastify mechanics (precomputed tables, sent-guard short-circuit,
+  explicit reset contract), and the bullmq portable core
+  (attempts/backoff, due-time delayed heap, lock heartbeat, two-phase
+  stalled sweep, ownership-checked terminals) on a bounded
+  loop-boundary runner that never blocks accept. **Ordered framework
+  backlog is now fully landed: security headers shipped; all five
+  designs (keep-alive, store durability, SQL migrations, middleware
+  chain, jobs) waiting on their gates (stdlib runtime wave / SQL
+  driver package).**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
