@@ -3,25 +3,27 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-10 wrap 14 (0.2 PULSE-side slate COMPLETE; first 0.3 interop probes green; 0.1.2 shipped; demo live), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-11 wrap 15 (0.2.0 shipped on linux+windows; v0.64.3 pinned+validated; site mode landed; xiom-relays bus + 11-project reference shelf), by the PULSE consumer lane.
 
-## 0. STATE (2026-10-10 wrap 14) -- CURRENT STATE digest (supersedes the log below)
+## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
 - **Repo:** `E:\xiom-projects\xiom-pulse`, **PUBLIC** since 2026-10-09
   (owner flipped it); rulesets live -- `protect-main` requires DCO +
   `ubuntu-latest` + `windows-latest`, `protect-release-tags` covers
   `pulse-v*` (org-admin pushes bypass; never move a tag -- if a tag's CI
   fails, fix and cut the next patch version). DCO `-s` commits; identity
-  Lefteris Notas <lefterisnotas@gmail.com>. Head: `6171304` + the wrap
-  commit on top (see `git log`); wrap-14 commits: pagination `9301052`,
-  idempotency `a6a55b9`, `/v1` `602c9e6`, outbound `bf6d9b0`, uploads
-  `130a54b`, interop `6171304`.
+  Lefteris Notas <lefterisnotas@gmail.com>. Head: `e7cbcbf` (wrap-15
+  key commits: `e31d396` release v0.2.0, `f15a6b0` packaging fix,
+  `e626939` v0.64.3 CI pins, `41e4ace` site mode landed, `36f08c8`
+  wishlist freeze, `4142c96`/`e7cbcbf` reference shelf).
 - **Toolchain:** **v0.64.3 pinned + VALIDATED in CI** (2026-10-10; dry run
   `38075327683` green on linux-x64 + windows-x64 with the pinned stdlib
   `48850df`; dl synced; pins in `docs/OPS-REQUEST.md` D.1 and every
   workflow; macOS shas pinned for the gated legs). **Local Windows/WSL
-  installs are still v0.64.2** until the next toolchain maintenance
-  window. **C-PULSE-13 CLOSED (m232):** package home unified, no
+  installs were upgraded to v0.64.3 on 2026-10-10** (the re-extract had
+  wiped the package store -- all 10 packages re-added; `xiom-pkg.exe`
+  restored from the full extract; repeated after ANY toolchain
+  maintenance). Local pin cache: `%LOCALAPPDATA%\xiom-pins\stdlib-dd352f6`. **C-PULSE-13 CLOSED (m232):** package home unified, no
   bridge anywhere (CI included); after any toolchain maintenance verify
   the store (`xiom doctor`; re-add with `xiom pkg install` -- a re-extract
   removes non-archive subdirs like `packages/`). Stdlib lane `d54929d`
@@ -71,28 +73,32 @@
   backlog live in `docs/PRODUCTION-REFERENCES.md`.
 - **Live demo:** pulse.xiom-lang.org serves the website page **through
   PULSE** (nginx -> loopback; landing via `PULSE_LANDING_PATH`, JSON via
-  `/health` + `/api/version`); currently running **0.1.0/cc3e741** -- ops
-  redeploys to 0.1.2+ at leisure (site buttons/badge auto-follow
-  `latest.json`). Linux memory still open: keep `MemoryMax` + restart.
+  `/health` + `/api/version`); running **0.1.0** -- ops tried 0.2.0 and
+  rolled back on the SIGILL (bus `REL-20261010-1721-ops`); redeploy
+  0.2.x once the stdlib fix lands (site buttons/badge auto-follow
+  `latest.json`; 0.2.0 zips are live on dl). Linux memory still open:
+  keep `MemoryMax` + restart.
   orbitdb./xvector. phase-1 pages live (driver work queued for 0.3);
   docs.xiom-lang.org = versioned compiler-docs root, PULSE docs render
   at pulse.xiom-lang.org/docs/; registry.xiom-lang.org live (490 pkgs;
   GitHub sign-in / SQLite social layer implemented in the registry lane).
-- **Current focus: 0.2.0 "the release that matters"** (owner direction):
-  **macOS x64 + arm64 artifacts plus the gap slate.** Dry run
-  `38066169081` (2026-10-10, all four legs): **linux-x64 + windows-x64
-  GREEN**; remaining macOS blockers are two distinct items, both filed
-  high on the bus (2026-10-10 16:09):
-  1. **macos-arm64**: compiler codegen `@llvm.memset.p0i8.i64` emission
-     dies at IR verify (`use of undefined value`, 65536-byte zero) --
-     needs a NEW compiler archive (v0.64.3); item to `compiler`.
-  2. **macos-x64**: `Undefined symbols ___addtf3...` -- the fp128
-     naked-asm tf shims do not materialize under Apple clang x86_64;
-     proposal: plain C wrappers over the value-form impls on
-     `__APPLE__ && __x86_64__`; item to `stdlib`.
-  Already fixed by PULSE one-off + pinned: `_SC_AVPHYS_PAGES` guard and
-  arm64 asm-compile (stdlib `48850df`, owner-authorized). When the two
-  items land: `RELEASE_BUILD_MACOS=true`, four-leg dry run, bump, tag.
+- **Current focus: the NEXT release (0.2.1 hotfix / 0.3.0)** -- owner
+  shipped **0.2.0** on linux+windows and deferred macOS to the next cut.
+  Main is green (`e7cbcbf`): packaging fix + v0.64.3 + **site mode
+  landed** are all in; `pulse-v0.2.0` is live on GitHub + dl. Remaining
+  gates, all on the bus (check `relay.py view --lane pulse`):
+  1. **SIGILL / VPS**: stdlib `REL-20261010-1615-stdlib` + ops
+     `REL-20261010-1721-ops` -- when fixed, re-verify and cut (the demo
+     stays on 0.1.0 until then; ops rolled back).
+  2. **macOS legs**: compiler `REL-20261010-1609-pulse` (arm64 memset
+     codegen) + stdlib `REL-20261010-1609-pulse-2` (Darwin x64 fp128
+     shims) -- when BOTH fixed: `RELEASE_BUILD_MACOS=true`, four-leg dry
+     run, cut with macOS included.
+  3. Compiler `REL-20261010-1854/2122-pulse` (the `&HandlerOut` helper
+     crash; site mode shipped with the inlining workaround -- re-test
+     the helper when fixed, no re-land needed).
+  0.2.1 scope already on main: packaging fix + v0.64.3 pins + site mode
+  (0.3-fleet item). Follow `docs/RELEASE-CHECKLIST.md` for the cut.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -153,7 +159,12 @@
   `docs/repro/io-list-dir-dangling/`; PULSE avoids list_dir entirely);
   **C-PULSE-18 NEW** (`time.sleep_ms` is a NO-OP on v0.64.2, both
   platforms -- repro `docs/repro/time-sleep-noop/`; harness writers
-  busy-wait on monotonic deadlines).
+  busy-wait on monotonic deadlines); **bus round 2 (2026-10-11):**
+  C-PULSE-17's sibling (`read_file_bytes` nested-read trap) FIXED by
+  stdlib `dd352f6`, verified+closed (`REL-20261010-2122-pulse-2`);
+  compiler helper crash bisected (`REL-20261010-1854/2122-pulse`,
+  worked around); wishlist rows all migrated to the bus
+  (`REL-20261011-0317-pulse*`).
 - **Score:** ~55.4% production grade (`docs/PROGRESS.md`).
 - **Stores:** jsonl = default; kv = verified opt-in both platforms
   (20m + 45m Linux soaks); flip still gated on the recorded
@@ -845,76 +856,93 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-10 wrap 14)
+## 3. Paste prompt for the next PULSE session (2026-10-11 wrap 15)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (the official
-XIOM web backend). Read SESSION.md first -- the CURRENT STATE digest at
-the top is authoritative; then docs\PROGRESS.md and the relay docs it
-lists. The repo is PUBLIC now; org rulesets gate PRs on DCO +
-ubuntu-latest + windows-latest (admin pushes bypass; never move a
+XIOM web backend, growing into the ecosystem's full backend framework).
+Read SESSION.md first -- the CURRENT STATE digest at the top is
+authoritative; then docs\PROGRESS.md, docs\PRODUCTION-REFERENCES.md and
+the relay docs it lists. The repo is PUBLIC; org rulesets gate PRs on
+DCO + ubuntu-latest + windows-latest (admin pushes bypass; never move a
 published tag -- on a failed tag run, fix and cut the next patch
 version). Consumer lane: never edit E:\xiom-lang\stdlib,
 E:\xiom-lang\xiom, E:\xiom-packages\packages (or its bindings worktree
-E:\xiom-packages\bindings). Identity "Lefteris Notas
-<lefterisnotas@gmail.com>"; conventional commits, DCO -s; when a message
-contains quotes or slash-paths use git commit -F <file> (PS mangles
-native-arg quoting). Toolchain: v0.64.2 on BOTH Windows and Linux/WSL
-(pins in docs\OPS-REQUEST.md D.1 and every workflow); Linux
-verification uses the PINNED stdlib (now `48850df`) -- export
-XIOM_STDLIB=$HOME/.cache/xiom-pin/stdlib-48850df (the WSL tmp cleaner
-wipes /tmp on distro restarts, so the pin cache lives in ~/.cache).
-Coordination: the xiom-relays bus (private `xiom-lang/xiom-relays`,
-cloned at `E:\xiom-lang\xiom-relays`); at session start and before
-finishing any task pull it and process items addressed to pulse
-(`python tools/relay.py view --lane pulse`); never edit another lane's
-item -- open a new one.
+E:\xiom-packages\bindings) -- the only standing exception is the
+owner-authorized 2026-10-10 darwin runtime one-off (already landed in
+stdlib as 48850df); keep the boundary otherwise. Identity "Lefteris
+Notas <lefterisnotas@gmail.com>"; conventional commits, DCO -s; when a
+message contains quotes or slash-paths use git commit -F <file> (PS
+mangles native-arg quoting).
+
+COORDINATION: the xiom-relays bus (private xiom-lang/xiom-relays, cloned
+at E:\xiom-lang\xiom-relays) is the only cross-lane channel. At session
+START and BEFORE FINISHING any task: fetch+merge there (plain
+`git pull --ff-only` errors with "Cannot fast-forward to multiple
+branches" in this clone -- use `git fetch origin` then
+`git merge --ff-only origin/main`), then `python tools/relay.py view
+--lane pulse` and process items to pulse (ack; as reporter move
+fixed->verified->closed with evidence; never edit another lane's item --
+open a new one). A doorbell cron may already be active; keep it or
+reschedule every 2-4 hours.
+
+TOOLCHAIN: v0.64.3 everywhere (pins in every workflow +
+docs\OPS-REQUEST.md D.1; local Windows/WSL installs upgraded 2026-10-10
+-- after ANY toolchain maintenance `xiom doctor` and re-add with
+`xiom pkg install`, the re-extract wipes non-archive dirs). Stdlib pin =
+dd352f6 (STDLIB_VERSION, wave 105.1). Local Windows pin cache:
+%LOCALAPPDATA%\xiom-pins\stdlib-dd352f6; export via `git -C
+E:\xiom-lang\stdlib archive -o file.tar <sha>` + tar -x (NEVER pipe git
+archive through PowerShell -- it corrupts the stream). Linux uses the
+pinned checkout via XIOM_STDLIB.
 
 TASK ORDER:
-1. FIRST: quick regression on the existing binaries -- probe fleet
-   (12/12, incl. probe_outbound_guard) + suites x2 + smoke 119/119
-   (jsonl and kv) on Linux and Windows; Linux with the pinned stdlib;
-   compare against probe-logs\regress-20261010\ before touching anything.
-2. RELEASE 0.2.0 ("the release that matters") when macOS is green (or on
-   the owner's call): the 0.2 PULSE-side slate is COMPLETE (pagination
-   Link + seq cursor, idempotency keys, /v1 alias, outbound base +
-   SSRF guard, multipart uploads) and the docs/public refresh is done.
-   Follow docs\RELEASE-CHECKLIST.md (mechanical cut; every version
-   literal incl. the twin `Server:` header occurrences in src\http.xi,
-   preconditions, verify, tag, CI, ops, website).
-3. INTEROP / 0.3: next tranche of tests/interop/ -- orbitdb hard-kill
-   harness (integration doc §5.2/3: writer/verify modes + kill), xvector
-   filter combos (§5.2) + hybrid join (§5.9); then the 0.3 drivers
-   (open/exec/query/tx seam over ORBITDB; upsert/search/delete over
-   XVector). Probes: tests/interop/<lane>/, nested xiom.toml with
-   source-roots relative to the sibling checkouts; local-only until the
-   packages publish.
-4. WATCH the lanes: compiler (darwin trio -> flip RELEASE_BUILD_MACOS +
-   dry-run all four legs; C-PULSE-16 address-aware bind -> enforce
-   loopback + LISTEN-address smoke check; C-PULSE-14 Linux memory retest
-   on the next archive; C-PULSE-12 alias ask; C-PULSE-17 list_dir fix ->
-   re-enable list_dir use if it lands), packages/bindings (SQL class
-   when the sqlite --c-source story lands; the http --c-source hook for
-   the real outbound client), demo redeploys.
-5. OPS/SITE: demo runs 0.1.0; ops redeploys 0.1.2+ at leisure (Linux
-   memory: MemoryMax + restart stays). Wire the owner's cover image
-   (resources\img\) into the product landing when it lands.
-6. Wrap at every stopping point: SESSION.md digest + the relay docs +
+1. FIRST: bus sweep (above) + quick regression: probe fleet (12/12) +
+   m212 + suites x2 + smoke 119/119 (jsonl and kv) on Windows and Linux
+   (Linux with the pin); compare against probe-logs\regress-20261010\.
+2. WATCH lanes / verify as fixes land (bus items to pulse):
+   - SIGILL: stdlib REL-20261010-1615-stdlib + ops REL-20261010-1721-ops
+     -- when fixed, include in the next cut and tell ops to redeploy.
+   - macOS legs: compiler REL-20261010-1609-pulse (arm64 memset) +
+     stdlib REL-20261010-1609-pulse-2 (Darwin x64 fp128) -- when BOTH
+     fixed: RELEASE_BUILD_MACOS=true, dry-run all four legs, cut.
+   - Compiler REL-20261010-1854-pulse / REL-20261010-2122-pulse (the
+     &HandlerOut helper crash; site mode shipped with the inlining
+     workaround) -- when fixed, re-test and note.
+   - website REL-20261010-1658-website (fixed; website verifies) +
+     REL-20261010-1549-website-6 (acked).
+3. RELEASE (next = 0.2.1 hotfix): packaging fix + v0.64.3 + site mode
+   are already on main; 0.2.1 waits on the SIGILL fix; macOS joins when
+   its two items land. Follow docs\RELEASE-CHECKLIST.md (every version
+   literal incl. the twin Server: headers; dry run; tag; CI; ops at
+   :17; website auto).
+4. CONTINUE the framework backlog (docs\PRODUCTION-REFERENCES.md, in
+   order): security headers (helmet checklist) -> keep-alive/deadlines
+   design doc (h11 + fasthttp three-timeout model) -> store durability
+   discipline (bbolt) -> SQL migrations (knex) -> OpenAPI generation
+   from route metadata -> 0.4 middleware chain (gin + fastify stage
+   names) + jobs (bullmq). Each unit: full suites (Linux pinned) +
+   smoke, docs + relay updates, signed commit; end with a green CI dry
+   run when it touches the server. Reference shelf lives in E:\repos
+   (MIT-only, light clones; owner-authorized).
+5. OPS/SITE: demo stays 0.1.0 until the SIGILL fix; website is waiting
+   for the cut ping; wire the owner's cover image when it lands.
+6. Wrap at every stopping point: SESSION.md digest + relay docs +
    PROGRESS.md, commit signed, push.
 
 DISCIPLINE: probes in-repo; suites x2; outputs to files, never inherited
 pipes (chatty servers: file-redirect stdout; the PS smoke reads exit
-codes through a cmd wrapper); durable step logs for crash-prone runs;
-every struct literal lists every field; no module-scope package
-constructors (Vec-holder pattern); no const-receiver .to_str(); explicit
-*p for &mut Int reads; quoted dotted TOML dep keys; avoid inner quotes
-driving WSL from PS (write scripts to files); `wsl --shutdown` on
-CLR/paging errors (system commit pressure, not the build); after any
-toolchain maintenance verify the package store (xiom doctor; re-add with
-xiom pkg install); avoid io.list_dir until C-PULSE-17 is fixed (dangling
-names); guard io.create_dir with io.is_dir (its contract requires the
-path NOT to exist); kill stray test servers/scripts after any stopped
-monitor.
+codes through a cmd wrapper); durable step logs; every struct literal
+lists every field; no module-scope package constructors (Vec-holder
+pattern); no const-receiver .to_str(); explicit *p for &mut Int reads;
+quoted dotted TOML dep keys; avoid inner quotes driving WSL from PS
+(write scripts to files); wsl --shutdown on CLR/paging or clang crashes
+(system commit pressure, not the build); guard io.create_dir with
+io.is_dir (contract requires absence); avoid io.list_dir until
+C-PULSE-17 lands; kill stray test servers after any stopped monitor;
+NEVER re-land a revert by merge without `git diff --name-only <base>
+<branch>` (revert-merge pitfall -- cost us one red CI round); do not
+trust `git pull --ff-only` in the relays clone.
 ```
 
 ## 3c. Paste prompt (2026-10-07, superseded)
