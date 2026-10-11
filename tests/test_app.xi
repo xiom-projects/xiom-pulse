@@ -494,10 +494,18 @@ pub fn main() -> Int {
   env.remove_var("PULSE_UPLOAD_DIR");
 
   // --- site mode (0.3) ------------------------------------------------------
+  // Guarded creates: io.create_dir requires the path NOT to exist, and the
+  // r2 run finds the dirs r1 left behind (files are cleaned, dirs stay).
   let sdir = "pulse-test-site";
-  let _smk1 = io.create_dir(sdir);
-  let _smk2 = io.create_dir(sdir + "/assets");
-  let _smk3 = io.create_dir(sdir + "/sub");
+  if !io.is_dir(sdir) {
+    let _smk1 = io.create_dir(sdir);
+  }
+  if !io.is_dir(sdir + "/assets") {
+    let _smk2 = io.create_dir(sdir + "/assets");
+  }
+  if !io.is_dir(sdir + "/sub") {
+    let _smk3 = io.create_dir(sdir + "/sub");
+  }
   let _sw1 = io.write_file(sdir + "/index.html", "SITE_INDEX");
   let _sw2 = io.write_file(sdir + "/about.html", "SITE_ABOUT");
   let _sw3 = io.write_file(sdir + "/sub/index.html", "SITE_SUB");
