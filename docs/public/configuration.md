@@ -38,6 +38,8 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_UPLOAD_MAX_PARTS` | `8` | parts per upload request (clamped 1..64) |
 | `PULSE_HTTP_ALLOWLIST` | (unset) | outbound SSRF allowlist (comma-separated hosts, exact or subdomain); unset = blocklist mode |
 | `PULSE_HTTP_MAX_BYTES` | `262144` | outbound HTTP response size cap |
+| `PULSE_SITE_DIR` | (unset) | static-site root; serves unmatched GET/HEAD + `/assets/*` (clean URLs, `404.html`, `application/wasm`) |
+| `PULSE_SITE_MAX_AGE` | `3600` | site `Cache-Control` max-age seconds |
 
 `PULSE_BIND` takes the **address only** (`127.0.0.1`, `::1`, `0.0.0.0`
 in containers); the port belongs to `PULSE_PORT`. A combined value such
@@ -54,8 +56,8 @@ Any of the documented keys can be set in the JSON file (`port`,
 `audit_path`, `audit_max_bytes`, `config`, `icon_path`, `assets_dir`,
 `landing_path`, `jwt_secret`, `session_ttl`, `rate_limit`,
 `rate_burst`, `csrf`, `cors_origin`, `upload_dir`, `upload_max_bytes`,
-`upload_max_parts`, `http_allowlist`, `http_max_bytes`). Environment
-variables override the file.
+`upload_max_parts`, `http_allowlist`, `http_max_bytes`, `site_dir`,
+`site_max_age`). Environment variables override the file.
 
 ## Store backends
 

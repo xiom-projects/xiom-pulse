@@ -78,6 +78,19 @@ pub fn cfg_upload_max_parts() -> Int {
   return n;
 }
 
+/// cfg_site_dir returns the static-site root (PULSE_SITE_DIR, "" = off).
+/// When set, unmatched GET/HEAD requests and /assets/* serve from this
+/// tree (clean URLs, index resolution, custom 404). Complexity: O(1).
+pub fn cfg_site_dir() -> Str {
+  return env.var_or("PULSE_SITE_DIR", "");
+}
+
+/// cfg_site_max_age returns the site Cache-Control max-age seconds
+/// (PULSE_SITE_MAX_AGE, default 3600). Complexity: O(1). Pure.
+pub fn cfg_site_max_age() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_SITE_MAX_AGE", "3600"), 3600);
+}
+
 /// cfg_cors_origin returns the allowed CORS origin ("" = CORS off).
 /// Complexity: O(1). Pure.
 pub fn cfg_cors_origin() -> Str {
@@ -156,6 +169,8 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "upload_max_parts", "PULSE_UPLOAD_MAX_PARTS");
   cfg_apply_str(obj, "http_allowlist", "PULSE_HTTP_ALLOWLIST");
   cfg_apply_str(obj, "http_max_bytes", "PULSE_HTTP_MAX_BYTES");
+  cfg_apply_str(obj, "site_dir", "PULSE_SITE_DIR");
+  cfg_apply_str(obj, "site_max_age", "PULSE_SITE_MAX_AGE");
   return true;
 }
 

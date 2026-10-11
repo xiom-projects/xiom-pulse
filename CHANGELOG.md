@@ -4,6 +4,19 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
+## [Unreleased]
+
+### Added
+
+- **Static site mode** (`PULSE_SITE_DIR`): serves a whole pre-built
+  directory tree for unmatched `GET`/`HEAD` and `/assets/*` -- index
+  resolution, clean URLs (`/about` -> `about.html`), a custom `404.html`
+  served with status 404, and `application/wasm` for `.wasm` bundles
+  (playground/editor bundle ready). Cache via `PULSE_SITE_MAX_AGE`
+  (default 3600). API routes always win; traversal stays rejected by
+  the static engine. Configured by env or the `site_dir`/`site_max_age`
+  JSON keys.
+
 ## [0.2.0] - 2026-10-10
 
 ### Added

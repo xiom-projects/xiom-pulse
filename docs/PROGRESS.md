@@ -303,6 +303,24 @@ docs/public refreshed at the cut (releases.md 0.2.0, install.md
 examples). Cut ping on the bus (`REL-20261010-1633-pulse` website,
 `-2` owner). Score: API-contract row moves to shipped. (~56.0%.)_
 
+_Delta 2026-10-10 (site mode, 0.3 fast-lane): **static site mode** --
+`PULSE_SITE_DIR` serves a whole pre-built tree for unmatched GET/HEAD and
+`/assets/*`: clean URLs, directory indexes, custom `404.html` (status
+404), `application/wasm`, cache via `PULSE_SITE_MAX_AGE` (env + JSON
+keys). API routes always win; traversal rejected by the engine. Verified
+with a compact probe on the CI pairing (v0.64.3 + stdlib `48850df`):
+`/` 200, `/about` 200, `/assets/*.wasm` 200 `application/wasm`, 404
+page, `/health` wins; test_app +9 checks added (full-suite verification
+delegated to clean CI runners -- the local box's clang crashes under
+lane memory pressure). Local-env note: another lane upgraded the local
+toolchain to v0.64.3 mid-session; the re-extract wiped the package
+store (re-added all 10 pkgs) and the lane-HEAD stdlib now traps on
+`read_file_bytes` ensures (`io.xi:947`) -- local builds should pin
+`%LOCALAPPDATA%\xiom-pins\stdlib-48850df`. Unblocks the website
+cutover and the playground static bundle (per the playground lane's
+architecture item). Score holds (~55.4%; site mode row lands with the
+cut)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
