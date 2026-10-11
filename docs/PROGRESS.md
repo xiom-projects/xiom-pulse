@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-10 (0.2 pagination: `Link` + seq-in-record cursor; smoke 100/100 both platforms)
+**Last updated:** 2026-10-11 (post-wrap-15 checkpoint: sweep on `496b568` green both platforms with pin `dd352f6`; bus `0317-pulse-3/4` verified + closed)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -320,6 +320,21 @@ store (re-added all 10 pkgs) and the lane-HEAD stdlib now traps on
 cutover and the playground static bundle (per the playground lane's
 architecture item). Score holds (~55.4%; site mode row lands with the
 cut)._
+
+_Delta 2026-10-11 (post-wrap-15 checkpoint): **fresh regression baseline
+on `496b568` is GREEN on both platforms with the pinned stdlib
+`dd352f6`** -- probe fleet 12/12 (`probe_outbound_guard` +
+`probe_stdlib_server_parse` included), m212 dash+dot gate (check AND
+run), suites x2, smoke **119/119** (jsonl + kv), all on v0.64.3;
+evidence `probe-logs/regress-20261011/` (win exe sha256 `928d2e1b...`,
+linux `19c0384b...`; delta vs `regress-20261010` is shape-identical,
+with the Linux legs now on the `dd352f6` pin). Bus: reporter
+verification closed `REL-20261011-0317-pulse-3` (server_parse_request)
+and `-4` (TcpStream.write_all loop) -- both already present in the pin
+via `ec64dec`; locked by `probe_stdlib_server_parse` (11/11 both
+platforms) and the stdlib `p_pulse_shapes` probe (exit 0 win+linux,
+100000-byte loopback). Next: the framework backlog (security headers
+first). Score holds (~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

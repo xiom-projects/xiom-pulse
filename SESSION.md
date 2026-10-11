@@ -12,7 +12,7 @@
   `ubuntu-latest` + `windows-latest`, `protect-release-tags` covers
   `pulse-v*` (org-admin pushes bypass; never move a tag -- if a tag's CI
   fails, fix and cut the next patch version). DCO `-s` commits; identity
-  Lefteris Notas <lefterisnotas@gmail.com>. Head: `e7cbcbf` (wrap-15
+  Lefteris Notas <lefterisnotas@gmail.com>. Head: `496b568` (wrap-15
   key commits: `e31d396` release v0.2.0, `f15a6b0` packaging fix,
   `e626939` v0.64.3 CI pins, `41e4ace` site mode landed, `36f08c8`
   wishlist freeze, `4142c96`/`e7cbcbf` reference shelf).
@@ -99,6 +99,16 @@
      the helper when fixed, no re-land needed).
   0.2.1 scope already on main: packaging fix + v0.64.3 pins + site mode
   (0.3-fleet item). Follow `docs/RELEASE-CHECKLIST.md` for the cut.
+- **Checkpoint 2026-10-11 (post-wrap-15 session):** fresh sweep on
+  `496b568` with the pin `dd352f6` is **GREEN on both platforms** --
+  fleet 12/12 (incl. `probe_outbound_guard` + `probe_stdlib_server_parse`),
+  m212 dash+dot check+run, suites x2, smoke 119/119 jsonl + kv;
+  evidence `probe-logs/regress-20261011/` (win exe sha `928d2e1b...`,
+  linux `19c0384b...`; WSL pin cache now holds `stdlib-dd352f6`). Bus:
+  `REL-20261011-0317-pulse-3` (server_parse_request) and `-4`
+  (TcpStream.write_all) **verified + CLOSED** as reporter -- both already
+  shipped in `ec64dec` (ancestor of the pin; locked by the fleet probe
+  11/11 and stdlib `p_pulse_shapes` exit 0 on win+linux).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
