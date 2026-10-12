@@ -219,6 +219,18 @@
   still red on the released v0.64.4 archive (`0xC000001D`) -- **0.2.1
   stays gated**. Wave sweep: `probe-logs/toolchain-0644/` FAILED=1
   (solely smoke-kv on the v0.64.4 combo).
+- **Production-grade relay (2026-10-12, owner request):**
+  `docs/PRODUCTION-GAPS.md` landed -- 30-row parity matrix vs the
+  reference shelf (fastify/gin/fasthttp/h11/helmet/bbolt/knex/bullmq):
+  12/30 fully green, 10 designed-and-gated, 8 missing. Filed to the
+  bus: stdlib wave 2 `REL-20261012-1946-pulse` (signals/drain,
+  poll + accept deadline, SO_REUSEPORT, chunked stream writer for SSE,
+  websocket primitives, gzip/deflate, linear json_parse, shutdown
+  confirmation), packages `-pulse-2` (SQL driver priority, HTML
+  templates + escaping), broadcast `-pulse-3` to all lanes.
+  PULSE-internal additions are tracked in PRODUCTION-REFERENCES
+  (static conditional/Range, per-route rate policy, test-runner
+  harness, SSE/WS units, tracing decision).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

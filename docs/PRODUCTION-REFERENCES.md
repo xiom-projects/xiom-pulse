@@ -270,5 +270,27 @@ socket-timeout bus asks.
   lock/heartbeat ownership, two-phase stalled sweep, ownership-checked
   terminal writes) on a bounded, never-blocking loop-boundary runner;
   Redis-specific parts (scripts, markers, streams, schedulers) excluded.
+
+### Production-grade relay (2026-10-12; analysis in docs/PRODUCTION-GAPS.md)
+
+PULSE-internal units (no lane gate), dependency-ordered:
+
+- [ ] Static conditional GET (ETag/If-None-Match, Last-Modified) +
+  Range requests in site/assets mode.
+- [ ] Per-route/per-key rate policy (global bucket shipped).
+- [ ] Test-runner harness on the fixed module-scope fn-ptr
+  (REL-20261011-0317-pulse-7) to replace manual check unrolling.
+- [ ] SSE unit (after stdlib stream primitives) + WebSocket unit (after
+  stdlib WS primitives).
+- [ ] Optional: tracing decision (OTel-class) -- decide with the 0.4
+  wave.
+
+Lane asks filed 2026-10-12 (relay): stdlib wave 2
+`REL-20261012-1946-pulse` (signals/drain, poll + accept deadline,
+SO_REUSEPORT, chunked stream writer for SSE, websocket primitives,
+gzip/deflate, linear-time json_parse, shutdown confirmation);
+packages `REL-20261012-1946-pulse-2` (SQL driver priority, HTML
+templates + escaping); broadcast `REL-20261012-1946-pulse-3` to all
+lanes.
 - Watch: when upstream threads land, gin-style pooling becomes directly
   applicable.

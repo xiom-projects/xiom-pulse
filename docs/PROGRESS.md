@@ -477,6 +477,21 @@ the released v0.64.4 archive (0xC000001D); 0.2.1 remains gated. Wave sweep
 evidence `probe-logs/toolchain-0644/` (FAILED=1 solely smoke-kv on the
 v0.64.4 combo). Score holds (~55.4%)._
 
+_Delta 2026-10-12 (production-grade relay, owner request):
+**`docs/PRODUCTION-GAPS.md` landed** -- PULSE benchmarked against the
+reference shelf (fastify/gin/fasthttp/h11/helmet/bbolt/knex/bullmq;
+nginx at the TLS edge) with a 30-row parity matrix (12/30 fully green,
+10 designed-and-gated on lanes, 8 missing), a definition-of-done for
+production readiness, and lane ask tables. Filed to the bus: stdlib
+wave 2 `REL-20261012-1946-pulse` (SIGTERM drain, poll/accept-deadline,
+SO_REUSEPORT, chunked stream writer (SSE), websocket primitives,
+gzip/deflate, linear-time json_parse, shutdown confirmation), packages
+`-pulse-2` (SQL driver priority / vendored sqlite, HTML templates +
+escaping), broadcast `-pulse-3` (all lanes). Internal backlog rows
+added to PRODUCTION-REFERENCES (conditional/Range static, per-route
+rate policy, fn-ptr test harness, SSE/WS units, tracing decision).
+Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
