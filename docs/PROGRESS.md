@@ -465,7 +465,8 @@ installed + sha256-verified on Windows and WSL (WSL binary byte-identical
 to the archive); the shared package store was found EMPTY during the
 wave and the 10 pinned registry deps reinstalled
 (`REL-20261012-1418-pulse-2`). **`STDLIB_VERSION` -> `3df0843`
-(stdlib-v0.64.4) ADOPTED** (suites + smoke green under v0.64.3).
+(stdlib-v0.64.4) ADOPTED** (suites + smoke green under v0.64.3; CI dry
+run `38261983177` green).
 **Toolchain v0.64.4 adoption HELD**: a v0.64.4-built binary exits 0 at
 startup with `PULSE_STORE_BACKEND=kv` (jsonl fine; v0.64.3 control serves
 200; reproduced on both pins; standalone kv-API witness green; CLI paths

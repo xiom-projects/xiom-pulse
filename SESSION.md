@@ -211,7 +211,7 @@
   after the shared store (`%LOCALAPPDATA%\xiom\packages`) was found
   EMPTY during the wave (`REL-20261012-1418-pulse-2`, ops). `STDLIB_VERSION`
   moved to `3df0843` (stdlib-v0.64.4) and is clean (suites GREEN under
-  v0.64.3). **Toolchain adoption held**: a v0.64.4-built binary exits 0
+  v0.64.3; CI dry run `38261983177` green). **Toolchain adoption held**: a v0.64.4-built binary exits 0
   at startup in kv mode (jsonl fine; v0.64.3 control serves 200;
   pin-independent; repro `docs/repro/kv-hang-0644/`; compiler item
   `REL-20261012-1418-pulse`), so CI pins stay v0.64.3 and the
