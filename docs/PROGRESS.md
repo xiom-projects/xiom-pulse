@@ -492,6 +492,18 @@ added to PRODUCTION-REFERENCES (conditional/Range static, per-route
 rate policy, fn-ptr test harness, SSE/WS units, tracing decision).
 Score holds (~55.4%)._
 
+_Delta 2026-10-12 (m276 + wave-115 verified): **kv empty-store
+regression verified fixed** -- PULSE rebuilt with the fresh compiler
+(m277 incl. m276 `0268c7d9`) serves kv mode on an empty dir
+(`/health` 200 + `evt-seg-0000000001.kv`); toolchain re-adoption waits
+for the next archive. **Durability primitives verified**:
+`p_wave115_shapes.xi` exit 0 against stdlib `c65acb5` (wave 115) --
+`io.fsync` + `sync_io.sync_fd` + real `io.flush_stdout`; durability
+Phase A is cleared to implement once the re-vendored pin reaches
+consumers (same caveat). Both closed on the bus (`d98e2f3`). Production
+relay items acked by stdlib + packages; xvector/engine filed their own
+gap relays. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

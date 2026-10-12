@@ -231,6 +231,17 @@
   PULSE-internal additions are tracked in PRODUCTION-REFERENCES
   (static conditional/Range, per-route rate policy, test-runner
   harness, SSE/WS units, tracing decision).
+- **m276 + wave-115 verified, closed (2026-10-12 late):** kv
+  empty-store regression verified fixed on the fresh compiler build
+  (m276 `0268c7d9`; PULSE kv leg serves `/health` 200 + creates
+  `evt-seg-0000000001.kv`) -- **toolchain re-adoption waits for the
+  next archive carrying m276+**. Durability primitives verified via
+  the wave-115 lock probe (`p_wave115_shapes.xi` exit 0 on stdlib
+  `c65acb5`: `io.fsync` + `sync_io.sync_fd` + real `io.flush_stdout`)
+  -- **durability Phase A is cleared to implement once the re-vendored
+  pin lands**. Production relay: stdlib wave-2 + packages items acked;
+  xvector/engine filed their own gap relays the same day. Bus
+  `d98e2f3`.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
