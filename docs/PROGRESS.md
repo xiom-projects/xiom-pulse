@@ -460,6 +460,22 @@ stays gated** on that fix; evidence filed to compiler
 (module-scope fn-ptr, m265): witness `docs/repro/fnptr-harness/` exits 0
 on m271, v0.64.3 control fails `error[C001]`. Score holds (~55.4%)._
 
+_Delta 2026-10-12 (v0.64.4 wave: pin adopted, toolchain held): v0.64.4
+installed + sha256-verified on Windows and WSL (WSL binary byte-identical
+to the archive); the shared package store was found EMPTY during the
+wave and the 10 pinned registry deps reinstalled
+(`REL-20261012-1418-pulse-2`). **`STDLIB_VERSION` -> `3df0843`
+(stdlib-v0.64.4) ADOPTED** (suites + smoke green under v0.64.3).
+**Toolchain v0.64.4 adoption HELD**: a v0.64.4-built binary exits 0 at
+startup with `PULSE_STORE_BACKEND=kv` (jsonl fine; v0.64.3 control serves
+200; reproduced on both pins; standalone kv-API witness green; CLI paths
+fine) -- repro `docs/repro/kv-hang-0644/`, filed to compiler
+(`REL-20261012-1418-pulse`, high); CI pins stay v0.64.3 and the
+`&HandlerOut` helper re-land rides the unblock. SIGILL `1615` still red on
+the released v0.64.4 archive (0xC000001D); 0.2.1 remains gated. Wave sweep
+evidence `probe-logs/toolchain-0644/` (FAILED=1 solely smoke-kv on the
+v0.64.4 combo). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

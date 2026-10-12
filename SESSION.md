@@ -205,6 +205,20 @@
   `docs/repro/fnptr-harness/` exits 0 on m271; v0.64.3 control fails
   `error[C001] unresolved 'handler'`. Suites keep dispatch-by-id; the
   harness capability is available for later test-runner work.
+- **v0.64.4 wave (2026-10-12): pin ADOPTED, toolchain ON HOLD.** v0.64.4
+  installed + verified on Windows/WSL (archives sha256-verified; WSL
+  binary byte-identical to the archive). All 10 pinned deps reinstalled
+  after the shared store (`%LOCALAPPDATA%\xiom\packages`) was found
+  EMPTY during the wave (`REL-20261012-1418-pulse-2`, ops). `STDLIB_VERSION`
+  moved to `3df0843` (stdlib-v0.64.4) and is clean (suites GREEN under
+  v0.64.3). **Toolchain adoption held**: a v0.64.4-built binary exits 0
+  at startup in kv mode (jsonl fine; v0.64.3 control serves 200;
+  pin-independent; repro `docs/repro/kv-hang-0644/`; compiler item
+  `REL-20261012-1418-pulse`), so CI pins stay v0.64.3 and the
+  `&HandlerOut` helper re-land is deferred with it. SIGILL `1615` repro
+  still red on the released v0.64.4 archive (`0xC000001D`) -- **0.2.1
+  stays gated**. Wave sweep: `probe-logs/toolchain-0644/` FAILED=1
+  (solely smoke-kv on the v0.64.4 combo).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
