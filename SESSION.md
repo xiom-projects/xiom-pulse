@@ -256,6 +256,15 @@
   toolchain). Remaining gates unchanged: SIGILL `1615` (0.2.1), macOS
   pair; production relay wave-2 asks (signals/poll/streaming/WS/gzip/
   json_parse) still `acked`.
+- **Game-backend positioning (2026-10-13, owner question):**
+  `docs/GAME-BACKEND-POSITIONING.md` -- PULSE is the game HTTP/WS
+  backend + control plane (accounts/sessions/JWT, matchmaking queues +
+  lobby metadata, leaderboards, telemetry ingest, webhooks with
+  idempotency, server register/heartbeat/allocate); XIOM Engine owns
+  the realtime plane (tick netcode, UDP/QUIC/WebTransport, prediction,
+  relays). Games raise WS/SSE + jobs/matchmaking + multi-worker/sticky
+  priorities; engine informed with a reuse offer + `/api/game/*`
+  control-route offer (`REL-20261013-1313-pulse`).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

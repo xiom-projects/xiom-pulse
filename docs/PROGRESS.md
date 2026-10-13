@@ -518,6 +518,18 @@ archive as m276+) unlocks toolchain re-adoption + keep-alive Phase A/B
 (0.2.1), macOS pair; production wave-2 asks acked. Score holds
 (~55.4%)._
 
+_Delta 2026-10-13 (game-backend positioning, owner question):
+**`docs/GAME-BACKEND-POSITIONING.md` landed** -- PULSE is the game
+HTTP/WS backend + control plane (accounts/sessions/JWT, matchmaking
+queues + lobby metadata, leaderboards, inventory, telemetry ingest,
+webhooks with idempotency, server register/heartbeat/allocate/drain),
+while XIOM Engine owns the realtime plane (tick netcode,
+UDP/QUIC/WebTransport, prediction, relays) -- the Nakama/PlayFab/
+GameLift-control-plane split. Games raise WS/SSE, jobs/matchmaking
+and multi-worker/sticky priorities. Engine lane informed with a
+reuse offer for in-engine HTTP and a `/api/game/*` control-route
+offer (`REL-20261013-1313-pulse`). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
