@@ -242,6 +242,20 @@
   pin lands**. Production relay: stdlib wave-2 + packages items acked;
   xvector/engine filed their own gap relays the same day. Bus
   `d98e2f3`.
+- **Wave-119 landing (2026-10-13 early): keep-alive + durability
+  source-side UNBLOCKED.** `0317-pulse` (socket options; Windows
+  SO_REUSEADDR root cause), `-2` (deadline recv; the 250 ms loopback
+  lock) and `1134-pulse` (fsync_dir; file-sync-before-rename /
+  dir-sync-after) verified via `p_wave119`/`p_wave115`/`p_wave60`
+  probes (all rc=0 on stdlib `a9b21b2`/`c65acb5` + the wave runtime via
+  `XIOM_RUNTIME_DIR`) and closed on the bus (`b413b0e`). With `-5`/`-6`
+  closed earlier, **every critical-path stdlib ask is now fixed**.
+  Implementation (keep-alive Phase A/B, durability Phase A/B) waits
+  ONLY on the next compiler pin that re-vendors stdlib/runtime (the
+  same archive that carries m276+ re-adopts the held v0.64.4
+  toolchain). Remaining gates unchanged: SIGILL `1615` (0.2.1), macOS
+  pair; production relay wave-2 asks (signals/poll/streaming/WS/gzip/
+  json_parse) still `acked`.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

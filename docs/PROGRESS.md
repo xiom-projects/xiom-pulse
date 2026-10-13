@@ -504,6 +504,20 @@ consumers (same caveat). Both closed on the bus (`d98e2f3`). Production
 relay items acked by stdlib + packages; xvector/engine filed their own
 gap relays. Score holds (~55.4%)._
 
+_Delta 2026-10-13 (wave-119 landing -- keep-alive + durability
+source-side unblocked): `0317-pulse` (socket options; Windows
+SO_REUSEADDR root cause fixed), `-2` (deadline recv; 250 ms loopback
+lock) and `1134-pulse` (fsync_dir; file-sync-before-rename /
+dir-sync-after) all verified via the wave probes (`p_wave119_shapes`,
+`p_wave115_shapes`, `p_wave60_shapes` -- rc=0 on stdlib
+`a9b21b2`/`c65acb5` + wave runtime) and closed on the bus (`b413b0e`).
+With `-5`/`-6` closed earlier, **every critical-path stdlib ask is now
+fixed**: the next compiler pin that re-vendors stdlib/runtime (same
+archive as m276+) unlocks toolchain re-adoption + keep-alive Phase A/B
++ durability Phase A/B implementation. Remaining gates: SIGILL `1615`
+(0.2.1), macOS pair; production wave-2 asks acked. Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
