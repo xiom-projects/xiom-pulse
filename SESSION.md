@@ -302,6 +302,19 @@
   `game` tag added (drift guard satisfied); http-api docs + CHANGELOG
   updated. Static conditional-GET/Range backlog row struck (already
   shipped via `xiom.static`).
+- **SQL driver co-verify (2026-10-13):** packages shipped `xiom.sqlite`
+  0.4.0 (eco-v0.1.174; checksum+signature verified) and requested
+  consumer co-verification. Result: **driver surface GREEN 24/24 on
+  v0.64.4 AND v0.64.3** (in-tree vendored sources + `--c-source`
+  vendored sqlite3.c; `docs/repro/sql-coverify/`). **Blocking packaging
+  finding filed** (`REL-20261013-1715-pulse`): the published package.xi
+  lacks the `modules:` list -> `use xiom.sqlite;` = unresolved import
+  for every external consumer (kv control imports fine); fix = modules
+  list + a consumer-import smoke in the publish gate. Artifact-level
+  rerun scheduled on the fixed republish. Doc notes: `rows_affected` =
+  `sqlite3_changes` (last statement only); consumer syntax =
+  unqualified type statics + module-prefixed free fns. Result:
+  `REL-20261013-1718-pulse`. Game-CP dry run `38435178845` green.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

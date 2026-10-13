@@ -571,6 +571,17 @@ http-api docs + CHANGELOG; static conditional/Range row struck
 (already shipped via xiom.static). Full sweep + CI dry run with the
 push. Score holds (~55.4%)._
 
+_Delta 2026-10-13 (SQL driver co-verify): `xiom.sqlite` 0.4.0 shipped by
+packages; consumer co-verification result: **driver surface GREEN 24/24
+on v0.64.4 and v0.64.3** (in-tree vendored sources + `--c-source`;
+`docs/repro/sql-coverify/`). **Blocking packaging finding filed**
+(`REL-20261013-1715-pulse`): published package.xi lacks the `modules:`
+list -> `use xiom.sqlite;` unresolved for every external consumer
+(control: xiom.kv imports fine); fix = modules list + consumer-import
+smoke in the publish gate. Result posted (`REL-20261013-1718-pulse`);
+artifact-level rerun on the fixed republish. Game-CP dry run
+`38435178845` green. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
