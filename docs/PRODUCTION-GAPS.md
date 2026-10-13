@@ -67,6 +67,16 @@ Owner: S=stdlib, C=compiler, P=packages, Q=PULSE, O=ops.
 
 ### 2.1 stdlib -- "production server primitives, wave 2"
 
+**Status update 2026-10-13:** the critical path is DONE -- deadlines,
+socket options, fsync family and fsync_dir all fixed and reporter-verified
+(closed: `0317-pulse`, `-2`, `-5`, `-6`, `1134-pulse`). Wave 121 landed
+the WebSocket helpers + chunked/stream writers + `send_all`; wave 122
+landed `socket_poll_read/write` + `socket_set_reuseport`. **Only signal
+delivery remains.** Triage additionally resolved two asks pre-emptively:
+`json_parse` is linear since wave 111 (byte-lexer), and gzip/deflate
+already exist in `xiom.compress`. Runtime rows are effective at the next
+re-vendoring pin (`XIOM_RUNTIME_DIR` interim on v0.64.4).
+
 Existing asks stay as filed (`0317-pulse`, `-2`, `-5`, `-6`, `1131`,
 `1134`, orbitdb/xvector/packages fsync bundle). NEW asks from this
 analysis:
@@ -87,10 +97,12 @@ analysis:
 5. **WebSocket primitives**: upgrade handshake accept (compute
    Sec-WebSocket-Accept), frame encode/decode incl. masking, close
    codes. PULSE builds the route/API layer. (#10.)
-6. **gzip/deflate** compress/decompress primitives. (#8.)
-7. **`json_parse` performance**: xvector filed the quadratic-on-numeric
-   behavior; large numeric JSON bodies are a real API workload --
-   linear-time parse is a production requirement, not a benchmark nit.
+6. **gzip/deflate** compress/decompress primitives. -- **RESOLVED
+   upstream**: `xiom.compress` already ships roundtrip + interop; no
+   ask; a PULSE response-compression unit is optional (nginx fronts).
+7. **`json_parse` performance**: -- **RESOLVED upstream**: linear
+   since wave 111 (byte-lexer; the xvector acceptance closed
+   `REL-20261011-1453`). Keep as a benchmark watch only.
 8. Confirm `shutdown(fd)` lands with the `0317-pulse` socket-options
    batch (half-close correctness).
 9. Note (already filed elsewhere): durable `flush_stdout`, `fsync`,

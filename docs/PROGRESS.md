@@ -536,6 +536,15 @@ lane was told the split is the agreed architecture and asked to reply
 with its in-engine HTTP stance plus the exact `/api/game/*` control
 routes (`REL-20261013-1316-pulse`). Score holds (~55.4%)._
 
+_Delta 2026-10-13 (wave-2 near-complete): stdlib wave 121 landed the
+WebSocket helpers + chunked/stream writers + `send_all`, wave 122 landed
+`socket_poll_read/write` + `SO_REUSEPORT` (POSIX double-bind locked);
+probes `p_wave121_shapes`/`p_wave122_shapes` pre-verified rc=0
+(`probe-logs/wave121-122/`). **Only signal delivery remains** from the
+wave-2 ask; gzip (`xiom.compress`) and linear `json_parse` (wave 111)
+were already resolved upstream -- PRODUCTION-GAPS corrected accordingly.
+Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

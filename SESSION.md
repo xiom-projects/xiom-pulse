@@ -268,6 +268,14 @@
   split the same day**; follow-up filed asking the engine to reply with
   its in-engine HTTP stance + the exact `/api/game/*` routes
   (`REL-20261013-1316-pulse`).
+- **Wave-2 progress (2026-10-13): near-complete.** stdlib wave 121
+  (WebSocket helpers + chunked/stream writers + `send_all`) and wave
+  122 (`socket_poll_read/write` + `SO_REUSEPORT`; POSIX double-bind
+  locked) landed -- probes `p_wave121_shapes`/`p_wave122_shapes`
+  pre-verified rc=0 (`probe-logs/wave121-122/`). **Only signal
+  delivery remains** from the wave-2 ask. Triage also resolved two
+  asks pre-emptively: `json_parse` linear since wave 111, gzip/deflate
+  already in `xiom.compress` (PRODUCTION-GAPS updated).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
