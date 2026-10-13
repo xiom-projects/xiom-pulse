@@ -315,6 +315,16 @@
   `sqlite3_changes` (last statement only); consumer syntax =
   unqualified type statics + module-prefixed free fns. Result:
   `REL-20261013-1718-pulse`. Game-CP dry run `38435178845` green.
+- **SQL artifact rerun (2026-10-13):** packages published **0.4.1**
+  (modules restored; install verified) in response to our finding --
+  `REL-20261013-1715-pulse` verified + **closed**. Rerun on 0.4.1:
+  import now accepted but dep symbols still undefined (T001 cascades,
+  both syntax forms) -- residual cause is the **compiler multi-module
+  consumer-discovery bug** (packages' kv-controlled A/B; their
+  `REL-20261013-1731-packages` -> compiler). PULSE filed the `--run`
+  datapoint (`REL-20261013-1901-pulse`); in-tree control remains 24/24
+  green; artifact rerun repeats on the next compiler candidate
+  (`REL-20261013-1721-bindings-3` acked with the result).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

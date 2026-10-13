@@ -15,14 +15,23 @@ caps, last_error.
 - **Driver surface: GREEN, 24/24 checks, on v0.64.4 and v0.64.3**
   (in-tree vendored copy of the 0.4.0 sources, `--c-source` against the
   package's vendored `sqlite3.c`).
-- **Registry artifact: BLOCKING FINDING** -- `xiom pkg install
-  xiom.sqlite@0.4.0` (checksum+signature verified) is not consumable by
-  an external project: the published `package.xi` has no `modules:`
-  list, so `use xiom.sqlite;` fails with `unresolved import` on both
-  toolchains (control: `xiom.kv`, whose manifest declares modules,
-  imports fine). Filed to packages (bug, high,
-  `REL-20261013-1715-pulse`); the artifact-level rerun happens when the
-  fixed publish lands.
+- **Registry artifact 0.4.0: BLOCKING packaging finding** -- published
+  `package.xi` had no `modules:` list -> `use xiom.sqlite;` failed with
+  `unresolved import` on both toolchains (control: `xiom.kv`, whose
+  manifest declares modules, imports fine). Filed
+  (`REL-20261013-1715-pulse`), fixed by packages: **0.4.1 published**
+  (eco-v0.1.175, `21c1f673...`, modules restored; install checksum +
+  signature verified).
+- **Registry artifact 0.4.1 rerun: still blocked, residual cause on the
+  compiler side.** The import is now accepted, but the dependency's
+  symbols stay undefined (`undefined variable 'SqlDsn'` / `'driver'`,
+  T001 cascades, both qualified and unqualified forms). Matches the
+  packages lane's systemic multi-module finding (kv single-module
+  passes; multi-module sqlite/sdl3 fail) and extends it to the `--run`
+  path: `REL-20261013-1731-packages` -> compiler item; PULSE datapoint
+  filed (`REL-20261013-1901-pulse`). 1715 closed (manifest fix correct
+  + necessary); artifact-level rerun repeats on the next compiler
+  candidate.
 
 ## How to run
 

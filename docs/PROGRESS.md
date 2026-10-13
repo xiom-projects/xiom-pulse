@@ -582,6 +582,16 @@ smoke in the publish gate. Result posted (`REL-20261013-1718-pulse`);
 artifact-level rerun on the fixed republish. Game-CP dry run
 `38435178845` green. Score holds (~55.4%)._
 
+_Delta 2026-10-13 (SQL artifact rerun): packages shipped 0.4.1 with the
+modules list restored (eco-v0.1.175; install checksum+signature OK) --
+`REL-20261013-1715-pulse` verified + closed. Artifact rerun on 0.4.1:
+import accepted but dep symbols undefined (T001 cascades, both syntax
+forms) -- residual blocker is the compiler multi-module
+consumer-discovery bug (packages' kv-controlled A/B; their
+1731-packages -> compiler; PULSE `--run` datapoint filed
+`REL-20261013-1901-pulse`). In-tree control 24/24 green; artifact rerun
+on the next compiler candidate. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
