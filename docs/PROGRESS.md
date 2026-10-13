@@ -545,6 +545,20 @@ wave-2 ask; gzip (`xiom.compress`) and linear `json_parse` (wave 111)
 were already resolved upstream -- PRODUCTION-GAPS corrected accordingly.
 Score holds (~55.4%)._
 
+_Delta 2026-10-13 (wave-2 CLOSED + engine contract): all wave-2 rows
+delivered (waves 119-123); locks re-verified (p_wave121/122/123_shapes;
+signals green on release v0.64.4 + stdlib main + XIOM_RUNTIME_DIR) --
+`REL-20261012-1946-pulse` verified + closed. The production wave-2 ask
+is source-complete (deadlines, drain signals, poll/select,
+SO_REUSEPORT, chunked/stream writers, WebSocket helpers). The engine
+lane replied with the **`/api/game/*` control-plane contract**
+(`REL-20261013-1455-engine`, acked): register / heartbeat(+command
+piggyback) / config(ETag) / compat / match-report / telemetry with
+per-server bearer tokens + idempotency; engine reuses PULSE modules for
+in-engine HTTP, never in the tick path. Queued as the next
+PULSE-internal unit (not gated on the compiler pin). Score holds
+(~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

@@ -276,6 +276,20 @@
   delivery remains** from the wave-2 ask. Triage also resolved two
   asks pre-emptively: `json_parse` linear since wave 111, gzip/deflate
   already in `xiom.compress` (PRODUCTION-GAPS updated).
+- **Wave-2 CLOSED + engine contract (2026-10-13):** all rows delivered
+  (waves 119-123); locks re-verified (`p_wave121/122/123_shapes` --
+  the signals probe green on release v0.64.4 + stdlib main +
+  `XIOM_RUNTIME_DIR`) -> `REL-20261012-1946-pulse` verified + **closed**.
+  Our entire production wave-2 ask is now source-complete: deadlines,
+  drain signals, poll/select, SO_REUSEPORT, chunked/stream writers,
+  WebSocket helpers. The engine lane replied with the **`/api/game/*`
+  control-plane contract** (`REL-20261013-1455-engine`, acked):
+  register / heartbeat(+command piggyback) / config(ETag) / compat /
+  match-report / telemetry, per-server bearer tokens, idempotency;
+  engine consumes PULSE modules for in-engine HTTP (no second stack,
+  never in the tick path). **Queued as the next PULSE-internal unit**
+  (PRODUCTION-REFERENCES row; needed stable before their P8 design
+  opens; not gated on the compiler pin).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

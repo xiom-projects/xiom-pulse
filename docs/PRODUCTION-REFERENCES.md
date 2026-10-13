@@ -284,6 +284,22 @@ PULSE-internal units (no lane gate), dependency-ordered:
   stdlib WS primitives).
 - [ ] Optional: tracing decision (OTel-class) -- decide with the 0.4
   wave.
+- [ ] **Game control plane `/api/game/*` (P8 forward contract; acked
+  with the engine lane 2026-10-13, `REL-20261013-1455-engine`):**
+  `POST /api/game/register` (build/protocol, map+mode, capacity,
+  region -> server id + per-server token + config revision + heartbeat
+  cadence), `POST /api/game/heartbeat` (liveness/load; the response
+  carries pending commands: `drain_requested`, `shutdown`,
+  `config_revision`), `GET /api/game/config` (by build+map+mode;
+  revision/ETag; explicit incompatible-build status),
+  `GET /api/game/compat?build=` (min/current build + protocol version),
+  `POST /api/game/match-report` (idempotency required),
+  `POST /api/game/telemetry` (batched; idempotency). Per-server bearer
+  token from register on every call after; JSON bodies carry
+  `protocol_version`. The engine consumes PULSE modules for any
+  in-engine HTTP (no second stack; never in the tick path). The
+  convention must be stable before their P8 engine/net design opens --
+  not gated on the compiler pin.
 
 Lane asks filed 2026-10-12 (relay): stdlib wave 2
 `REL-20261012-1946-pulse` (signals/drain, poll + accept deadline,
