@@ -75,3 +75,7 @@ a.out
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Runtime defaults (server run from the repo root)
+pulse-kv/
+pulse-game.jsonl
