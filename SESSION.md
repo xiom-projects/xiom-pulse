@@ -264,7 +264,10 @@
   the realtime plane (tick netcode, UDP/QUIC/WebTransport, prediction,
   relays). Games raise WS/SSE + jobs/matchmaking + multi-worker/sticky
   priorities; engine informed with a reuse offer + `/api/game/*`
-  control-route offer (`REL-20261013-1313-pulse`).
+  control-route offer (`REL-20261013-1313-pulse`). **Owner endorsed the
+  split the same day**; follow-up filed asking the engine to reply with
+  its in-engine HTTP stance + the exact `/api/game/*` routes
+  (`REL-20261013-1316-pulse`).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

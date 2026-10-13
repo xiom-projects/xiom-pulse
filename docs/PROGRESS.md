@@ -530,6 +530,12 @@ and multi-worker/sticky priorities. Engine lane informed with a
 reuse offer for in-engine HTTP and a `/api/game/*` control-route
 offer (`REL-20261013-1313-pulse`). Score holds (~55.4%)._
 
+_Delta 2026-10-13 (owner endorsed the game-backend split): the owner
+explicitly agreed with `docs/GAME-BACKEND-POSITIONING.md`; the engine
+lane was told the split is the agreed architecture and asked to reply
+with its in-engine HTTP stance plus the exact `/api/game/*` control
+routes (`REL-20261013-1316-pulse`). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
