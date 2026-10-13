@@ -31,6 +31,7 @@ use xiom.pulse.envelope;
 use xiom.pulse.config;
 use xiom.pulse.metrics;
 use xiom.pulse.sessions;
+use xiom.pulse.game;
 use xiom.jwt;
 use xiom.string.slice;
 use xiom.pulse.store;
@@ -99,19 +100,8 @@ fn error_status_body(status: Int, body: Str) -> Str {
   return body;
 }
 
-/// idem_key_valid guards the Idempotency-Key header: 1-200 bytes, no
-/// control characters. Complexity: O(key). Pure.
-fn idem_key_valid(s: Str) -> Bool {
-  if s.len() < 1 || s.len() > 200 { return false; }
-  var i: Int = 0;
-  while i < s.len() {
-    let b = s.byte_at(i);
-    if b < 32u8 || b == 127u8 { return false; }
-    i = i + 1;
-  }
-  return true;
-}
-
+/// out_json wraps a JSON body with the status error envelope.
+/// Complexity: O(body). Pure.
 fn out_json(status: Int, body: Str) -> HandlerOut {
   return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: Vec[(Str, Str)].new(); body: error_status_body(status, body); body_bytes: Vec[UInt8].new(); };
 }
@@ -372,7 +362,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     // a known key replays the stored seq with deduplicated=true instead
     // of appending a second event.
     let idem = http.header_get(req, "idempotency-key");
-    if idem.len() > 0 && !idem_key_valid(idem) {
+    if idem.len() > 0 && !http.idem_key_valid(idem) {
       return out_json(400, envelope.error_body("invalid_idempotency_key", "Idempotency-Key must be 1-200 visible characters"));
     }
     let path = config.cfg_store_path();
@@ -524,6 +514,31 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     }
     let up_body = "{\"stored\":" + stored.to_str() + ",\"files\":[" + files_json + "]}";
     return out_json(200, up_body);
+  }
+  // Game control plane (P8 forward contract, REL-20261013-1455-engine):
+  // game-server process -> control plane; bearer per server after
+  // register; heartbeat piggybacks commands; match/telemetry carry
+  // Idempotency-Key; admin state changes are ops-token gated.
+  if m.route_id == 19 {
+    return game.register(body);
+  }
+  if m.route_id == 20 {
+    return game.heartbeat(req, body);
+  }
+  if m.route_id == 21 {
+    return game.config_feed(&m, req);
+  }
+  if m.route_id == 22 {
+    return game.compat(&m);
+  }
+  if m.route_id == 23 {
+    return game.match_report(req, body);
+  }
+  if m.route_id == 24 {
+    return game.telemetry(req, body);
+  }
+  if m.route_id == 25 {
+    return game.admin_command(req, body);
   }
   if m.route_id == 14 {
     // Static assets via registry xiom.static 0.1.0: ETag/Last-Modified/

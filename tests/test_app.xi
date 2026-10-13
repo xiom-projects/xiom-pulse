@@ -580,7 +580,7 @@ pub fn main() -> Int {
     rli2 = rli2 + 1;
   }
   f = f + check("routes list has uploads", has_uploads);
-  f = f + check("routes list size", rl.len() == 18);
+  f = f + check("routes list size", rl.len() == 25);
   let oa_missing = openapi.openapi_missing_routes(oa.body);
   var oam: Int = 0;
   while oam < oa_missing.len() {
@@ -596,6 +596,67 @@ pub fn main() -> Int {
   f = f + check("error status field 405", m405b.status == 405 && string.str_contains(m405b.body, "\"status\":405"));
   let okb = route_req("GET", "/api/items/7", "");
   f = f + check("ok body untouched", okb.status == 200 && !string.str_contains(okb.body, "\"error\":"));
+
+  // --- game control plane (P8 contract) --------------------------------------
+  let _rg = io.remove_file("pulse-game-test.jsonl");
+  env.set_var("PULSE_GAME_PATH", "pulse-game-test.jsonl");
+  env.set_var("PULSE_GAME_CONFIG_PATH", "tests/fixtures/game-config.json");
+  let reg = route_req_hdr_cl("POST", "/api/game/register", "Content-Type: application/json\r\n", "{\"protocol_version\":\"P8-1\",\"build\":\"1.0.0\",\"map\":\"arena\",\"mode\":\"dm\",\"capacity\":8,\"region\":\"eu\"}");
+  f = f + check("game register 200", reg.status == 200);
+  let gsid = json_field(reg.body, "server_id");
+  let gtok = json_field(reg.body, "server_token");
+  f = f + check("game register issues id", string.str_starts_with(gsid, "srv-"));
+  f = f + check("game register issues token", gtok.len() > 20);
+  f = f + check("game register config revision", string.str_contains(reg.body, "\"config_revision\":7"));
+  let reg_bad = route_req_hdr_cl("POST", "/api/game/register", "Content-Type: application/json\r\n", "{\"map\":\"arena\"}");
+  f = f + check("game register missing fields 400", reg_bad.status == 400);
+  let hb_noauth = route_req_hdr_cl("POST", "/api/game/heartbeat", "", "{}");
+  f = f + check("game heartbeat no auth 401", hb_noauth.status == 401);
+  let hb = route_req_hdr_cl("POST", "/api/game/heartbeat", "Authorization: Bearer " + gtok + "\r\n", "{\"players\":3,\"tick_rate\":30}");
+  f = f + check("game heartbeat 200", hb.status == 200);
+  f = f + check("game heartbeat no commands", string.str_contains(hb.body, "\"commands\":[]"));
+  let adm_off = route_req_hdr_cl("POST", "/api/game/admin/command", "Authorization: Bearer x\r\n", "{\"server_id\":\"" + gsid + "\",\"state\":\"drain_requested\"}");
+  f = f + check("game admin disabled without token", adm_off.status == 403);
+  env.set_var("PULSE_GAME_ADMIN_TOKEN", "test-admin-token");
+  let adm_bad = route_req_hdr_cl("POST", "/api/game/admin/command", "Authorization: Bearer wrong\r\n", "{\"server_id\":\"" + gsid + "\",\"state\":\"drain_requested\"}");
+  f = f + check("game admin wrong token 401", adm_bad.status == 401);
+  let adm = route_req_hdr_cl("POST", "/api/game/admin/command", "Authorization: Bearer test-admin-token\r\n", "{\"server_id\":\"" + gsid + "\",\"state\":\"drain_requested\"}");
+  f = f + check("game admin drain 200", adm.status == 200 && string.str_contains(adm.body, "\"state\":\"drain_requested\""));
+  let hb2 = route_req_hdr_cl("POST", "/api/game/heartbeat", "Authorization: Bearer " + gtok + "\r\n", "{}");
+  f = f + check("game heartbeat carries drain", string.str_contains(hb2.body, "drain_requested"));
+  let adm_bad2 = route_req_hdr_cl("POST", "/api/game/admin/command", "Authorization: Bearer test-admin-token\r\n", "{\"server_id\":\"" + gsid + "\",\"state\":\"nope\"}");
+  f = f + check("game admin bad state 400", adm_bad2.status == 400);
+  let gcfg = route_req("GET", "/api/game/config", "");
+  f = f + check("game config 200", gcfg.status == 200 && string.str_contains(gcfg.body, "\"tick_rate\": 30"));
+  var has_etag: Bool = false;
+  var ghi: Int = 0;
+  while ghi < gcfg.headers.len() {
+    if gcfg.headers[ghi].0 == "ETag" { has_etag = true; }
+    ghi = ghi + 1;
+  }
+  f = f + check("game config etag", has_etag);
+  let gcfg304 = route_req_hdr_cl("GET", "/api/game/config", "If-None-Match: \"rev-7\"\r\n", "");
+  f = f + check("game config 304", gcfg304.status == 304);
+  let gcfg409 = route_req("GET", "/api/game/config?build=0.9.0", "");
+  f = f + check("game config incompatible 409", gcfg409.status == 409);
+  let gcompat = route_req("GET", "/api/game/compat?build=1.0.0", "");
+  f = f + check("game compat true", string.str_contains(gcompat.body, "\"compatible\":true"));
+  let gcompat_bad = route_req("GET", "/api/game/compat?build=0.9.0", "");
+  f = f + check("game compat false", string.str_contains(gcompat_bad.body, "\"compatible\":false"));
+  let mr_no = route_req_hdr_cl("POST", "/api/game/match-report", "Authorization: Bearer " + gtok + "\r\n", "{}");
+  f = f + check("game report idem required", mr_no.status == 400);
+  let mr = route_req_hdr_cl("POST", "/api/game/match-report", "Authorization: Bearer " + gtok + "\r\nIdempotency-Key: m-1\r\n", "{\"session_id\":\"s1\",\"outcome\":\"win\"}");
+  f = f + check("game report stored", mr.status == 200 && string.str_contains(mr.body, "\"stored\":true"));
+  let mr2 = route_req_hdr_cl("POST", "/api/game/match-report", "Authorization: Bearer " + gtok + "\r\nIdempotency-Key: m-1\r\n", "{\"session_id\":\"s1\"}");
+  f = f + check("game report deduplicated", string.str_contains(mr2.body, "\"deduplicated\":true"));
+  let tl = route_req_hdr_cl("POST", "/api/game/telemetry", "Authorization: Bearer " + gtok + "\r\nIdempotency-Key: t-1\r\n", "{\"items\":[1,2,3]}");
+  f = f + check("game telemetry stored", tl.status == 200 && string.str_contains(tl.body, "\"stored\":true"));
+  let tl2 = route_req_hdr_cl("POST", "/api/game/telemetry", "Authorization: Bearer " + gtok + "\r\nIdempotency-Key: t-1\r\n", "{\"items\":[1]}");
+  f = f + check("game telemetry deduplicated", string.str_contains(tl2.body, "\"deduplicated\":true"));
+  env.remove_var("PULSE_GAME_ADMIN_TOKEN");
+  let _rgg = io.remove_file("pulse-game-test.jsonl");
+  env.remove_var("PULSE_GAME_PATH");
+  env.remove_var("PULSE_GAME_CONFIG_PATH");
 
   if f == 0 {
     io.println("pulse-app: GREEN");

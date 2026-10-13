@@ -19,7 +19,8 @@
     { "name": "tokens", "description": "JWT issue and verify" },
     { "name": "events", "description": "event store" },
     { "name": "ops", "description": "metrics and contract" },
-    { "name": "uploads", "description": "multipart file uploads" }
+    { "name": "uploads", "description": "multipart file uploads" },
+    { "name": "game", "description": "game server control plane (PULSE x XIOM Engine)" }
   ],
   "paths": {
     "/health": {
@@ -275,6 +276,105 @@
         "summary": "Landing page (PULSE_LANDING_PATH when configured)",
         "operationId": "getLanding",
         "responses": { "200": { "description": "HTML landing", "content": { "text/html": { "schema": { "type": "string" } } } } }
+      }
+    },
+    "/api/game/register": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Onboard a game server; mints the server id + per-server bearer token",
+        "operationId": "postGameRegister",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "server_id, server_token, config_revision, heartbeat_cadence_secs", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/game/heartbeat": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Liveness/load; the response carries pending commands (drain_requested, shutdown)",
+        "operationId": "postGameHeartbeat",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "config_revision + commands", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/game/config": {
+      "get": {
+        "tags": ["game"],
+        "summary": "Game config document by build (revision/ETag; 409 incompatible_build)",
+        "operationId": "getGameConfig",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "build", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Config document + ETag", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "304": { "description": "Not modified" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "description": "incompatible_build" }
+        }
+      }
+    },
+    "/api/game/compat": {
+      "get": {
+        "tags": ["game"],
+        "summary": "Build/protocol compatibility facts (min/current build + protocol_version)",
+        "operationId": "getGameCompat",
+        "parameters": [
+          { "name": "build", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Compatibility facts", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/api/game/match-report": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Final match record (Idempotency-Key required)",
+        "operationId": "postGameMatchReport",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "stored / deduplicated", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/game/telemetry": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Batched server telemetry (Idempotency-Key required)",
+        "operationId": "postGameTelemetry",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "stored / deduplicated", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/game/admin/command": {
+      "post": {
+        "tags": ["game"],
+        "summary": "Ops-gated server state change (active | drain_requested | shutdown)",
+        "operationId": "postGameAdminCommand",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": {
+          "200": { "description": "new state + revision", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "description": "admin disabled" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
       }
     }
   },

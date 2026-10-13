@@ -290,6 +290,18 @@
   never in the tick path). **Queued as the next PULSE-internal unit**
   (PRODUCTION-REFERENCES row; needed stable before their P8 design
   opens; not gated on the compiler pin).
+- **Game control plane SHIPPED (2026-10-13, `/api/game/*`):** the P8
+  contract is implemented and suite-covered (28 checks in test_app):
+  register (per-server bearer token), heartbeat (command piggyback),
+  config (revision/ETag/304/409 incompatible_build), compat,
+  match-report + telemetry (Idempotency-Key dedup), admin command
+  (ops token; 403 when disabled). Records append to `PULSE_GAME_PATH`
+  (kind-tagged, latest-wins); config at `PULSE_GAME_CONFIG_PATH`;
+  cadence `PULSE_GAME_HEARTBEAT_SECS`; overlay keys
+  `game_path`/`game_config_path`/`game_heartbeat_secs`. OpenAPI paths +
+  `game` tag added (drift guard satisfied); http-api docs + CHANGELOG
+  updated. Static conditional-GET/Range backlog row struck (already
+  shipped via `xiom.static`).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

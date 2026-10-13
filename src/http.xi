@@ -569,3 +569,27 @@ pub fn build_response(status: Int, body: Str) -> Vec[UInt8] {
   var none: Vec[(Str, Str)] = Vec[(Str, Str)].new();
   return build_response_full(status, "application/json; charset=utf-8", &none, body);
 }
+
+/// bearer_token extracts the token from an `Authorization: Bearer x`
+/// header ("" when absent or malformed). The scheme match is
+/// case-insensitive per RFC 9110. Complexity: O(n). Pure.
+pub fn bearer_token(req: &PulseRequest) -> Str {
+  let h = header_get(req, "authorization");
+  if h.len() < 8 { return ""; }
+  let scheme = string.str_slice(h, 0, 7);
+  if string.str_lower(scheme) != "bearer " { return ""; }
+  return string.str_slice(h, 7, h.len());
+}
+
+/// idem_key_valid guards the Idempotency-Key header: 1-200 bytes, no
+/// control characters. Complexity: O(key). Pure.
+pub fn idem_key_valid(s: Str) -> Bool {
+  if s.len() < 1 || s.len() > 200 { return false; }
+  var i: Int = 0;
+  while i < s.len() {
+    let b = s.byte_at(i);
+    if b < 32u8 || b == 127u8 { return false; }
+    i = i + 1;
+  }
+  return true;
+}

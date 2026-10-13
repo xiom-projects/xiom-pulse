@@ -559,6 +559,18 @@ in-engine HTTP, never in the tick path. Queued as the next
 PULSE-internal unit (not gated on the compiler pin). Score holds
 (~55.4%)._
 
+_Delta 2026-10-13 (game control plane SHIPPED): the P8 `/api/game/*`
+contract is implemented -- register (per-server bearer token),
+heartbeat (command piggyback), config (revision/ETag/304/409),
+compat, match-report + telemetry (Idempotency-Key dedup), admin command
+(ops token). Append-only kind-tagged records at `PULSE_GAME_PATH`;
+config at `PULSE_GAME_CONFIG_PATH`; `PULSE_GAME_HEARTBEAT_SECS`
+cadence; overlay keys added. 28 test_app checks + test_http GREEN on
+the CI combo; openapi paths + `game` tag added (drift guard satisfied);
+http-api docs + CHANGELOG; static conditional/Range row struck
+(already shipped via xiom.static). Full sweep + CI dry run with the
+push. Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

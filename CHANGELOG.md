@@ -8,6 +8,21 @@ GitHub release body.
 
 ### Added
 
+- **Game control plane (`/api/game/*`, P8 forward contract with the
+  XIOM Engine lane)**: `register` (build/protocol/map/mode/capacity/
+  region -> server id + per-server bearer token + config revision +
+  heartbeat cadence), `heartbeat` (liveness/load; the response carries
+  pending commands -- `drain_requested`/`shutdown` piggyback, no inbound
+  route to game servers), `config` (document with revision/ETag;
+  `304` on If-None-Match; `409 incompatible_build`), `compat`
+  (min/current build + protocol facts), `match-report` + `telemetry`
+  (per-server bearer + `Idempotency-Key`, duplicate keys replay
+  `deduplicated`), and ops-gated `admin/command` (state: `active` |
+  `drain_requested` | `shutdown`). Records append to `PULSE_GAME_PATH`
+  (kind-tagged, latest-wins per server); config document at
+  `PULSE_GAME_CONFIG_PATH`; admin token `PULSE_GAME_ADMIN_TOKEN`
+  (unset = admin disabled); new config keys `game_path`,
+  `game_config_path`, `game_heartbeat_secs`.
 - **`pulse_app openapi --check`**: verifies the served OpenAPI contract
   still covers every router route (exit 1 with the missing list on
   drift) -- the release-gate companion to the route-table drift guard.

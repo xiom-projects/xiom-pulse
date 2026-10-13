@@ -14,7 +14,10 @@
 // 7 POST /api/token, 8 POST /api/token/verify, 9 GET /metrics,
 // 10 GET /api/items/:id, 11 POST /api/events, 12 GET /api/events/count,
 // 13 GET /api/events, 14 GET /favicon.ico, 15 GET /, 16 POST /api/events/compact,
-// 17 GET /openapi.json, 18 POST /api/uploads. Every route is also reachable
+// 17 GET /openapi.json, 18 POST /api/uploads, 19 POST /api/game/register,
+// 20 POST /api/game/heartbeat, 21 GET /api/game/config, 22 GET /api/game/compat,
+// 23 POST /api/game/match-report, 24 POST /api/game/telemetry,
+// 25 POST /api/game/admin/command. Every route is also reachable
 // through the `/v1` alias prefix (v1_path strips it before matching); new
 // surfaces are introduced under `/v1` first.
 module xiom.pulse.router
@@ -163,6 +166,13 @@ pub fn route_defs() -> Vec[(Str, Str)] {
   out.push(("POST", "/api/events/compact"));
   out.push(("GET", "/openapi.json"));
   out.push(("POST", "/api/uploads"));
+  out.push(("POST", "/api/game/register"));
+  out.push(("POST", "/api/game/heartbeat"));
+  out.push(("GET", "/api/game/config"));
+  out.push(("GET", "/api/game/compat"));
+  out.push(("POST", "/api/game/match-report"));
+  out.push(("POST", "/api/game/telemetry"));
+  out.push(("POST", "/api/game/admin/command"));
   return out;
 }
 

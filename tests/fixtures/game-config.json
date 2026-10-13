@@ -1,0 +1,7 @@
+{
+  "revision": 7,
+  "protocol_version": "P8-1",
+  "min_build": "1.0.0",
+  "current_build": "1.0.0",
+  "rules": { "tick_rate": 30, "max_players": 16 }
+}

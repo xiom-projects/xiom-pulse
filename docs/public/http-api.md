@@ -105,6 +105,39 @@ served as `application/wasm`, and caching is controlled by
 `/health`, `/metrics`, `/openapi.json`, `/favicon.ico`) always take
 precedence, and path traversal is rejected by the static engine.
 
+## Game control plane (`/api/game/*`)
+
+The P8 contract for XIOM Engine game servers (server-to-server; the
+realtime plane stays engine-owned). A game server calls `register`
+once, then presents its **per-server bearer token** on every call.
+
+- `POST /api/game/register` -- `{protocol_version, build, map, mode,
+  capacity?, region?, game_endpoint?, query_endpoint?}` -> `server_id`,
+  `server_token`, `config_revision`, `heartbeat_cadence_secs`.
+- `POST /api/game/heartbeat` -- `{players?, tick_rate?, frame_time_ms?,
+  uptime_sec?}`; the response carries `commands` (`drain_requested`,
+  `shutdown`) so control-plane -> server delivery needs no inbound
+  route.
+- `GET /api/game/config?build=` -- config document with `ETag:
+  "rev-N"` (304 on `If-None-Match`); a build that matches neither
+  `min_build` nor `current_build` gets `409 incompatible_build`.
+- `GET /api/game/compat?build=` -- `min_build`, `current_build`,
+  `protocol_version`, `compatible` (exact-match fact; the engine owns
+  richer ordering).
+- `POST /api/game/match-report` -- final match record; requires
+  `Idempotency-Key` (duplicates replay `deduplicated:true`).
+- `POST /api/game/telemetry` -- batched telemetry; requires
+  `Idempotency-Key` (same duplicate semantics).
+- `POST /api/game/admin/command` -- ops-gated (`PULSE_GAME_ADMIN_TOKEN`)
+  state change: `{server_id, state: active|drain_requested|shutdown}`;
+  `403 admin_disabled` when no token is configured.
+
+Storage: append-only kind-tagged JSONL at `PULSE_GAME_PATH` (default
+`pulse-game.jsonl`; latest-wins per `server_id`); the config document
+lives at `PULSE_GAME_CONFIG_PATH` (default `pulse-game-config.json`,
+`revision` field feeds the ETag). Advertised cadence:
+`PULSE_GAME_HEARTBEAT_SECS` (default 15).
+
 ## Request limits and semantics
 
 - Body cap: 1 MiB decoded; over-cap chunked bodies get `413`.

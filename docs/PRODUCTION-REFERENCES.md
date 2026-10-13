@@ -275,31 +275,36 @@ socket-timeout bus asks.
 
 PULSE-internal units (no lane gate), dependency-ordered:
 
-- [ ] Static conditional GET (ETag/If-None-Match, Last-Modified) +
-  Range requests in site/assets mode.
+- [x] Static conditional GET (ETag/If-None-Match, Last-Modified) +
+  Range requests in site/assets mode. -- ALREADY SHIPPED: registry
+  `xiom.static` serves ETag/Last-Modified/Cache-Control + 304 +
+  Range 206/416 (route-14 handler note; `/assets/{path}` advertises
+  it in the contract). Stale row.
 - [ ] Per-route/per-key rate policy (global bucket shipped).
+- [ ] **Perf baseline + benchmark profile (bttger spec)**: implement the
+  six bttger endpoints (`/serialize`, `/serialize/big`, `/plain/text`,
+  `/query/{userId}/tools/{offset}`, `/insert`, `/calculate`) as a
+  `bench/` profile; harness = autocannon (bttger script) + the k6
+  methodology from the xlcaptain suite; record a **pre-keep-alive
+  baseline now** (pinned toolchain, sequential accept, documented
+  caveats), re-run after each wave (deadlines/keep-alive/multi-worker).
+  References `E:\repos\web-framework-benchmarks`,
+  `E:\repos\web-framework-bench-xlcaptain` (cloned 2026-10-13). Do NOT
+  publish cross-framework tables before keep-alive + worker parity.
 - [ ] Test-runner harness on the fixed module-scope fn-ptr
   (REL-20261011-0317-pulse-7) to replace manual check unrolling.
 - [ ] SSE unit (after stdlib stream primitives) + WebSocket unit (after
   stdlib WS primitives).
 - [ ] Optional: tracing decision (OTel-class) -- decide with the 0.4
   wave.
-- [ ] **Game control plane `/api/game/*` (P8 forward contract; acked
+- [x] **Game control plane `/api/game/*` (P8 forward contract; acked
   with the engine lane 2026-10-13, `REL-20261013-1455-engine`):**
-  `POST /api/game/register` (build/protocol, map+mode, capacity,
-  region -> server id + per-server token + config revision + heartbeat
-  cadence), `POST /api/game/heartbeat` (liveness/load; the response
-  carries pending commands: `drain_requested`, `shutdown`,
-  `config_revision`), `GET /api/game/config` (by build+map+mode;
-  revision/ETag; explicit incompatible-build status),
-  `GET /api/game/compat?build=` (min/current build + protocol version),
-  `POST /api/game/match-report` (idempotency required),
-  `POST /api/game/telemetry` (batched; idempotency). Per-server bearer
-  token from register on every call after; JSON bodies carry
-  `protocol_version`. The engine consumes PULSE modules for any
-  in-engine HTTP (no second stack; never in the tick path). The
-  convention must be stable before their P8 engine/net design opens --
-  not gated on the compiler pin.
+  **SHIPPED 2026-10-13** -- register / heartbeat(command piggyback) /
+  config(revision+ETag, 409 incompatible_build) / compat /
+  match-report + telemetry (bearer + Idempotency-Key) / admin command
+  (ops token, state gate); records append to `PULSE_GAME_PATH`, config
+  at `PULSE_GAME_CONFIG_PATH`, cadence `PULSE_GAME_HEARTBEAT_SECS`.
+  Covered by 28 test_app checks; routed under `/v1` too.
 
 Lane asks filed 2026-10-12 (relay): stdlib wave 2
 `REL-20261012-1946-pulse` (signals/drain, poll + accept deadline,

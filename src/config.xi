@@ -172,6 +172,9 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "site_dir", "PULSE_SITE_DIR");
   cfg_apply_str(obj, "site_max_age", "PULSE_SITE_MAX_AGE");
   cfg_apply_str(obj, "csp", "PULSE_CSP");
+  cfg_apply_str(obj, "game_path", "PULSE_GAME_PATH");
+  cfg_apply_str(obj, "game_config_path", "PULSE_GAME_CONFIG_PATH");
+  cfg_apply_str(obj, "game_heartbeat_secs", "PULSE_GAME_HEARTBEAT_SECS");
   return true;
 }
 
@@ -275,6 +278,32 @@ pub fn cfg_landing_path() -> Str {
 /// Complexity: O(1). Pure.
 pub fn cfg_csp() -> Str {
   return env.var_or("PULSE_CSP", "");
+}
+
+/// cfg_game_path returns the game control-plane record file
+/// (PULSE_GAME_PATH, default "pulse-game.jsonl"). Complexity: O(1).
+pub fn cfg_game_path() -> Str {
+  return env.var_or("PULSE_GAME_PATH", "pulse-game.jsonl");
+}
+
+/// cfg_game_config_path returns the game config document path
+/// (PULSE_GAME_CONFIG_PATH, default "pulse-game-config.json").
+/// Complexity: O(1). Pure.
+pub fn cfg_game_config_path() -> Str {
+  return env.var_or("PULSE_GAME_CONFIG_PATH", "pulse-game-config.json");
+}
+
+/// cfg_game_heartbeat_secs returns the advertised heartbeat cadence
+/// (PULSE_GAME_HEARTBEAT_SECS, default 15). Complexity: O(1). Pure.
+pub fn cfg_game_heartbeat_secs() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_GAME_HEARTBEAT_SECS", "15"), 15);
+}
+
+/// cfg_game_admin_token returns the ops token gating
+/// /api/game/admin/command (PULSE_GAME_ADMIN_TOKEN, default "" =
+/// admin disabled). Complexity: O(1). Pure.
+pub fn cfg_game_admin_token() -> Str {
+  return env.var_or("PULSE_GAME_ADMIN_TOKEN", "");
 }
 
 /// cfg_session_ttl_secs returns the session lifetime (PULSE_SESSION_TTL,
