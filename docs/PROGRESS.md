@@ -605,6 +605,15 @@ archive -> toolchain wave-2 (re-pin + helper re-land + sweep) -> cut
 0.2.1 -> redeploy. Score: release gate progression counted; overall
 holds (~55.4%) pending the cut._
 
+_Delta 2026-10-14 (v0.64.5 candidate held): stdlib's release-gate
+battery flagged candidate regressions (corpus 953/955; probe compilefails
+`zext float` + duplicate `LinkedList.invariant_check`; crypto pair
+lengths -1/AV; controls green on v0.64.4 -> wave suspects m314-m319) and
+HELD the `stdlib-v0.64.5` tag (`REL-20261014-2123-stdlib`). The archive
+now waits on a compiler fix wave + battery re-run; the SIGILL fix (m297)
+is already in the candidate. PULSE wave-2 stays staged; no ops change
+(demo hold until the release + our ping). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

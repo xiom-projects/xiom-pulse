@@ -338,6 +338,16 @@
   sequence: next compiler archive (m297+) -> toolchain wave-2 (re-pin +
   helper re-land + full sweep both platforms) -> cut 0.2.1 per
   docs/RELEASE-CHECKLIST.md -> ops redeploy.**
+- **v0.64.5 candidate HELD (2026-10-14 late):** stdlib's release-gate
+  battery found regressions on the candidate (corpus 953/955; probe
+  compilefails: `zext float` cast, duplicate `LinkedList.invariant_check`
+  emission; `p_wave107/108` crypto pair lengths -1 then AV; controls
+  green on v0.64.4 -> release-wave suspects m314-m319;
+  `REL-20261014-2123-stdlib`). **The `stdlib-v0.64.5` tag is HELD** and
+  the archive now waits on a compiler fix wave + battery re-run. The
+  SIGILL fix (m297) is in the candidate; PULSE's wave-2 sequence stays
+  staged and fires on the eventual release. No demo change (ops still
+  on hold).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
