@@ -592,6 +592,19 @@ consumer-discovery bug (packages' kv-controlled A/B; their
 `REL-20261013-1901-pulse`). In-tree control 24/24 green; artifact rerun
 on the next compiler candidate. Score holds (~55.4%)._
 
+_Delta 2026-10-14 (**SIGILL gate cleared at source**): compiler m297
+(6797197d) fixed the Path.is_dir implicit-self recursion. PULSE
+verification on the post-fix compiler (m305 range): witness
+`p_path_println_context_crash` rc 0 (was 0xC000001D); server builds +
+serves /health 200 in jsonl AND kv modes. Bonus: m303 resolved the
+sqlite registry-artifact consumer blocker -- xiom.sqlite 0.4.1 probe
+24/24 GREEN via `--run` (unqualified type-statics; README `driver.`
+form nuance sent to packages). Ops HOLD the demo until the next archive
++ 0.2.1 redeploy ping (`REL-20261014-1305-pulse/-2/-3`). Sequence:
+archive -> toolchain wave-2 (re-pin + helper re-land + sweep) -> cut
+0.2.1 -> redeploy. Score: release gate progression counted; overall
+holds (~55.4%) pending the cut._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

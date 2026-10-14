@@ -325,6 +325,19 @@
   datapoint (`REL-20261013-1901-pulse`); in-tree control remains 24/24
   green; artifact rerun repeats on the next compiler candidate
   (`REL-20261013-1721-bindings-3` acked with the result).
+- **SIGILL GATE CLEARED AT SOURCE (2026-10-14):** compiler **m297**
+  (`6797197d`) fixed the `Path.is_dir` implicit-self recursion (the
+  `0xC000001D` startup crash family). PULSE verified on the post-fix
+  compiler (m305 range): witness `p_path_println_context_crash` **rc 0**
+  (was 0xC000001D), server builds + serves `/health` 200 in **jsonl AND
+  kv** modes. **m303 also resolved the sqlite registry-artifact
+  consumer blocker**: 0.4.1 probe **24/24 GREEN** via `--run`
+  (unqualified type-statics form; the README `driver.`-form nuance
+  noted to packages). Ops told to **HOLD** the demo until the archive +
+  our redeploy ping (`REL-20261014-1305-pulse/-2/-3`). **Release
+  sequence: next compiler archive (m297+) -> toolchain wave-2 (re-pin +
+  helper re-land + full sweep both platforms) -> cut 0.2.1 per
+  docs/RELEASE-CHECKLIST.md -> ops redeploy.**
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
