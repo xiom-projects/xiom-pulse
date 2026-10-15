@@ -35,10 +35,11 @@ trigger the crash.
 - 2026-10-11 (post-fix, m271/v0.64.4 build, pin `dd352f6`): **GREEN** --
   suite exit 0 including the helper check
   (`probe-logs/witness5-m271-reverify.log`).
-- Permanent re-land status: **deferred until the CI toolchain pin moves
-  to >= v0.64.4** -- v0.64.3 still crashes on this shape, so re-landing
-  the helper into `tests/test_app.xi` before the pin moves would red the
-  CI fleet. The patch remains the frozen artifact until then.
+- 2026-10-15 (released v0.64.5, pin `092dfa0c`): **GREEN** -- suite exit
+  0 including the helper check; the helper + check were **RE-LANDED
+  PERMANENTLY** into `tests/test_app.xi` alongside the v0.64.5 CI pin
+  move. This directory stays as the witness record; `witness.patch` is
+  now applied in-tree (no longer a floating patch).
 
 ## Evidence trail
 
