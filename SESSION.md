@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-15 wrap 16 (v0.64.5 RELEASED + paired stdlib pin `092dfa0c`; game control plane `/api/game/*` shipped; SIGILL fixed + verified at source; stdlib wave-2 delivered + verified; NEXT = toolchain wave-2 then cut 0.2.1), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-15 wrap 17 (v0.2.1 RELEASED on the v0.64.5 + `092dfa0c` pairing -- the SIGILL fix shipped to consumers; wave-2 adopted green both platforms; SQL co-verify 24/24 + bus closes; NEXT = post-release queue: keep-alive -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane.
 
 ## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
@@ -355,6 +355,23 @@
   next :17 sweep. **NEXT SESSION = toolchain wave-2, then cut 0.2.1** --
   full recipe is the §3 paste prompt (wrap 16). Demo stays on 0.1.0
   until the ops redeploy ping.
+- **0.2.1 RELEASED (2026-10-15T21:23Z) -- wrap 17:** wave-2 adopted
+  v0.64.5 + pin `092dfa0c` (fleet 12/12, suites x2, smoke 119/119
+  jsonl+kv both platforms; helper re-landed `3743704`; CI pins
+  `0e2ee57`; SQL artifact 24/24 on both platforms -- bus: 1718/1901
+  closed, bindings reply `REL-20261015-2029-pulse`, compiler `-2` +
+  stdlib `-3` INFOs). Cut `9ac3016` (11 literals), dry run `38808053663`
+  green, tag `pulse-v0.2.1`, release run `38808850409` green (guard +
+  both legs + publish): linux
+  `81cce634a0fbcace59ab97045fad1493bf8d5bf99bba7cd1b11a5825148e455c`,
+  windows `df96da7c917300e512f431d3b93a15d9933e4243a5f57b284f8fb994999b8daf`;
+  release body carries the highlights; dl at the next :17 sweep; ops
+  pinged (`REL-20261015-2125-pulse`) to redeploy the demo 0.1.0 -> 0.2.1.
+  Local: Windows `xiom.new-20261015-2240` (default `xiom.new`
+  byte-identical, v0.64.3 A/B kept), WSL `xiom-v0645`; pin caches
+  `stdlib-092dfa0c` both; 11 deps incl. `xiom.sqlite@0.4.1`. Evidence:
+  `probe-logs/toolchain-v0645/` (post-bump WIN/LINUX summaries +
+  `-prebump` copies) + `sql-coverify/artifact-0645-{win,linux}.log`.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -1112,7 +1129,73 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-15 wrap 16)
+## 3. Paste prompt for the next PULSE session (2026-10-15 wrap 17)
+
+```
+You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
+XIOM web backend / full backend framework). Read SESSION.md first -- the
+CURRENT STATE digest at the top is authoritative; then docs\PROGRESS.md,
+docs\PRODUCTION-REFERENCES.md, docs\PRODUCTION-GAPS.md and your designs
+(docs\DESIGN-*.md). Relays: E:\xiom-lang\xiom-relays. Reference shelf:
+E:\repos\.
+
+RE-ARM YOUR DOORBELL FIRST (crons are session-scoped): every 2h with the
+standard sweep prompt (fetch+merge --ff-only relays; view --lane pulse;
+process items; wrap on change). Use `python tools/relay.py` in the
+relays clone; NEVER `git pull` there; never edit another lane's item.
+
+STATE AT WRAP 17:
+- **0.2.1 SHIPPED** (tag `pulse-v0.2.1`, GH published 21:23Z): linux
+  `81cce634...`, windows `df96da7c...`; release body carries the
+  highlights; dl mirror at the next :17 sweep; ops pinged to redeploy
+  the demo 0.1.0 -> 0.2.1 (`REL-20261015-2125-pulse`, follows
+  `REL-20261010-1721-ops`).
+- Wave-2 complete on the released **v0.64.5 + stdlib pin 092dfa0c**:
+  fleet 12/12, suites x2, smoke 119/119 jsonl+kv on both platforms; CI
+  pins moved (`STDLIB_VERSION` + v0.64.5 shas in ci/release/heavy); the
+  batch-5 `&HandlerOut` helper re-landed as a permanent lock; SQL
+  artifact co-verify 24/24 on both platforms (bus: 1718/1901 closed,
+  bindings reply `REL-20261015-2029-pulse`, compiler INFO `-2`, stdlib
+  INFO `-3`).
+- Local toolchains (pinned): Windows
+  `%LOCALAPPDATA%\xiom.new-20261015-2240` (v0.64.5; `xiom.new` refreshed
+  byte-identical; v0.64.3 A/B kept at `xiom.new-20261010-212636`); WSL
+  `~/.local/share/xiom-v0645` (`~/.local/bin/xiom` points there; A/B
+  v0.64.3 at `~/.local/share/xiom-0643`). Pin caches `stdlib-092dfa0c`
+  on both; 11 deps incl. `xiom.sqlite@0.4.1` on both.
+- Evidence: `probe-logs\toolchain-v0645\` (post-bump WIN/LINUX
+  summaries + `-prebump` copies; `sql-coverify\artifact-0645-*.log`).
+
+NEXT -- the post-release queue (dependency order):
+1. Keep-alive Phase A + B per docs\DESIGN-KEEPALIVE-DEADLINES.md
+   (primitives delivered in the wave-119+ runtime).
+2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
+3. Middleware order tests FIRST, then the chain refactor, then the jobs
+   core (docs\DESIGN-MIDDLEWARE-JOBS.md).
+4. SQL class: migrations runner per docs\DESIGN-SQL-MIGRATIONS.md (wire
+   xiom.sqlite into package.xi + the CI install list when the unit
+   opens; the SQL driver artifact is co-verified green).
+5. Bench baseline: bench\ profile for the six bttger endpoints
+   (E:\repos\web-framework-benchmarks + -xlcaptain); pre/post
+   keep-alive numbers.
+6. SSE + WebSocket units; per-route rate policy; OpenAPI paths
+   generation remainder; test-runner harness (fn-ptr fixed).
+7. macOS pair (REL-20261010-1609-pulse/-2) is v0.64.6 scope (owner
+   decision); re-test when that toolchain moves.
+8. Registry pilot gate ping when production-serving
+   (REL-20261013-1707); game CP follow-ups via REL-20261013-1701-pulse.
+9. Watch the ops redeploy (demo -> 0.2.1) + the website `latest.json`
+   follow; note the dl mirror timing (:17).
+
+DISCIPLINE: pinned toolchain for ALL local builds (export
+XIOM_COMPILER/XIOM_STDLIB explicitly -- Windows versioned v0.64.5 / WSL
+xiom-v0645 + the `stdlib-092dfa0c` caches); suite watchdog >= 300s on
+Linux (drvfs slowness); signed conventional commits; bus sweep before
+finishing any task; wrap at every stopping point (SESSION.md digest +
+docs\PROGRESS.md).
+```
+
+## 3d. Paste prompt (2026-10-15 wrap 16, superseded)
 
 ```
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official

@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-11 (security headers unit adopted: helmet set on every response, CSP opt-in; CI dry run green)
+**Last updated:** 2026-10-15 (v0.2.1 released on the v0.64.5 + `092dfa0c` pairing; wave-2 + SQL artifact co-verify green on both platforms)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -623,6 +623,20 @@ time the gates caught it pre-publish. Next session: toolchain wave-2
 (install, deps, pin cache, helper re-land, sweeps, CI pins, dry run)
 then cut 0.2.1 per RELEASE-CHECKLIST + the ops redeploy ping -- full
 recipe in SESSION.md §3 (wrap 16). Score holds (~55.4%)._
+
+_Delta 2026-10-15 (**v0.2.1 RELEASED -- wrap 17**): wave-2 adopted the
+released **v0.64.5 + stdlib pin `092dfa0c`** (fleet 12/12, suites x2,
+smoke 119/119 jsonl+kv, both platforms; dry runs `38802546194` +
+`38808053663` green; the batch-5 `&HandlerOut` helper re-landed as a
+permanent lock; SQL registry-artifact co-verify 24/24 on both
+platforms). **`pulse-v0.2.1` is out** (GH published 21:23Z; linux
+`81cce634...`, windows `df96da7c...`; release body carries the
+highlights; dl mirror at the next :17 sweep) -- the v0.64.5 rebuild
+with the SIGILL fix; ops pinged (`REL-20261015-2125-pulse`) to move the
+demo 0.1.0 -> 0.2.1. Bus: SQL co-verify items closed (1718/1901);
+bindings reply + compiler/stdlib INFOs filed. NEXT: the post-release
+queue in SESSION.md §3 (keep-alive -> durability -> middleware/jobs ->
+SQL runner -> bench -> SSE/WS -> macOS v0.64.6). Score holds (~55.4%)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
