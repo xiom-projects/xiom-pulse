@@ -638,6 +638,15 @@ bindings reply + compiler/stdlib INFOs filed. NEXT: the post-release
 queue in SESSION.md §3 (keep-alive -> durability -> middleware/jobs ->
 SQL runner -> bench -> SSE/WS -> macOS v0.64.6). Score holds (~55.4%)._
 
+_Delta 2026-10-15 (top-tier directive): owner escalated the goal to
+#1-class (multipurpose: static/apps/realtime, balancer scale-out,
+safe/fast/secure, modern + legacy); `docs/ROADMAP-TOP-TIER.md` maps
+the acceptance criteria T1-T9, the capability truth table (headline:
+no TLS anywhere in-tree), workstreams W1-W10, and the 0.3/0.4/1.0
+milestones; per-lane roadblock asks filed on the bus
+(`REL-20261015-2202-pulse..-5`). No score change -- the directive
+re-frames the plan; strict evidence-scoring still applies._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

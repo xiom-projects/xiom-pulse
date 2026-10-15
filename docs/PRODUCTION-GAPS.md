@@ -8,6 +8,11 @@ webframeworks"). Companion to the designs in this repo and the
 reference shelf (`E:\repos\`: fastify, gin, fasthttp, h11, helmet,
 bbolt, knex, bullmq; nginx terminates TLS in the target deployment).
 
+**Status update 2026-10-15:** the wave-2 asks in section 2.1 are all
+delivered and reporter-verified; the current plan (top-tier directive,
+capability truth table, milestones, lane asks) lives in
+`docs/ROADMAP-TOP-TIER.md`.
+
 ## 0. Where PULSE is today (0.2.x on main)
 
 Shipped and CI-green (v0.64.3 toolchain + stdlib pin `3df0843`):

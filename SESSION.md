@@ -372,6 +372,16 @@
   `stdlib-092dfa0c` both; 11 deps incl. `xiom.sqlite@0.4.1`. Evidence:
   `probe-logs/toolchain-v0645/` (post-bump WIN/LINUX summaries +
   `-prebump` copies) + `sql-coverify/artifact-0645-{win,linux}.log`.
+- **Top-tier directive (2026-10-15) -- wrap 17b:** owner escalated the
+  goal to #1-class multipurpose framework (static/apps/realtime,
+  balancer scale-out, safe/fast/secure, modern + legacy). Roadmap +
+  capability truth table + milestones: `docs/ROADMAP-TOP-TIER.md`;
+  lane asks filed `REL-20261015-2202-pulse` (stdlib, 10 items, TLS
+  first), `-2` (compiler, FFI hardening / ffigen C-headers), `-3`
+  (packages, templates/TLS binding/OTLP/codecs), `-4` (ops, edge +
+  multi-worker templates), `-5` (broadcast). Headline gap: no TLS
+  anywhere in-tree. Compile-speed concern dismissed (controlled A/B
+  clean).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -1166,7 +1176,11 @@ STATE AT WRAP 17:
 - Evidence: `probe-logs\toolchain-v0645\` (post-bump WIN/LINUX
   summaries + `-prebump` copies; `sql-coverify\artifact-0645-*.log`).
 
-NEXT -- the post-release queue (dependency order):
+NEXT -- the post-release queue (dependency order; the top-tier program
+in docs\ROADMAP-TOP-TIER.md frames the whole queue and holds the
+lane-ask refs REL-20261015-2202-pulse..-5; TLS is the ceiling):
+0. Top-tier tracker: fold lane replies to the asks into the milestone
+   plan as they land; W10 bench baseline is the first proof artifact.
 1. Keep-alive Phase A + B per docs\DESIGN-KEEPALIVE-DEADLINES.md
    (primitives delivered in the wave-119+ runtime).
 2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
