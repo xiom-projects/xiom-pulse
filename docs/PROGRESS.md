@@ -657,6 +657,15 @@ milestones; per-lane roadblock asks filed on the bus
 (`REL-20261015-2202-pulse..-5`). No score change -- the directive
 re-frames the plan; strict evidence-scoring still applies._
 
+_Delta 2026-10-15 (site-mode 301 -- doorbell unit): the website lane's
+full-tree pass on 0.2.1 found slash-less directory paths serving 200
+with broken relative assets; fixed (`74cd0f9`): 301 to the canonical
+slash form (prefix + query preserved), dir-before-file resolution so
+POSIX directories no longer take the exact-file branch, three new suite
+checks, `run.sh` log cap 200->400. Both platforms FAILED=0 (suites x2 +
+smoke 119/119 jsonl+kv). Score holds -- correctness polish, no new
+capability._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

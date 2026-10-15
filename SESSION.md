@@ -395,6 +395,14 @@
   multi-worker templates), `-5` (broadcast). Headline gap: no TLS
   anywhere in-tree. Compile-speed concern dismissed (controlled A/B
   clean).
+- **Site-mode 301 (doorbell unit, 2026-10-15T23:4xZ):** the website
+  lane's full-tree pass found slash-less directory paths serving 200
+  with broken relative assets; now 301 to the canonical slash form
+  (prefix + query preserved), with dir-before-file resolution for POSIX
+  (the naive order was Windows-only-correct -- caught by the Linux
+  sweep, fixed pre-commit). `74cd0f9`, three new site checks, both
+  platforms FAILED=0; `run.sh` log cap 200->400. Reply
+  `REL-20261015-2344-pulse`; ships in 0.2.2.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
