@@ -9,6 +9,28 @@ The full changelog lives in `CHANGELOG.md` in the repository root; each
 GitHub release also carries highlights. The download mirror lists the
 current tag in `https://dl.xiom-lang.org/pulse/latest.json`.
 
+## 0.2.1 - 2026-10-15
+
+Rebuild release on the XIOM v0.64.5 toolchain (paired stdlib pin
+`092dfa0c`): the upstream startup-crash fix unblocks the Linux
+production demo. Brings the 0.2.x line current with main -- the game
+control plane (`/api/game/*`), static site mode, security headers, and
+`openapi --check`.
+
+Artifacts (each with a `.sha256`, plus a combined `SHA256SUMS`):
+
+- `pulse-0.2.1-linux-x64.zip`
+- `pulse-0.2.1-windows-x64.zip`
+
+Highlights: static site mode (`PULSE_SITE_DIR`) and the helmet-derived
+security header set; the P8 game control plane for XIOM Engine
+integration (register / heartbeat / config / compat / match-report /
+telemetry); the OpenAPI route-drift guard + `openapi --check`. Built on
+XIOM v0.64.5; smoke suite 119 checks.
+
+Notes: macOS x64/arm64 still follow once the darwin items land (now
+targeted at the v0.64.6 toolchain).
+
 ## 0.2.0 - 2026-10-10
 
 The "matters" release: the API-contract slate plus real integrations

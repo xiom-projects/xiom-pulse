@@ -4,7 +4,20 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
-## [Unreleased]
+## [0.2.1] - 2026-10-15
+
+### Changed
+
+- **Rebuilt on the released XIOM v0.64.5 toolchain** (paired stdlib pin
+  `092dfa0c`): carries the upstream startup-crash family fix
+  (`Path.is_dir` implicit-self recursion) that kept the Linux production
+  demo on 0.1.0. CI pins in every workflow moved to v0.64.5 + the four
+  archive SHA256s, and the `&HandlerOut` reference-parameter helper is
+  re-landed in the suite as a permanent compiler regression lock
+  (batch-5 witness).
+- The registry `xiom.sqlite` 0.4.1 SQL driver artifact is consumer
+  co-verified green (24/24) on this toolchain; the SQL migrations unit
+  follows post-release.
 
 ### Added
 
