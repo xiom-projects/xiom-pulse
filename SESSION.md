@@ -355,6 +355,19 @@
   next :17 sweep. **NEXT SESSION = toolchain wave-2, then cut 0.2.1** --
   full recipe is the §3 paste prompt (wrap 16). Demo stays on 0.1.0
   until the ops redeploy ping.
+- **NEW GATE -- v0.64.5 linux-x64 miscompile (xvector,
+  `REL-20261015-2142-xvector`, compiler `acked` high):** on Linux,
+  v0.64.5 mis-compiles xvector's HTTP service `/search` path (route
+  miss -> 404/400; 6 gates red on WSL; **v0.64.4 linux AND v0.64.5
+  windows are green**; reproduces with the bundled stdlib; repro
+  `docs/repro/xv-http-service-linux` in their repo). PULSE is an HTTP
+  server -- treat this as a live risk for the wave-2 Linux legs AND the
+  0.2.1 demo (the VPS is Linux). Wave-2 step: if PULSE's Linux sweep
+  shows any routing/param anomaly (or suites/smoke red in a
+  routing-shaped way), STOP, file with our repro, and hold the cut
+  until the compiler item clears; if our Linux legs are green, cut but
+  tell ops to validate routing (not just /health) before switching
+  traffic, keeping the 0.1.0 rollback armed.
 - **0.2.1 RELEASED (2026-10-15T21:23Z) -- wrap 17:** wave-2 adopted
   v0.64.5 + pin `092dfa0c` (fleet 12/12, suites x2, smoke 119/119
   jsonl+kv both platforms; helper re-landed `3743704`; CI pins
@@ -1290,6 +1303,11 @@ WAVE-2 RECIPE (do it fully before the cut):
    XIOM_COMPILER=<v0645> + XIOM_STDLIB=<new pin>; suites carry
    --timeout-sec 300; expect fleet 12/12 + suites x2 + smoke 119/119
    jsonl+kv both platforms). Commit with evidence pointers.
+   *** GATE WARNING: v0.64.5 linux-x64 has a known HTTP-routing
+   miscompile (xvector REL-20261015-2142-xvector, compiler acked). If
+   the Linux legs show routing/param anomalies or routing-shaped
+   failures, STOP and file with us; do not cut 0.2.1 for Linux until
+   the compiler item clears. Windows is reported clean. ***
 9. release.yml dry run (gh workflow run release.yml) -> watch to green.
 10. SQL artifact re-verify on the new pin: run docs/repro/sql-coverify/
     (artifact form, 0.4.1) -> expect 24/24; then verify+close the

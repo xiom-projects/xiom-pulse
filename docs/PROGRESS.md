@@ -624,6 +624,16 @@ time the gates caught it pre-publish. Next session: toolchain wave-2
 then cut 0.2.1 per RELEASE-CHECKLIST + the ops redeploy ping -- full
 recipe in SESSION.md §3 (wrap 16). Score holds (~55.4%)._
 
+_Delta 2026-10-15 (wrap-16 addendum -- new release risk): xvector filed
+`REL-20261015-2142-xvector` (high, compiler acked): **v0.64.5 linux-x64
+miscompiles their HTTP service routing** (/search -> 404/400; 6 gates
+red on WSL; v0.64.4-linux and v0.64.5-windows green; bundled-stdlib
+repro). Since PULSE is an HTTP server and the demo is Linux, the wave-2
+Linux legs and the 0.2.1 cut now carry an explicit routing-anomaly
+stop-and-file gate (SESSION digest + §3 step 8 updated); if our Linux
+legs are green, ops still validates routing before switching traffic
+with 0.1.0 rollback armed. Score holds (~55.4%)._
+
 _Delta 2026-10-15 (**v0.2.1 RELEASED -- wrap 17**): wave-2 adopted the
 released **v0.64.5 + stdlib pin `092dfa0c`** (fleet 12/12, suites x2,
 smoke 119/119 jsonl+kv, both platforms; dry runs `38802546194` +
