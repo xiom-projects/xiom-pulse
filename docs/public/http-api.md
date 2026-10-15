@@ -98,7 +98,9 @@ reachable at `/api/uploads` and `/v1/api/uploads`.
 With `PULSE_SITE_DIR` set, the binary serves a pre-built static site:
 any `GET`/`HEAD` that matches no API route is resolved against the site
 root -- exact file, clean URL (`/about` -> `about.html`), directory
-index (`/docs/` -> `docs/index.html`). Missing paths serve `404.html`
+index (`/docs/` -> `docs/index.html`; a slash-less directory path like
+`/docs` gets a `301` to `/docs/` so relative links resolve correctly).
+Missing paths serve `404.html`
 with status `404` (plain JSON when that file is absent), `.wasm` is
 served as `application/wasm`, and caching is controlled by
 `PULSE_SITE_MAX_AGE` (default 3600s). API routes (`/api/*`, `/v1/*`,

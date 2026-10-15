@@ -64,13 +64,13 @@ fi
 RC=$?
 
 if [ "$RC" -eq 124 ]; then
-  sed -n '1,200p' "$OUT"
+  sed -n '1,400p' "$OUT"
   rm -f "$OUT" "$PULSE_REPO_ROOT/a.out" "$PULSE_REPO_ROOT/a.exe" "$PULSE_REPO_ROOT/a.exe.ll"
   pulse_log "run: TIMEOUT after ${TIMEOUT_SEC}s"
   exit 124
 fi
 
-[ "$QUIET" -eq 0 ] && sed -n '1,200p' "$OUT"
+[ "$QUIET" -eq 0 ] && sed -n '1,400p' "$OUT"
 
 # `xiom --run` prints the program's exit code on its own "exit code:" line and
 # can exit 0 even when the program crashed; trust the reported code.

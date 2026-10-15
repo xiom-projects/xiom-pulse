@@ -147,36 +147,60 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
   /// site_candidate returns the site-relative file to serve for a URL
   /// path: exact file, clean URL (`about` -> about.html), directory index
   /// (`sub/` or `sub` -> sub/index.html); "" when nothing matches. The
-  /// static engine still owns traversal rejection. Complexity: O(fs).
-  fn site_candidate(dir: Str, path: Str) -> Str {
+  /// Bool reports a directory index reached via a slash-less path -- the
+  /// caller must 301 to the slash form so relative asset links in the
+  /// page resolve against the directory, not its parent (nginx
+  /// convention). The static engine still owns traversal rejection.
+  /// Complexity: O(fs).
+  fn site_candidate(dir: Str, path: Str) -> (Str, Bool) {
     var p = path;
     if p.len() > 0 && string.str_starts_with(p, "/") {
       p = string.str_slice(p, 1, p.len());
     }
     if p.len() == 0 {
-      if io.file_exists(io.join_paths(dir, "index.html")) { return "index.html"; }
-      return "";
+      if io.file_exists(io.join_paths(dir, "index.html")) { return ("index.html", false); }
+      return ("", false);
     }
     if string.str_ends_with(p, "/") {
       let idx = p + "index.html";
-      if io.file_exists(io.join_paths(dir, idx)) { return idx; }
-      return "";
+      if io.file_exists(io.join_paths(dir, idx)) { return (idx, false); }
+      return ("", false);
     }
-    if io.file_exists(io.join_paths(dir, p)) { return p; }
+    // Directory check first: on POSIX, file_exists (stat) also succeeds
+    // for directories, and an exact-file branch would swallow the dir --
+    // serving it as a file and skipping the slash redirect (the Linux-only
+    // site dir 301 miss found by the sweep).
+    if io.is_dir(io.join_paths(dir, p)) {
+      let idx2 = p + "/index.html";
+      if io.file_exists(io.join_paths(dir, idx2)) { return (idx2, true); }
+      return ("", false);
+    }
+    if io.file_exists(io.join_paths(dir, p)) { return (p, false); }
     let htm = p + ".html";
-    if io.file_exists(io.join_paths(dir, htm)) { return htm; }
-    let idx2 = p + "/index.html";
-    if io.file_exists(io.join_paths(dir, idx2)) { return idx2; }
-    return "";
+    if io.file_exists(io.join_paths(dir, htm)) { return (htm, false); }
+    return ("", false);
   }
 
   /// serve_site_page serves one URL path from the site root (PULSE_SITE_DIR):
-  /// clean URLs + index resolution + a custom `404.html` (served with
-  /// status 404) + `application/wasm` for `.wasm`. Cache via
+  /// clean URLs + index resolution (+ a 301 to the slash form when a
+  /// slash-less directory path resolves to its index) + a custom `404.html`
+  /// (served with status 404) + `application/wasm` for `.wasm`. Cache via
   /// PULSE_SITE_MAX_AGE. Complexity: O(fs).
   fn serve_site_page(dir: Str, path: Str, req: &PulseRequest) -> HandlerOut {
-    let cand = site_candidate(dir, path);
+    let sc = site_candidate(dir, path);
+    let cand = sc.0;
     if cand.len() > 0 {
+      if sc.1 {
+        // Directory index via a slash-less path: 301 to the canonical
+        // form. Location preserves the client's prefix (`/v1/...`) and
+        // the query string (REL-20261015-2156-website-2).
+        let parts = router.split_target(req.target);
+        var loc = parts.0 + "/";
+        if parts.1.len() > 0 { loc = loc + "?" + parts.1; }
+        var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+        hs.push(("Location", loc));
+        return HandlerOut{ status: 301; content_type: CONTENT_TEXT; headers: hs; body: ""; body_bytes: Vec[UInt8].new() };
+      }
       var out = serve_static_file(dir, cand, req, config.cfg_site_max_age());
       if string.str_ends_with(cand, ".wasm") {
         out.content_type = "application/wasm";

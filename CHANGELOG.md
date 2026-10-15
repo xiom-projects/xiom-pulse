@@ -4,6 +4,16 @@ All notable changes to XIOM PULSE. Versions match the release tags
 (`pulse-v<version>`); highlights for each release also appear in the
 GitHub release body.
 
+## [Unreleased]
+
+### Changed
+
+- Site mode now answers `301` (query preserved) when a slash-less
+  directory path resolves to its index page, so relative asset URLs in
+  the page resolve against the directory instead of its parent -- the
+  nginx convention; found re-testing the full xiom-lang.org tree
+  (`REL-20261015-2156-website-2`).
+
 ## [0.2.1] - 2026-10-15
 
 ### Changed

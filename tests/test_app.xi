@@ -530,6 +530,12 @@ pub fn main() -> Int {
   f = f + check("site clean url", s2.status == 200 && string.str_contains(http.bytes_to_str(&s2.body_bytes, 0, s2.body_bytes.len()), "SITE_ABOUT"));
   let s3 = route_req("GET", "/sub/", "");
   f = f + check("site dir index", s3.status == 200 && string.str_contains(http.bytes_to_str(&s3.body_bytes, 0, s3.body_bytes.len()), "SITE_SUB"));
+  let s3b = route_req("GET", "/sub", "");
+  f = f + check("site dir 301", s3b.status == 301 && s3b.headers.len() == 1 && s3b.headers[0].0 == "Location" && s3b.headers[0].1 == "/sub/");
+  let s3c = route_req("GET", "/sub?x=1", "");
+  f = f + check("site dir 301 query", s3c.status == 301 && s3c.headers.len() == 1 && s3c.headers[0].1 == "/sub/?x=1");
+  let s3d = route_req("GET", "/sub/index.html", "");
+  f = f + check("site index file direct", s3d.status == 200 && string.str_contains(http.bytes_to_str(&s3d.body_bytes, 0, s3d.body_bytes.len()), "SITE_SUB"));
   let s4 = route_req("GET", "/assets/app.js", "");
   f = f + check("site assets", s4.status == 200 && string.str_contains(http.bytes_to_str(&s4.body_bytes, 0, s4.body_bytes.len()), "SITE_JS"));
   let s5 = route_req("GET", "/assets/bundle.wasm", "");
