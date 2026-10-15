@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-11 wrap 15 (0.2.0 shipped on linux+windows; v0.64.3 pinned+validated; site mode landed; xiom-relays bus + 11-project reference shelf), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-15 wrap 16 (v0.64.5 RELEASED + paired stdlib pin `092dfa0c`; game control plane `/api/game/*` shipped; SIGILL fixed + verified at source; stdlib wave-2 delivered + verified; NEXT = toolchain wave-2 then cut 0.2.1), by the PULSE consumer lane.
 
 ## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
@@ -348,6 +348,13 @@
   SIGILL fix (m297) is in the candidate; PULSE's wave-2 sequence stays
   staged and fires on the eventual release. No demo change (ops still
   on hold).
+- **v0.64.5 RELEASED (2026-10-15T19:18Z):** GH assets live now (windows
+  `bd71e2d3...`, linux `246e5e82...`; macos x64/arm64 also); paired
+  stdlib pin from the compiler tag (`v0.64.5:STDLIB_VERSION`) =
+  **`092dfa0c`** (the moved stdlib-v0.64.5); the dl mirror lands at the
+  next :17 sweep. **NEXT SESSION = toolchain wave-2, then cut 0.2.1** --
+  full recipe is the §3 paste prompt (wrap 16). Demo stays on 0.1.0
+  until the ops redeploy ping.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -1105,7 +1112,132 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-11 wrap 15)
+## 3. Paste prompt for the next PULSE session (2026-10-15 wrap 16)
+
+```
+You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
+XIOM web backend / full backend framework). Read SESSION.md first -- the
+CURRENT STATE digest at the top is authoritative; then docs\PROGRESS.md,
+docs\PRODUCTION-REFERENCES.md, docs\PRODUCTION-GAPS.md and your designs
+(docs\DESIGN-*.md). Relays: E:\xiom-lang\xiom-relays. Reference shelf:
+E:\repos\ (fastify, gin, fasthttp, h11, helmet, bbolt, knex, bullmq +
+the two benchmark suites).
+
+RE-ARM YOUR DOORBELL FIRST (crons are session-scoped): every 2h with the
+standard sweep prompt (fetch+merge --ff-only relays; view --lane pulse;
+process items; wrap on change). Use `python tools/relay.py` in the
+relays clone; NEVER `git pull` there; never edit another lane's item.
+
+STATE AT WRAP 16:
+- 0.2.0 shipped (linux+windows; demo still 0.1.0 on purpose).
+- Game control plane /api/game/* SHIPPED (2e65965): register / heartbeat
+  (command piggyback) / config (ETag/409) / compat / match-report +
+  telemetry (Idempotency-Key) / admin command; P8 convention FROZEN
+  (additive-only); engine build note filed (REL-20261013-1701-pulse).
+- SIGILL fixed at source (compiler m297) and PULSE-verified (witness rc 0;
+  server serves jsonl + kv on a post-fix build); ops told to HOLD the demo
+  until our redeploy ping (REL-20261014-1305-pulse).
+- The whole critical-path stdlib wave-2 is delivered + reporter-verified:
+  deadlines/socket options (0317-pulse, -2), fsync family (-5, -6,
+  fsync_dir 1134-pulse), signals/poll/SO_REUSEPORT/WS/chunked (1946-pulse
+  CLOSED). Keep-alive + durability designs are ready to implement.
+- SQL driver co-verified 24/24 (in-tree) and the registry-artifact path
+  works on m303+ (xiom.sqlite 0.4.1, unqualified type-statics form).
+- CI pins TODAY (before your first wave): XIOM_TOOLCHAIN_VERSION v0.64.3
+  (+4 sha256s), STDLIB_VERSION 3df0843. Local: Windows pinned v0.64.3 at
+  %LOCALAPPDATA%\xiom.new-20261010-212636; v0.64.4 at xiom.new; WSL
+  default v0.64.4 + pinned v0.64.3 copy at ~/.local/share/xiom-0643;
+  pin caches %LOCALAPPDATA%\xiom-pins\stdlib-3df0843 + WSL
+  ~/.cache/xiom-pin/stdlib-3df0843; package store has the 10 pinned deps
+  + xiom.sqlite 0.4.0/0.4.1.
+
+*** v0.64.5 IS RELEASED (2026-10-15T19:18Z) -- YOUR FIRST JOB IS THE
+TOOLCHAIN WAVE-2, THEN CUT 0.2.1. ***
+
+v0.64.5 facts (verified from the release + the compiler tag):
+- assets (gh release download -R xiom-lang/xiom v0.64.5 works NOW; the
+  dl.xiom-lang.org mirror lands at the next :17 sweep):
+  windows-x64.zip  sha256 bd71e2d357b7a7218ad5e440396b7278767ed8bc080ba720192c60742b78907f
+  linux-x64.tar.gz sha256 246e5e826640e9e115df188330f1d6d643e4adb30248320d532400acd3a4b7fb
+  macos-x64.tar.gz sha256 d4073c84a7c385612a5c08f47db1b8dedc813804942dffd1d884aafe22b46350
+  macos-arm64.tar.gz sha256 7636eb6698182ab893d6999f922c5e133d558b443f50f93245c39c5e3a83bf77
+- paired stdlib pin (compiler v0.64.5:STDLIB_VERSION):
+  092dfa0cc0dc813943154278eecfc4fbb144d6e8  (stdlib-v0.64.5, the MOVED tag)
+
+WAVE-2 RECIPE (do it fully before the cut):
+1. Bus sweep as always. Download the 4-5 assets above (SHA256SUMS from the
+   GH release or dl) and verify hashes.
+2. Install Windows: extract to %LOCALAPPDATA%\xiom.new-20261015-<ts>;
+   refresh the xiom.new copy; update the user PATH entry (replace the
+   xiom.new-20261010-212636 segment). Install WSL: extract to a versioned
+   dir (e.g. ~/.local/share/xiom-v0645), point ~/.local/bin/xiom at it;
+   KEEP the v0.64.3 copy for old-pin A/B.
+3. Deps for the new toolchain (both platforms): xiom pkg install
+   xiom.http@0.1.5 xiom.cookie@0.1.1 xiom.jwt@0.2.0 xiom.router@0.1.0
+   xiom.rate@0.2.0 xiom.metrics@0.2.0 xiom.http.middleware@0.1.0
+   xiom.session@0.1.0 xiom.static@0.1.0 xiom.kv@0.1.0 xiom.sqlite@0.4.1
+4. Pin cache: export stdlib 092dfa0c into %LOCALAPPDATA%\xiom-pins\
+   stdlib-092dfa0c and the WSL ~/.cache/xiom-pin/stdlib-092dfa0c
+   (git -C E:\xiom-lang\stdlib archive -o file.tar <sha>; tar -x; NEVER
+   pipe git archive through PowerShell).
+5. Re-land the helper: git apply docs/repro/handlerout-helper/witness.patch
+   (permanent suite lock now that the toolchain is >= m261).
+6. Pre-sweep checks: SIGILL witness
+   (E:\xiom-lang\stdlib\tools\known_failures\p_path_println_context_crash.xi)
+   rc 0; build both pulse_app binaries; serve /health in jsonl AND kv.
+7. CI pins: STDLIB_VERSION -> 092dfa0cc0dc813943154278eecfc4fbb144d6e8;
+   XIOM_TOOLCHAIN_VERSION "v0.64.5" + the four sha256s above in ci.yml,
+   release.yml, heavy.yml. Commit -s + push.
+8. Full sweep both platforms into probe-logs\toolchain-v0645\ (copy the
+   scripts from probe-logs\game-cp-20261013\; Linux: export
+   XIOM_COMPILER=<v0645> + XIOM_STDLIB=<new pin>; suites carry
+   --timeout-sec 300; expect fleet 12/12 + suites x2 + smoke 119/119
+   jsonl+kv both platforms). Commit with evidence pointers.
+9. release.yml dry run (gh workflow run release.yml) -> watch to green.
+10. SQL artifact re-verify on the new pin: run docs/repro/sql-coverify/
+    (artifact form, 0.4.1) -> expect 24/24; then verify+close the
+    co-verify on REL-20261013-1540-packages / REL-20261013-1718-pulse and
+    reply on REL-20261013-1721-bindings-3.
+
+CUT 0.2.1 (docs\RELEASE-CHECKLIST.md is the authority):
+- Bump EVERY version literal: project version (src\pulse.xi APP_VERSION),
+  the twin `Server: xiom-pulse/<ver>` headers in src\http.xi, the
+  openapi literal in tests\test_app.xi, CHANGELOG (Unreleased -> 0.2.1 +
+  date), digest references.
+- Dry run first (release.yml dispatch) -> green both legs.
+- Tag pulse-v0.2.1 (rules: protect-release-tags; org-admin bypass is
+  normal), push tag, watch the release run green (dl assets published).
+- Ping ops on REL-20261010-1721-ops: artifacts live + hashes -> ops
+  redeploys the demo 0.1.0 -> 0.2.1 (website badge follows latest.json).
+- Update the digest + PROGRESS with the cut.
+
+AFTER 0.2.1 (dependency order):
+1. Keep-alive Phase A + B per docs\DESIGN-KEEPALIVE-DEADLINES.md
+   (primitives delivered in the wave-119+ runtime).
+2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
+3. Middleware order tests FIRST, then the chain refactor, then the jobs
+   core (docs\DESIGN-MIDDLEWARE-JOBS.md).
+4. SQL class: migrations runner per docs\DESIGN-SQL-MIGRATIONS.md (wire
+   xiom.sqlite into package.xi + the CI install list when the unit opens).
+5. Bench baseline: bench\ profile for the six bttger endpoints
+   (E:\repos\web-framework-benchmarks + -xlcaptain); pre/post keep-alive
+   numbers.
+6. SSE + WebSocket units; per-route rate policy; OpenAPI paths
+   generation remainder; test-runner harness (fn-ptr fixed).
+7. macOS pair (REL-20261010-1609-pulse/-2) is v0.64.6 scope (owner
+   decision); re-test when that toolchain moves.
+8. Registry pilot gate ping when production-serving (REL-20261013-1707).
+9. Game CP: engine replies / further /api/game/* asks via
+   REL-20261013-1701-pulse.
+
+DISCIPLINE: pinned toolchain for ALL local builds (the WSL default is
+v0.64.4-ish and will drift -- always export XIOM_COMPILER/XIOM_STDLIB
+explicitly); suite watchdog >= 300s on Linux (drvfs slowness); signed
+conventional commits; bus sweep before finishing any task; wrap at every
+stopping point (SESSION.md digest + docs\PROGRESS.md).
+```
+
+## 3a. Paste prompt (2026-10-11 wrap 15, superseded)
 
 ```
 You are the PULSE session for E:\xiom-projects\xiom-pulse (the official

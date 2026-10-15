@@ -614,6 +614,16 @@ now waits on a compiler fix wave + battery re-run; the SIGILL fix (m297)
 is already in the candidate. PULSE wave-2 stays staged; no ops change
 (demo hold until the release + our ping). Score holds (~55.4%)._
 
+_Delta 2026-10-15 (**v0.64.5 RELEASED -- wrap 16**): the archive is
+live (GH 19:18Z; windows `bd71e2d3...` / linux `246e5e82...`; paired
+stdlib pin `092dfa0c` = the moved stdlib-v0.64.5; dl mirror at the next
+:17). The release train held three times (m323-m327 regression wave, a
+pin-era m296 smoke fix with the tag move, and pin-PR CI rounds) and each
+time the gates caught it pre-publish. Next session: toolchain wave-2
+(install, deps, pin cache, helper re-land, sweeps, CI pins, dry run)
+then cut 0.2.1 per RELEASE-CHECKLIST + the ops redeploy ping -- full
+recipe in SESSION.md §3 (wrap 16). Score holds (~55.4%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
