@@ -680,6 +680,19 @@ Beacon freeze is GREEN (`56eb9f8`; milestone `REL-20261016-1401-pulse`
 filed) -- next: the `xiom.pulse` extraction + the benchmark baseline
 (pre/post keep-alive numbers)._
 
+_Delta 2026-10-16 (consumer-verify `xiom.template` 0.2.0 -- top-tier
+item 1c): the registry artifact (eco-v0.1.186; sha256 `bedd03a9...`)
+renders **15/15 x2 on both platforms** on the v0.64.5 pin -- the block
+surface (loops/inverted/dotted + auto-escaping `& < > " '`) verified
+against realistic pages (a 404 error page + a docs nav page) plus the
+exact strict-error texts; the v0.1 surface is unchanged. Consumer
+recipe pins the dependency (undeclared imports bind to the stdlib
+`xiom.string.template` Map surface -- documented in
+`docs/repro/template-verify/`). W8 templates wrapper unblocked; score
+holds (verification unit). The `xiom.pulse` (Beacon) extraction is IN
+FLIGHT packages-side (porter carving `56eb9f8` ->
+`packages/xiom-pulse`; `REL-20261016-1429-packages`)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

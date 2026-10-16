@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-16 wrap 18 (keep-alive **A+B landed** (`7924222`, `56eb9f8`) -- Beacon freeze gate GREEN, milestone `REL-20261016-1401-pulse` filed; packages delivered template 0.2.0 + ssl building + otel built + zstd real; NEXT = `xiom.pulse` (Beacon) extraction -> publish-ready item -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-16 wrap 18 (keep-alive **A+B landed** (`7924222`, `56eb9f8`) -- Beacon freeze gate GREEN, milestone `REL-20261016-1401-pulse` filed; packages delivered template 0.2.0 + ssl building + otel built + zstd real; NEXT = `xiom.pulse` (Beacon) extraction -> publish-ready item -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane. **Session 19 (live):** doorbell re-armed (2h); sweep acks pushed (`70e342f` bus); roadmap fold `8a1f22e`; **Beacon extraction IN FLIGHT packages-side** (porter carving `56eb9f8` -> `packages/xiom-pulse`, `REL-20261016-1429-packages`; no PULSE action until their relays); **`xiom.template 0.2.0` consumer-verify 15/15 x2 both platforms** (item 1c; unit `docs/repro/template-verify/`; bus reply filed).
 
 ## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
@@ -1245,18 +1245,18 @@ lane-ask refs REL-20261015-2202-pulse..-5; TLS is the ceiling):
    plan as they land; W10 bench baseline is the first proof artifact.
 1. ~~Keep-alive Phase A + B~~ DONE (2026-10-16): `7924222` + `56eb9f8`;
    freeze gate green (smoke 134/134 x2 both platforms).
-1b. **Beacon extraction -- THE next step (owner directive 2026-10-16):**
-    extract `xiom.pulse` per the packages porter SPEC/PROVENANCE --
-    protocol core (parser + builders + the A+B connection loop) +
-    router + envelope + `minimal.xi` example + its own CI -- then file
-    the **publish-ready item** to packages (tree + suite-x2 evidence +
-    version proposal; they drive the porter flow + the registry
-    canary). Refs: `REL-20261016-1108-pulse` (acked), `-1121`
-    (codenames), `-1401` (freeze milestone filed). One core, never a
-    fork; afterwards PULSE Station consumes the package.
-1c. Consumer-verify `xiom.template 0.2.0` (top-tier item 1): install +
-    render a real page (error pages / docs site) and note the result
-    in the `REL-20261016-1111-packages` flow.
+1b. **Beacon extraction -- IN FLIGHT (packages owns it as of
+    2026-10-16 ~14:29Z):** the porter is carving the frozen pair
+    `56eb9f8` verbatim into `packages/xiom-pulse` (fresh `minimal.xi` +
+    the hardening suite carried over; deps `xiom.std` only; 0.1.0) --
+    `REL-20261016-1429-packages`; stages relay as they land. PULSE: no
+    action until their porter/ops/publish relays; then co-verify the
+    carved surface against the frozen semantics and prepare the
+    Station-consumes refactor. One core, never a fork.
+1c. ~~Consumer-verify `xiom.template 0.2.0`~~ **DONE (session 19,
+    2026-10-16):** 15/15 x2 both platforms on the v0.64.5 pin
+    (`docs/repro/template-verify/`; registry artifact, sha256 matched;
+    reply filed to packages, ref `REL-20261016-1111-packages`).
 2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
 3. Middleware order tests FIRST, then the chain refactor, then the jobs
    core (docs\DESIGN-MIDDLEWARE-JOBS.md).
