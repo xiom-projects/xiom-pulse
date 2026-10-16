@@ -200,18 +200,17 @@ compile slowdown on v0.64.5 (controlled A/B: 117/68s vs 76/84s --
 machine-state variance, no finding).
 
 **Lane replies folded (2026-10-16, post-wrap-18):** the packages
-`-2202-pulse-3` slate is delivered -- `xiom.template 0.2.0` LIVE
-(eco-v0.1.186; consumer-verify = the next Q unit), `xiom.ssl 0.1.0`
-built + verified at bindings (23/23 + SKIP 4/4; PROD-only scope LIVE,
-eco 550), `xiom.brotli 0.1.0` landed (26/26 x2; scope LIVE, eco 552 --
-the stacked ssl+brotli registry publish rides packages' next batch),
-`xiom.otel 0.1.0` LIVE (eco-v0.1.188; OTLP core), `xiom.zstd 0.3.0`
-real (vendored 1.5.7). **`xiom.pulse` (Beacon) extraction STARTED**:
-the porter is carving the frozen pair `56eb9f8` into
-`packages/xiom-pulse` (`REL-20261016-1429-packages`; deps `xiom.std`
-only; hardening fixtures carry over; 0.1.0). stdlib (`-2202-pulse`;
-TLS/ALPN the ceiling), compiler (`-2202-pulse-2`) and ops
-(`-2202-pulse-4`) asks remain open.
+`-2202-pulse-3` slate is COMPLETE -- `xiom.template 0.2.0` LIVE
+(eco-v0.1.186; consumer-verify 15/15 x2), `xiom.ssl 0.1.0` LIVE
+(eco-v0.1.189; the TLS headline is closed on the packages path),
+`xiom.brotli 0.1.0` LIVE (eco-v0.1.189), `xiom.otel 0.1.0` LIVE
+(eco-v0.1.188; OTLP core), `xiom.zstd 0.3.0` real (vendored 1.5.7).
+**`xiom.pulse` (Beacon) extraction GREEN + IN-TREE** (`053cab87`;
+125/125 x2 on the pin; PULSE co-verify: all PROVENANCE hashes match at
+`56eb9f8`, the verbatim pairs byte-identical) -- ops scope asked,
+publish path next (`REL-20261016-1515/-1516-packages`). The remaining
+top-tier delta sits with stdlib (`-2202-pulse`; TLS/ALPN), compiler
+(`-2202-pulse-2`) and ops (`-2202-pulse-4`).
 
 ## 8. Proof discipline
 

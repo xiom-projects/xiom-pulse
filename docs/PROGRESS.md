@@ -693,6 +693,18 @@ holds (verification unit). The `xiom.pulse` (Beacon) extraction is IN
 FLIGHT packages-side (porter carving `56eb9f8` ->
 `packages/xiom-pulse`; `REL-20261016-1429-packages`)._
 
+_Delta 2026-10-16 (packages evening wave): the top-tier packages path is
+COMPLETE -- `xiom.ssl 0.1.0` (TLS headline) + `xiom.brotli 0.1.0` LIVE in
+eco-v0.1.189 (template/otel/zstd already delivered); and the `xiom.pulse`
+(Beacon) extraction is **GREEN + IN-TREE** (`053cab87`; 125/125 x2 on the
+pin; ops scope asked). PULSE co-verify: all PROVENANCE source hashes
+re-checked from our side at `56eb9f8` -- 14/14 match, the four verbatim
+pairs byte-identical (`cmp`), the keep-alive A/B markers confirmed in the
+carved loop, SPEC section 5 deviations reviewed and accepted; no surface
+changes requested. Next: publish at LIVE -> consumer-verify the installed
+artifact + prepare the Station-consumes refactor. Score holds (delivery +
+verification units)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
