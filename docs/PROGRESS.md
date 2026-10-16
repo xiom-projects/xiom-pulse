@@ -729,7 +729,8 @@ test_app +11 checks (config surface + durable append); crash harness
 re-run x2 both platforms; suites x2 + smoke both platforms green
 (evidence: `probe-logs/toolchain-v0645/*-SWEEP-SUMMARY*.txt`; the first
 linux pass was red on a stale runner pin -- `dd352f6` hardcode corrected
-to `092dfa0c`, red summary preserved). Storage 68 -> 72.
+to `092dfa0c`, red summary preserved). CI dry run `38947560303` green on
+both platforms. Storage 68 -> 72.
 Total ~55.4% -> ~55.8%._
 
 **Purpose:** one page the owner can read to see what a full
