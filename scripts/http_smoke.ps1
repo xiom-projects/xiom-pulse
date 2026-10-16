@@ -40,6 +40,19 @@ Remove-Item Env:PULSE_PORT -ErrorAction SilentlyContinue
 $env:PULSE_PORT = "$Port"
 $env:PULSE_CORS_ORIGIN = "*"
 $env:PULSE_UPLOAD_DIR = Join-Path $repoRoot "probe-logs\smoke-uploads"
+# Short deadlines for the Phase-A raw-socket checks (13e).
+$env:PULSE_READ_TIMEOUT = "4000"
+$env:PULSE_WRITE_TIMEOUT = "4000"
+$env:PULSE_IDLE_TIMEOUT = "2000"
+# Assets dir for the write-stall check: hello.txt + a 50 MB file so the
+# stalled-write drop is provable below any socket-buffer autotuning.
+$bigDir = Join-Path $repoRoot "probe-logs\smoke-assets"
+New-Item -ItemType Directory -Path $bigDir -Force | Out-Null
+Copy-Item (Join-Path $repoRoot "resources\public\hello.txt") $bigDir -Force
+$bigFile = [IO.File]::Create((Join-Path $bigDir "big.bin"))
+$bigFile.SetLength(50000000)
+$bigFile.Close()
+$env:PULSE_ASSETS_DIR = $bigDir
 # Server stdout/stderr go to FILES (never pipes): the access log exceeds
 # the ~4 KiB pipe buffer after ~40 requests, and an undrained pipe blocks
 # the single-threaded server mid-loop (standing project lesson). Launched
@@ -99,6 +112,7 @@ $ccOut = (& $ServerExe check-config 2>&1 | Out-String)
 $ccRc = $LASTEXITCODE
 Check "cli check-config subcommand" $ccOut "port="
 Check "cli check-config subcommand rc" "rc=$ccRc" "rc=0"
+Check "cli check-config deadlines" $ccOut "read_timeout_ms="
 
 function Invoke-CurlPost {
     param([string]$Path, [string]$Body, [string]$CookieJar = "", [string[]]$ExtraHeaders = @())
@@ -341,6 +355,37 @@ Remove-Item -LiteralPath $tf -ErrorAction SilentlyContinue
 $r = curl.exe -s -i -H "Content-Type: multipart/form-data" --data-binary "nope" "$base/api/uploads" 2>&1 | Out-String
 Check "upload no boundary 415" $r "415 Unsupported Media Type"
 Check "upload no boundary code" $r '"code":"unsupported_media_type"'
+
+# 13e. deadlines (keep-alive Phase A): slowloris -> 408; write-stall drop
+$tc = New-Object Net.Sockets.TcpClient
+$tc.Connect("127.0.0.1", $Port)
+$st = $tc.GetStream()
+$partial = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: smoke")
+$st.Write($partial, 0, $partial.Length)
+Start-Sleep -Milliseconds 5600
+$buf = New-Object byte[] 4096
+$n = $st.Read($buf, 0, 4096)
+$slowResp = [Text.Encoding]::ASCII.GetString($buf, 0, $n)
+Check "deadline slowloris 408" $slowResp "408 Request Timeout"
+$tc.Close()
+$r = Invoke-CurlGet "/health"
+Check "deadline loop alive after slowloris" $r "200 OK"
+
+$tc2 = New-Object Net.Sockets.TcpClient
+$tc2.ReceiveBufferSize = 4096
+$tc2.Connect("127.0.0.1", $Port)
+$st2 = $tc2.GetStream()
+$favReq = [Text.Encoding]::ASCII.GetBytes("GET /assets/big.bin HTTP/1.1`r`nHost: smoke`r`n`r`n")
+$st2.Write($favReq, 0, $favReq.Length)
+Start-Sleep -Milliseconds 5600
+$st2.ReadTimeout = 4000
+$buf2 = New-Object byte[] 8192
+$favTotal = 0
+try { while (($n2 = $st2.Read($buf2, 0, 8192)) -gt 0) { $favTotal += $n2; if ($favTotal -gt 60000000) { break } } } catch { }
+$tc2.Close()
+if ($favTotal -lt 20000000) { Check "deadline write-stall dropped" "yes" "yes" } else { Check "deadline write-stall dropped" "total=$favTotal" "yes" }
+$r = Invoke-CurlGet "/health"
+Check "deadline loop alive after write-stall" $r "200 OK"
 
 # 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1

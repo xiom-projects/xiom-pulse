@@ -91,6 +91,27 @@ pub fn cfg_site_max_age() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_SITE_MAX_AGE", "3600"), 3600);
 }
 
+/// cfg_read_timeout returns the full-request read deadline in ms
+/// (PULSE_READ_TIMEOUT, default 30000; 0 = no deadline, dev only).
+/// Complexity: O(1). Pure.
+pub fn cfg_read_timeout() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_READ_TIMEOUT", "30000"), 30000);
+}
+
+/// cfg_write_timeout returns the response write deadline in ms
+/// (PULSE_WRITE_TIMEOUT, default 30000; 0 = no deadline, dev only).
+/// Complexity: O(1). Pure.
+pub fn cfg_write_timeout() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_WRITE_TIMEOUT", "30000"), 30000);
+}
+
+/// cfg_idle_timeout returns the keep-alive idle deadline in ms
+/// (PULSE_IDLE_TIMEOUT, default 5000; honored from keep-alive Phase B).
+/// Complexity: O(1). Pure.
+pub fn cfg_idle_timeout() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_IDLE_TIMEOUT", "5000"), 5000);
+}
+
 /// cfg_cors_origin returns the allowed CORS origin ("" = CORS off).
 /// Complexity: O(1). Pure.
 pub fn cfg_cors_origin() -> Str {
@@ -436,6 +457,32 @@ pub fn cfg_validate() -> Vec[Str] {
   let backend = env.var_or("PULSE_STORE_BACKEND", "");
   if backend.len() > 0 && backend != "jsonl" && backend != "kv" {
     w.push("PULSE_STORE_BACKEND=\"" + backend + "\" is not jsonl or kv; using jsonl");
+  }
+
+  let rt = env.var_or("PULSE_READ_TIMEOUT", "");
+  if rt.len() > 0 {
+    let rv = cfg_digit_value(rt);
+    if rv < 0 {
+      w.push("PULSE_READ_TIMEOUT=\"" + rt + "\" is not a non-negative integer; using 30000");
+    } else if rv == 0 {
+      w.push("PULSE_READ_TIMEOUT=0 disables the read deadline (slowloris risk; dev only)");
+    }
+  }
+  let wt = env.var_or("PULSE_WRITE_TIMEOUT", "");
+  if wt.len() > 0 {
+    let wv = cfg_digit_value(wt);
+    if wv < 0 {
+      w.push("PULSE_WRITE_TIMEOUT=\"" + wt + "\" is not a non-negative integer; using 30000");
+    } else if wv == 0 {
+      w.push("PULSE_WRITE_TIMEOUT=0 disables the write deadline (stalled-reader risk; dev only)");
+    }
+  }
+  let ito = env.var_or("PULSE_IDLE_TIMEOUT", "");
+  if ito.len() > 0 {
+    let iv = cfg_digit_value(ito);
+    if iv < 0 {
+      w.push("PULSE_IDLE_TIMEOUT=\"" + ito + "\" is not a non-negative integer; using 5000");
+    }
   }
 
   return w;

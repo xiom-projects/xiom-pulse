@@ -6,6 +6,14 @@ GitHub release body.
 
 ## [Unreleased]
 
+### Added
+
+- Connection deadlines (keep-alive Phase A): `PULSE_READ_TIMEOUT` /
+  `PULSE_WRITE_TIMEOUT` / `PULSE_IDLE_TIMEOUT` bound every client wait
+  -- a slowloris gets `408 Request Timeout`, a stalled reader is
+  dropped mid-write, and one slow client can no longer hold the loop.
+  `--check-config` prints the values and warns on `0` (dev only).
+
 ### Changed
 
 - Site mode now answers `301` (query preserved) when a slash-less

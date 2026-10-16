@@ -66,12 +66,23 @@ CC_OUT=$("$SERVER_EXE" check-config 2>&1)
 CC_RC=$?
 pulse_check "cli check-config subcommand" "$CC_OUT" "port="
 pulse_check_eq "cli check-config subcommand rc" "$CC_RC" "0"
+pulse_check "cli check-config deadlines" "$CC_OUT" "read_timeout_ms="
 
 LOG_DIR="$PULSE_REPO_ROOT/probe-logs"
 mkdir -p "$LOG_DIR"
 SERVER_LOG="$LOG_DIR/http-smoke.out"
 
-PULSE_CORS_ORIGIN='*' PULSE_PORT="$PORT" PULSE_UPLOAD_DIR="$LOG_DIR/smoke-uploads" "$SERVER_EXE" >"$SERVER_LOG" 2>&1 &
+# Assets dir for the write-stall check: hello.txt + a 50 MB sparse file so
+# the stalled-write drop is provable below any socket-buffer autotuning.
+BIG_DIR="$LOG_DIR/smoke-assets"
+mkdir -p "$BIG_DIR"
+cp "$PULSE_REPO_ROOT/resources/public/hello.txt" "$BIG_DIR/"
+truncate -s 50M "$BIG_DIR/big.bin"
+
+PULSE_CORS_ORIGIN='*' PULSE_PORT="$PORT" PULSE_UPLOAD_DIR="$LOG_DIR/smoke-uploads" \
+  PULSE_READ_TIMEOUT=4000 PULSE_WRITE_TIMEOUT=4000 PULSE_IDLE_TIMEOUT=2000 \
+  PULSE_ASSETS_DIR="$BIG_DIR" \
+  "$SERVER_EXE" >"$SERVER_LOG" 2>&1 &
 SRV_PID=$!
 
 if ! wait_listen "$PORT" 10; then
@@ -307,6 +318,57 @@ R=$(curl -s -i -H "Content-Type: multipart/form-data" --data-binary "nope" "$(pu
 pulse_check "upload no boundary 415" "$R" "415 Unsupported Media Type"
 pulse_check "upload no boundary code" "$R" '"code":"unsupported_media_type"'
 rm -f "$TF"
+
+# --- 13e. deadlines (keep-alive Phase A): slowloris -> 408; write-stall -----
+DL_SLOW=$(python3 - "$PORT" <<'PYEOF'
+import socket, sys, time
+port = int(sys.argv[1])
+s = socket.create_connection(("127.0.0.1", port), 5)
+s.sendall(b"GET /health HTTP/1.1\r\nHost: smoke")
+time.sleep(5.6)
+data = s.recv(4096)
+print(data.split(b"\r\n")[0].decode("latin1") if data else "EMPTY")
+s.close()
+PYEOF
+)
+if printf '%s' "$DL_SLOW" | grep -q "408 Request Timeout"; then
+  pulse_check "deadline slowloris 408" yes yes
+else
+  pulse_check "deadline slowloris 408" "$DL_SLOW" "408 Request Timeout"
+fi
+R=$(http_get /health)
+pulse_check "deadline loop alive after slowloris" "$R" "200 OK"
+DL_STALL=$(python3 - "$PORT" <<'PYEOF'
+import socket, sys, time
+port = int(sys.argv[1])
+t = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+t.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
+t.connect(("127.0.0.1", port))
+t.sendall(b"GET /assets/big.bin HTTP/1.1\r\nHost: smoke\r\n\r\n")
+time.sleep(5.6)
+total = 0
+t.settimeout(4)
+try:
+    while True:
+        chunk = t.recv(8192)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > 60000000:
+            break
+except Exception:
+    pass
+print(total)
+t.close()
+PYEOF
+)
+if [ -n "$DL_STALL" ] && [ "$DL_STALL" -lt 20000000 ]; then
+  pulse_check "deadline write-stall dropped" yes yes
+else
+  pulse_check "deadline write-stall dropped" "bytes=$DL_STALL" yes
+fi
+R=$(http_get /health)
+pulse_check "deadline loop alive after write-stall" "$R" "200 OK"
 
 # --- 13. QUIT ---------------------------------------------------------------
 pulse_quit

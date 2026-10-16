@@ -413,12 +413,15 @@
   porter-flow scoping agreed at the keep-alive A+B freeze); codenames
   note `REL-20261016-1121-pulse`. Sequence: keep-alive A/B -> core
   extraction (Beacon) -> Station consumes -> publish + registry canary.
-- **Keep-alive Phase A (in flight, 2026-10-16):** deadlines landed in
-  the tree (PULSE_READ_TIMEOUT/PULSE_WRITE_TIMEOUT/PULSE_IDLE_TIMEOUT +
-  check-config + warns; bounded recv per-request; poll-gated send);
-  Windows manual proof: slowloris -> `408` + loop alive; write-stall ->
-  dropped at 64 KiB + loop alive. Remaining: WSL proof, smoke raw
-  sections, suites/sweeps, commit. Phase B (reuse) next.
+- **Keep-alive Phase A LANDED (2026-10-16):** connection deadlines --
+  `PULSE_READ_TIMEOUT`/`PULSE_WRITE_TIMEOUT`/`PULSE_IDLE_TIMEOUT`
+  (+ check-config + warns), bounded recv per request, non-blocking
+  poll-gated send (the Linux sweep caught the blocking-send bypass --
+  a blocking `send()` froze past the poll gate on partial buffer space;
+  fixed with O_NONBLOCK sends + a 50 MB stream test), `408` from IDLE.
+  Smoke grew 119->124 checks (raw slowloris + write-stall +
+  check-config); both platforms FAILED=0, 124/124 x2. Phase B (reuse)
+  next -- A+B green is the PULSE Beacon freeze gate.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -1220,6 +1223,13 @@ lane-ask refs REL-20261015-2202-pulse..-5; TLS is the ceiling):
    plan as they land; W10 bench baseline is the first proof artifact.
 1. Keep-alive Phase A + B per docs\DESIGN-KEEPALIVE-DEADLINES.md
    (primitives delivered in the wave-119+ runtime).
+1b. Beacon publish (owner directive 2026-10-16): when keep-alive A+B is
+    GREEN (the freeze gate), extract `xiom.pulse` + `minimal.xi` and
+    file the publish-ready item to packages on the relay -- they drive
+    the porter flow + the registry canary (refs REL-20261016-1108-pulse
+    acked / -1121 codenames); then PULSE Station consumes the package.
+    Codename map: Beacon = embeddable edition (`xiom.pulse`), Station =
+    hosted edition (this product, docker/k8s).
 2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
 3. Middleware order tests FIRST, then the chain refactor, then the jobs
    core (docs\DESIGN-MIDDLEWARE-JOBS.md).

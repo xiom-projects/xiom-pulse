@@ -41,6 +41,9 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_SITE_DIR` | (unset) | static-site root; serves unmatched GET/HEAD + `/assets/*` (clean URLs, `404.html`, `application/wasm`) |
 | `PULSE_SITE_MAX_AGE` | `3600` | site `Cache-Control` max-age seconds |
 | `PULSE_CSP` | (unset) | `Content-Security-Policy` header value; unset = no CSP header |
+| `PULSE_READ_TIMEOUT` | `30000` | full-request read deadline (ms); `0` = off (dev only) |
+| `PULSE_WRITE_TIMEOUT` | `30000` | response write deadline (ms); stalled readers are dropped; `0` = off (dev only) |
+| `PULSE_IDLE_TIMEOUT` | `5000` | keep-alive idle deadline (ms), honored from Phase B |
 
 `PULSE_BIND` takes the **address only** (`127.0.0.1`, `::1`, `0.0.0.0`
 in containers); the port belongs to `PULSE_PORT`. A combined value such

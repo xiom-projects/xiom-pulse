@@ -49,8 +49,11 @@ the known gaps; do not deploy it as a hard production service yet.
 
 ## Known limits (the gap list)
 
-- Single-threaded with no keep-alive and no receive timeouts: one slow
-  client can hold the loop, and the proxy must enforce its own client
+- Single-threaded, still no keep-alive (Phase B): but every read and
+  write is deadline-bounded now (`PULSE_READ_TIMEOUT` /
+  `PULSE_WRITE_TIMEOUT`, both default 30 s) -- a slowloris gets `408`
+  and a stalled reader is dropped mid-write, so one slow client can no
+  longer hold the loop. The proxy should still set its own client
   deadlines.
 - No graceful shutdown drain on SIGTERM; restarts drop in-flight
   requests.

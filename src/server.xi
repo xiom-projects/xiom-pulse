@@ -2,7 +2,9 @@
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Single-threaded sequential-accept server (pin: no select/threads/timeouts).
+// Single-threaded sequential-accept server: read/write deadlines bound
+// every client wait (PULSE_READ_TIMEOUT / PULSE_WRITE_TIMEOUT); no
+// select/threads -- one connection at a time by design.
 // Reads go through the raw fd socket API because C-PULSE-01 disables one-arg
 // `.read(...)` methods. TLS is terminated by the front proxy.
 //
@@ -605,16 +607,33 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
   return out_json(404, envelope.error_body("not_found", "not found"));
 }
 
+/// recv_bounded receives up to 65536 bytes under the remaining request
+/// budget: the per-call deadline shrinks as the request is read
+/// (PULSE_READ_TIMEOUT semantics, fasthttp model). budget_ms <= 0 means
+/// no deadline. Complexity: O(1) syscalls.
+fn recv_bounded(client: Int, budget_ms: Int, t0: Int) -> Result[Vec[UInt8], Str] {
+  if budget_ms <= 0 { return socket.socket_recv(client, 65536); }
+  let remaining = budget_ms - (time.monotonic_ms() - t0);
+  if remaining <= 0 { return Err("read deadline exceeded"); }
+  return socket.socket_recv_timeout(client, 65536, remaining);
+}
+
 /// read_request buffers one request per connection until headers and the
-/// Content-Length body are complete. Complexity: O(n) syscalls.
-fn read_request(client: Int) -> Vec[UInt8] {
+/// Content-Length body are complete, bounded by the read deadline.
+/// Returns (raw, err): err = 1 means the deadline expired or the socket
+/// errored before the request completed -- the caller answers 408
+/// (fasthttp model). Complexity: O(n) syscalls.
+fn read_request(client: Int, budget_ms: Int) -> (Vec[UInt8], Int) {
   var raw: Vec[UInt8] = Vec[UInt8].new();
   var done: Bool = false;
+  var err: Int = 0;
   var rounds: Int = 0;
   var sent100: Bool = false;
+  let t0 = time.monotonic_ms();
   while !done && rounds < 1024 {
-    let rr = socket.socket_recv(client, 65536);
+    let rr = recv_bounded(client, budget_ms, t0);
     if rr.is_err {
+      err = 1;
       done = true;
     } else {
       let chunk = rr.value;
@@ -664,18 +683,61 @@ fn read_request(client: Int) -> Vec[UInt8] {
     }
     rounds = rounds + 1;
   }
-  return raw;
+  return (raw, err);
 }
 
-/// send_all writes the whole buffer through the stdlib TcpStream.write_all
-/// (stdlib hardening 2026-10-07): 64 KiB staging chunks with retries over
-/// partial sends -- replaces PULSE's hand-rolled chunk loop (the 270 KB
-/// favicon was the original partial-send repro). Returns false on error.
-/// Complexity: O(n) syscalls.
+/// send_step queues one 64 KiB slice; -1 on failure. Complexity: O(chunk).
+fn send_step(fd: Int, data: &Vec[UInt8], off: Int, n: Int) -> Int {
+  var take: Int = n - off;
+  if take > 65536 { take = 65536; }
+  var chunk: Vec[UInt8] = Vec[UInt8].with_capacity(take as UInt);
+  var ci: Int = 0;
+  while ci < take {
+    chunk.push(data[off + ci]);
+    ci = ci + 1;
+  }
+  let wr = socket.socket_send(fd, &chunk);
+  if wr.is_err { return -1; }
+  return wr.value;
+}
+
+/// send_all writes the whole buffer with the write deadline enforced
+/// (PULSE_WRITE_TIMEOUT): the fd goes non-blocking, every slice is gated
+/// on a writability poll, and the deadline caps the total wait -- a
+/// stalled reader drops the connection (fasthttp model; a half-written
+/// response is never retried). Non-blocking is what makes the gate real:
+/// a blocking send() can freeze on partial buffer space past the poll
+/// (found by the Linux sweep while streaming a large file). Returns
+/// false on error or deadline expiry. Complexity: O(n) syscalls.
 fn send_all(fd: Int, data: &Vec[UInt8]) -> Bool {
-  var ts = TcpStream{ fd: fd; };
-  let r = ts.write_all(data);
-  return r.is_ok;
+  let n = data.len();
+  if n == 0 { return true; }
+  let budget = config.cfg_write_timeout();
+  let t0 = time.monotonic_ms();
+  let nb = socket.socket_set_nonblocking(fd, true);
+  let _ = nb;
+  var off: Int = 0;
+  var ok: Bool = true;
+  while off < n && ok {
+    if budget > 0 {
+      let remaining = budget - (time.monotonic_ms() - t0);
+      if remaining <= 0 {
+        ok = false;
+      } else {
+        var fds: Vec[Int] = Vec[Int].new();
+        fds.push(fd);
+        let pr = socket.socket_poll_write(&fds, remaining);
+        if pr.is_err { ok = false; } else if pr.value.len() == 0 { ok = false; }
+      }
+    }
+    if ok {
+      let sent = send_step(fd, data, off, n);
+      if sent <= 0 { ok = false; } else { off = off + sent; }
+    }
+  }
+  let rb = socket.socket_set_nonblocking(fd, false);
+  let _ = rb;
+  return ok;
 }
 
 fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_ms: Int) {
@@ -821,6 +883,7 @@ pub fn main() -> Int {
       io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
+      io.println("     PULSE_READ_TIMEOUT PULSE_WRITE_TIMEOUT PULSE_IDLE_TIMEOUT PULSE_SITE_DIR");
       return 0;
     }
     if a == "--check-config" || a == "check-config" {
@@ -850,6 +913,9 @@ pub fn main() -> Int {
       io.println("openapi=" + config.cfg_openapi_path());
       io.println("assets_dir=" + config.cfg_assets_dir());
       io.println("landing_path=" + config.cfg_landing_path());
+      io.println("read_timeout_ms=" + config.cfg_read_timeout().to_str());
+      io.println("write_timeout_ms=" + config.cfg_write_timeout().to_str());
+      io.println("idle_timeout_ms=" + config.cfg_idle_timeout().to_str());
       let js = env.var_or("PULSE_JWT_SECRET", "");
       var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
       if js.len() > 0 { secret_note = "env"; }
@@ -929,6 +995,9 @@ pub fn main() -> Int {
     io.flush_stdout();
   }
 
+  io.println("pulse: deadlines read=" + config.cfg_read_timeout().to_str() + "ms write=" + config.cfg_write_timeout().to_str() + "ms idle=" + config.cfg_idle_timeout().to_str() + "ms");
+  io.flush_stdout();
+
   var served: Int = 0;
   var running: Bool = true;
   while running {
@@ -940,10 +1009,29 @@ pub fn main() -> Int {
     }
     let client = ar.value;
     let t0_ms = time.monotonic_ms();
-    let raw = read_request(client);
+    let rreq = read_request(client, config.cfg_read_timeout());
+    let raw = rreq.0;
+    let read_err = rreq.1;
 
-    if raw.len() == 0 {
+    if raw.len() == 0 && read_err == 0 {
       socket.socket_close(client);
+    } else if read_err == 1 {
+      // Deadline (or socket error) before the request completed: answer
+      // 408 best-effort (the send fails harmlessly on a dead socket) and
+      // close -- one slow client cannot stall the loop (slowloris guard,
+      // fasthttp model).
+      let rid = next_rid();
+      reqctx.set_rid(rid);
+      var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+      let rbody = envelope.error_body("request_timeout", "request timed out");
+      var resp = http.build_response_full(408, CONTENT_JSON, &no_headers, rbody);
+      resp = with_std_headers(resp);
+      let _w = send_all(client, &resp);
+      socket.socket_close(client);
+      let dur = time.monotonic_ms() - t0_ms;
+      metrics.metrics_record(408, rbody.len());
+      metrics.metrics_record_duration(dur);
+      access_log(rid, "?", "-", 408, rbody.len(), dur);
     } else {
       let rid = next_rid();
       reqctx.set_rid(rid);

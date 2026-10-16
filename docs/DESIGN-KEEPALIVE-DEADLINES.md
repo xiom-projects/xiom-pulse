@@ -8,6 +8,14 @@ MIT) and `E:\repos\fasthttp` (valyala, MIT), light clones; bus asks
 `REL-20261011-0317-pulse` (socket options) and `-pulse-2` (deadline
 receive).
 
+Status update 2026-10-16: **Phase A IMPLEMENTED** -- bounded recv per
+request (shrinking budget), poll-gated send (stalled readers dropped),
+`408 Request Timeout` from IDLE, the three `PULSE_*_TIMEOUT` knobs with
+check-config + warnings; socket-verified on Windows and WSL (slowloris
+-> 408 + loop alive; write-stall dropped at 64 KiB + loop alive).
+Phase B (keep-alive reuse) is next, and the A+B pair freezes the API
+for the PULSE Beacon package extraction.
+
 ## 1. Problem statement
 
 PULSE today is strictly one-request-per-connection:
