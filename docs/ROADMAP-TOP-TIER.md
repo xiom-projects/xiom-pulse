@@ -122,7 +122,8 @@ nginx templates [O]; stateless mode: shared sessions/rate/idempotency
 
 **W2 Modern protocol.** TLS server+client + ALPN [S, the ceiling];
 native h2 framing/HPACK [S scoping + Q unit] after TLS; h3 stays
-edge-terminated; real brotli + zstd + dynamic-Huffman gzip [S/P];
+edge-terminated; real brotli + zstd + dynamic-Huffman gzip [S/P --
+brotli 0.1.0 landed at bindings, scope live; zstd 0.3.0 real];
 response-compression unit + precompressed-static sidecars [Q].
 
 **W3 Legacy & platform.** HTTP/1.0 + `Connection` semantics via the
@@ -148,13 +149,15 @@ existing headers/audit/smuggling hardening stay locked.
 in site/assets mode [Q]; precompressed sidecars + negotiation [Q over
 S/P codecs]; immutable-asset guidance (hashed filenames) [docs/O].
 
-**W8 DX.** HTML templates + escaping v0 [P + Q wrapper]; test-runner
+**W8 DX.** HTML templates + escaping v0 [P delivered:
+`xiom.template 0.2.0` live; Q consumer-verify queued]; test-runner
 harness [Q, fn-ptr fixed]; OpenAPI `paths` generation (retire the
 hand-written block) [Q]; CLI growth (`--workers`, `openapi --check`
 exists).
 
-**W9 Observability.** tracing decision + OTLP export [Q decision, P
-package]; metrics/logs/rid stay locked; profiling hooks [S, phase 2].
+**W9 Observability.** tracing decision + OTLP export [Q decision open;
+P package delivered -- `xiom.otel 0.1.0` live]; metrics/logs/rid stay
+locked; profiling hooks [S, phase 2].
 
 **W10 Proof.** bench baseline on the six bttger endpoints
 (`/serialize`, `/serialize/big`, `/plain/text`,
@@ -195,6 +198,20 @@ HTTPS, `wss://`, h2-via-ALPN, and ACME. Everything downstream of it is
 sequenced in W2/W4. Dismissed during this analysis: the apparent 2x
 compile slowdown on v0.64.5 (controlled A/B: 117/68s vs 76/84s --
 machine-state variance, no finding).
+
+**Lane replies folded (2026-10-16, post-wrap-18):** the packages
+`-2202-pulse-3` slate is delivered -- `xiom.template 0.2.0` LIVE
+(eco-v0.1.186; consumer-verify = the next Q unit), `xiom.ssl 0.1.0`
+built + verified at bindings (23/23 + SKIP 4/4; PROD-only scope LIVE,
+eco 550), `xiom.brotli 0.1.0` landed (26/26 x2; scope LIVE, eco 552 --
+the stacked ssl+brotli registry publish rides packages' next batch),
+`xiom.otel 0.1.0` LIVE (eco-v0.1.188; OTLP core), `xiom.zstd 0.3.0`
+real (vendored 1.5.7). **`xiom.pulse` (Beacon) extraction STARTED**:
+the porter is carving the frozen pair `56eb9f8` into
+`packages/xiom-pulse` (`REL-20261016-1429-packages`; deps `xiom.std`
+only; hardening fixtures carry over; 0.1.0). stdlib (`-2202-pulse`;
+TLS/ALPN the ceiling), compiler (`-2202-pulse-2`) and ops
+(`-2202-pulse-4`) asks remain open.
 
 ## 8. Proof discipline
 
@@ -249,8 +266,10 @@ Sequence:
    landed and verified (smoke 134/134 x2 on both platforms) -- the
    core's connection semantics are frozen; the freeze gate is GREEN.
 2. Extract `xiom.pulse` (the Beacon core) with a `minimal.xi` example
-   and its own CI -- the NEXT step; the packages porter flow is armed
-   (`REL-20261016-1108-pulse` acked, slot reserved).
+   and its own CI -- **IN FLIGHT (2026-10-16)**: the packages porter is
+   carving the frozen pair `56eb9f8` into `packages/xiom-pulse`
+   (`REL-20261016-1429-packages`; verbatim carve, `xiom.std` only,
+   0.1.0, hardening fixtures carry over). Stages relay as they land.
 3. The PULSE Station product consumes the package; the extras stay
    Station-side.
 4. Publish via the packages lane; the registry reserves the name and
