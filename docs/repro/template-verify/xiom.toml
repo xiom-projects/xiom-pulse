@@ -1,0 +1,11 @@
+# Consumer-verify manifest: xiom.template 0.2.0 from the registry (eco-v0.1.186).
+# Local to docs/repro/template-verify/ -- this unit consumes the INSTALLED
+# registry artifact; run from this directory with the pinned v0.64.5 toolchain
+# (see README.md). Not part of the PULSE product build.
+[project]
+name = "template-verify"
+version = "0.1.0"
+root = "."
+
+[dependencies]
+"xiom.template" = "0.2.0"
