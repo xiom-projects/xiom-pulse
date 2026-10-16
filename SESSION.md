@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-15 wrap 17 (v0.2.1 RELEASED on the v0.64.5 + `092dfa0c` pairing -- the SIGILL fix shipped to consumers; wave-2 adopted green both platforms; SQL co-verify 24/24 + bus closes; NEXT = post-release queue: keep-alive -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane.
+**Written:** 2026-10-05; **last wrap:** 2026-10-16 wrap 18 (keep-alive **A+B landed** (`7924222`, `56eb9f8`) -- Beacon freeze gate GREEN, milestone `REL-20261016-1401-pulse` filed; packages delivered template 0.2.0 + ssl building + otel built + zstd real; NEXT = `xiom.pulse` (Beacon) extraction -> publish-ready item -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane.
 
 ## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
@@ -413,16 +413,29 @@
   porter-flow scoping agreed at the keep-alive A+B freeze); codenames
   note `REL-20261016-1121-pulse`. Sequence: keep-alive A/B -> core
   extraction (Beacon) -> Station consumes -> publish + registry canary.
-- **Keep-alive A+B LANDED (2026-10-16) -- Beacon freeze gate GREEN:**
-  Phase A (deadlines: `PULSE_READ_TIMEOUT`/`PULSE_WRITE_TIMEOUT`/
-  `PULSE_IDLE_TIMEOUT`, bounded recv per request, non-blocking
-  poll-gated send, `408` from IDLE) + Phase B (reuse latch,
-  `Connection: close`/HTTP-1.0/incomplete-framing close, in-order
-  pipelining via the trailing buffer, silent idle expiry, garbage
-  close). Smoke 119->134 checks; both platforms 134/134 x2. The
-  packages porter flow for `xiom.pulse` (Beacon) is now UNBLOCKED --
-  file the publish-ready milestone item next (SESSION §3 item 1b /
-  REL-20261016-1108-pulse acked).
+- **Keep-alive A+B LANDED -- Beacon freeze gate GREEN (2026-10-16):**
+  Phase A (`7924222`): deadlines -- `PULSE_READ_TIMEOUT`/
+  `PULSE_WRITE_TIMEOUT`/`PULSE_IDLE_TIMEOUT` + check-config/warns,
+  bounded recv per request, non-blocking poll-gated send (the Linux
+  50 MB stream check caught the blocking-send bypass), `408` from
+  IDLE. Phase B (`56eb9f8`): per-connection trailing buffer +
+  `request_complete` pre-check (pipelined requests never wait on a
+  recv), one-way reuse latch (comma-token `Connection: close`,
+  HTTP/1.0 never reuses, incomplete framing closes after the
+  response), in-order pipelining with no data loss, silent idle
+  expiry, EOF-mid close, garbage -> 400+close; `PULSE_KEEPALIVE=0`
+  restores close-per-request. Smoke 119->134 per backend; both
+  platforms FAILED=0, 134/134 x2. Freeze milestone FILED:
+  `REL-20261016-1401-pulse` (packages -- porter flow open). The
+  A+B check set is the Beacon core's frozen semantics.
+- **Packages deliveries on the top-tier asks (2026-10-16):**
+  `xiom.template 0.2.0` LIVE (blocks/loops/auto-escape -- top-tier
+  item 1; consumer-verify queued §3 1c); `xiom.ssl` BUILDING (the
+  TLS ceiling item); `xiom.otel 0.1.0` built green (held on the ops
+  scope); `xiom.zstd 0.3.0` real (vendored 1.5.7); real brotli in
+  flight at bindings; `xiom.pulse` slot reserved + porter SPEC
+  armed (refs `REL-20261016-1111/-1150-packages`, acks `65a11b7`).
+  Registry mojibake fixed (`a54862a`; validate clean, 596 items).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
@@ -1195,7 +1208,7 @@ standard sweep prompt (fetch+merge --ff-only relays; view --lane pulse;
 process items; wrap on change). Use `python tools/relay.py` in the
 relays clone; NEVER `git pull` there; never edit another lane's item.
 
-STATE AT WRAP 17:
+STATE AT WRAP 18 (2026-10-16, post keep-alive wave):
 - **0.2.1 SHIPPED** (tag `pulse-v0.2.1`, GH published 21:23Z): linux
   `81cce634...`, windows `df96da7c...`; release body carries the
   highlights; dl mirror at the next :17 sweep; ops pinged to redeploy
@@ -1215,22 +1228,35 @@ STATE AT WRAP 17:
   v0.64.3 at `~/.local/share/xiom-0643`). Pin caches `stdlib-092dfa0c`
   on both; 11 deps incl. `xiom.sqlite@0.4.1` on both.
 - Evidence: `probe-logs\toolchain-v0645\` (post-bump WIN/LINUX
-  summaries + `-prebump` copies; `sql-coverify\artifact-0645-*.log`).
+  summaries + `-prebump` copies; `sql-coverify\artifact-0645-*.log`;
+  keep-alive runs overwrote the summaries -- both platforms FAILED=0
+  with smoke 134/134).
+- **Keep-alive A+B LANDED** (`7924222` + `56eb9f8`): freeze gate GREEN;
+  milestone `REL-20261016-1401-pulse` filed (packages, porter flow
+  open). Main is at `56eb9f8`; relays last push `2244ad6`.
+- **Packages deliveries awaiting consumer-verify:** `xiom.template 0.2.0`
+  (top-tier item 1; queue 1c), `xiom.ssl` building, `xiom.otel 0.1.0`
+  held on ops scope, `xiom.zstd` real, brotli in flight.
 
 NEXT -- the post-release queue (dependency order; the top-tier program
 in docs\ROADMAP-TOP-TIER.md frames the whole queue and holds the
 lane-ask refs REL-20261015-2202-pulse..-5; TLS is the ceiling):
 0. Top-tier tracker: fold lane replies to the asks into the milestone
    plan as they land; W10 bench baseline is the first proof artifact.
-1. Keep-alive Phase A + B per docs\DESIGN-KEEPALIVE-DEADLINES.md
-   (primitives delivered in the wave-119+ runtime).
-1b. Beacon publish (owner directive 2026-10-16): when keep-alive A+B is
-    GREEN (the freeze gate), extract `xiom.pulse` + `minimal.xi` and
-    file the publish-ready item to packages on the relay -- they drive
-    the porter flow + the registry canary (refs REL-20261016-1108-pulse
-    acked / -1121 codenames); then PULSE Station consumes the package.
-    Codename map: Beacon = embeddable edition (`xiom.pulse`), Station =
-    hosted edition (this product, docker/k8s).
+1. ~~Keep-alive Phase A + B~~ DONE (2026-10-16): `7924222` + `56eb9f8`;
+   freeze gate green (smoke 134/134 x2 both platforms).
+1b. **Beacon extraction -- THE next step (owner directive 2026-10-16):**
+    extract `xiom.pulse` per the packages porter SPEC/PROVENANCE --
+    protocol core (parser + builders + the A+B connection loop) +
+    router + envelope + `minimal.xi` example + its own CI -- then file
+    the **publish-ready item** to packages (tree + suite-x2 evidence +
+    version proposal; they drive the porter flow + the registry
+    canary). Refs: `REL-20261016-1108-pulse` (acked), `-1121`
+    (codenames), `-1401` (freeze milestone filed). One core, never a
+    fork; afterwards PULSE Station consumes the package.
+1c. Consumer-verify `xiom.template 0.2.0` (top-tier item 1): install +
+    render a real page (error pages / docs site) and note the result
+    in the `REL-20261016-1111-packages` flow.
 2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
 3. Middleware order tests FIRST, then the chain refactor, then the jobs
    core (docs\DESIGN-MIDDLEWARE-JOBS.md).

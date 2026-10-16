@@ -675,9 +675,10 @@ comma-token `Connection: close`, HTTP/1.0 never reuses, in-order
 pipelining via the trailing buffer with no data loss, silent idle
 expiry, EOF-mid-message closes with no answer. `PULSE_KEEPALIVE=0`
 restores close-per-request. Smoke 119->134; both platforms 134/134 x2.
-Score: connection-handling row moves from partial to complete; next is
-the Beacon freeze **and** the benchmark baseline (pre/post keep-alive
-numbers)._
+Score: connection-handling row moves from partial to complete. The
+Beacon freeze is GREEN (`56eb9f8`; milestone `REL-20261016-1401-pulse`
+filed) -- next: the `xiom.pulse` extraction + the benchmark baseline
+(pre/post keep-alive numbers)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
