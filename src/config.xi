@@ -119,6 +119,21 @@ pub fn cfg_keepalive() -> Bool {
   return env.var_or("PULSE_KEEPALIVE", "1") != "0";
 }
 
+/// cfg_store_sync: PULSE_STORE_SYNC (default "1") -- fsync the store append
+/// before acknowledging it (durability Phase A, DESIGN-STORE-DURABILITY P1).
+/// "0" is the documented healing-only mode (crash-safe reopen, not durable).
+/// Complexity: O(1). Pure.
+pub fn cfg_store_sync() -> Bool {
+  return env.var_or("PULSE_STORE_SYNC", "1") != "0";
+}
+
+/// cfg_audit_sync: PULSE_AUDIT_SYNC (default "1") -- fsync the audit append
+/// before returning from the mutating request path (security-relevant).
+/// Complexity: O(1). Pure.
+pub fn cfg_audit_sync() -> Bool {
+  return env.var_or("PULSE_AUDIT_SYNC", "1") != "0";
+}
+
 /// cfg_cors_origin returns the allowed CORS origin ("" = CORS off).
 /// Complexity: O(1). Pure.
 pub fn cfg_cors_origin() -> Str {
@@ -494,6 +509,14 @@ pub fn cfg_validate() -> Vec[Str] {
   let ka = env.var_or("PULSE_KEEPALIVE", "");
   if ka.len() > 0 && ka != "0" && ka != "1" {
     w.push("PULSE_KEEPALIVE=\"" + ka + "\" is not 0 or 1; treating as enabled");
+  }
+  let ss = env.var_or("PULSE_STORE_SYNC", "");
+  if ss == "0" {
+    w.push("PULSE_STORE_SYNC=0: store appends are acknowledged without fsync (healing-only; a crash may lose the unsynced tail)");
+  }
+  let asy = env.var_or("PULSE_AUDIT_SYNC", "");
+  if asy == "0" {
+    w.push("PULSE_AUDIT_SYNC=0: audit appends are not fsynced before the response");
   }
 
   return w;

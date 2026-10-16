@@ -231,7 +231,7 @@ fleet is green (suites x2, smoke 61/61, crash 6/6, store soak, and
   over `PULSE_AUDIT_PATH` if the audit trail matters; start the service;
   verify with `GET /api/events/count` against the pre-backup count. The
   JSONL store tolerates a torn tail, so restoring a slightly-live file is
-  safe.
+  safe; acknowledged appends are fsynced by default (`PULSE_STORE_SYNC=1`).
 - **Pre-flight:** `pulse_app --check-config` dumps the effective config
   (env wins) without binding -- suitable as a deploy gate or systemd
   `ExecStartPre`; it exits non-zero only when the configured file is

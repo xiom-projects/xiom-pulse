@@ -800,6 +800,16 @@ fn audit_event(rid: Str, method: Str, target: Str, status: Int) {
   let path = config.cfg_audit_path();
   let _rot = audit.audit_rotate_if_needed(path, config.cfg_audit_max_bytes());
   let line = time.unix_timestamp().to_str() + " " + rid + " " + method + " " + target + " " + status.to_str();
+  // Durability Phase A: security-relevant records sync-before-return
+  // (PULSE_AUDIT_SYNC, default on).
+  if config.cfg_audit_sync() {
+    let rs = io.append_line_sync(path, line);
+    if rs.is_err {
+      io.println("pulse: audit append (sync) failed");
+      io.flush_stdout();
+    }
+    return;
+  }
   let r = io.append_line(path, line);
   if r.is_err {
     io.println("pulse: audit append failed");
@@ -933,6 +943,7 @@ pub fn main() -> Int {
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       io.println("     PULSE_READ_TIMEOUT PULSE_WRITE_TIMEOUT PULSE_IDLE_TIMEOUT PULSE_SITE_DIR");
+      io.println("     PULSE_STORE_SYNC PULSE_AUDIT_SYNC PULSE_KEEPALIVE");
       return 0;
     }
     if a == "--check-config" || a == "check-config" {
@@ -968,6 +979,11 @@ pub fn main() -> Int {
       var ka_note: Str = "on";
       if !config.cfg_keepalive() { ka_note = "off"; }
       io.println("keepalive=" + ka_note);
+      var ss_note: Str = "on";
+      if !config.cfg_store_sync() { ss_note = "off"; }
+      var as_note: Str = "on";
+      if !config.cfg_audit_sync() { as_note = "off"; }
+      io.println("store_sync=" + ss_note + " audit_sync=" + as_note);
       let js = env.var_or("PULSE_JWT_SECRET", "");
       var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
       if js.len() > 0 { secret_note = "env"; }

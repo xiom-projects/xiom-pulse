@@ -2,7 +2,10 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Design: store durability discipline (bbolt)
 
-Status: DESIGN (2026-10-11, PULSE session). Backlog order 3 of
+Status: **Phase A IMPLEMENTED** (2026-10-16, session 19 --
+`PULSE_STORE_SYNC`/`PULSE_AUDIT_SYNC` wired with sync-before-ack; suite +
+crash-harness green; see section 5). Phase B pending.
+DESIGN (2026-10-11, PULSE session). Backlog order 3 of
 `docs/PRODUCTION-REFERENCES.md`. Reference: `E:\repos\bbolt`
 (etcd-io/bbolt 1.5.0, MIT, light clone). Bus asks: `REL-20261011-0317-pulse-6`
 (PULSE fsync), `-pulse-5` (durable flush_stdout), plus the shared runtime
@@ -124,7 +127,8 @@ with its own header, not a best-effort live copy.
 | Claim | Allowed when |
 |---|---|
 | "Crash-safe reopen (torn tail healed)" | today |
-| "Writes acknowledged only after fsync" | P1 wired + `PULSE_STORE_SYNC=1` |
+| "Writes acknowledged only after fsync" | **LANDED (Phase A, 2026-10-16):** P1 wired; `PULSE_STORE_SYNC` default 1 |
+| "Audit records durable before the response" | **LANDED (Phase A):** `PULSE_AUDIT_SYNC` default 1 |
 | "Snapshot is a point-in-time fence" | P4 manifest + restore verification |
 | "Power-loss durable (compaction)" | rename ordering + `fsync_dir` shipped |
 
@@ -152,7 +156,15 @@ doc; no new wishlist rows while the bundle is queued.
 
 ## 5. Phased plan
 
-**Phase A -- sync points (when the runtime bundle lands):**
+**Phase A -- sync points -- LANDED (2026-10-16; pin v0.64.5 + stdlib
+`092dfa0c`):**
+
+**Landed:** `store_append` -> `io.append_line_sync` before ack
+(`PULSE_STORE_SYNC`); `audit_event` -> `io.append_line_sync` before return
+(`PULSE_AUDIT_SYNC`); both knobs in `--check-config` + startup warnings when
+disabled; test_app config-surface + durable-append checks; crash harness
+re-run x2 both platforms (evidence in `probe-logs/toolchain-v0645/`). Phase B
+(rename ordering + backup fence) remains.
 
 1. `store_append`/`store_append_event_keyed`: sync before the 2xx path
    (config `PULSE_STORE_SYNC`, default `1`; `0` documented as

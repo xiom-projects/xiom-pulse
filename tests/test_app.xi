@@ -164,6 +164,20 @@ pub fn main() -> Int {
   env.set_var("PULSE_PORT", "8080");
   let w3 = config.cfg_validate();
   f = f + check("cfg warn clean", w3.len() == 0);
+  // durability Phase A knobs: default-on, env-honored, warn on disable.
+  f = f + check("config store_sync default on", config.cfg_store_sync());
+  f = f + check("config audit_sync default on", config.cfg_audit_sync());
+  env.set_var("PULSE_STORE_SYNC", "0");
+  f = f + check("config store_sync off honored", !config.cfg_store_sync());
+  let w3b = config.cfg_validate();
+  f = f + check("cfg warn store_sync off", w3b.len() == 1 && string.str_contains(w3b[0], "PULSE_STORE_SYNC"));
+  env.remove_var("PULSE_STORE_SYNC");
+  env.set_var("PULSE_AUDIT_SYNC", "0");
+  f = f + check("config audit_sync off honored", !config.cfg_audit_sync());
+  let w3c = config.cfg_validate();
+  f = f + check("cfg warn audit_sync off", w3c.len() == 1 && string.str_contains(w3c[0], "PULSE_AUDIT_SYNC"));
+  env.remove_var("PULSE_AUDIT_SYNC");
+  f = f + check("config syncs restored", config.cfg_store_sync() && config.cfg_audit_sync());
   env.set_var("PULSE_STORE_BACKEND", "sqlite");
   let w4 = config.cfg_validate();
   f = f + check("cfg warn bad backend", w4.len() == 1 && string.str_contains(w4[0], "PULSE_STORE_BACKEND"));
@@ -398,6 +412,22 @@ pub fn main() -> Int {
   } else {
     f = f + check("compact drops torn", false);
   }
+  // durability Phase A: sync-on-ack append heals a torn tail + terminates.
+  let sp2 = "pulse-store-sync-test.jsonl";
+  let _rm1 = io.remove_file(sp2);
+  let _w0 = io.write_file(sp2, "{\"kind\":\"schema\",\"version\":1}\n{\"torn\":");
+  f = f + check("durable append heals torn tail", store.store_append(sp2, "{\"kind\":\"event\",\"seq\":1,\"ts\":0,\"data\":{}}"));
+  f = f + check("durable append record visible", store.store_count(sp2) == 1);
+  let rf2 = io.read_file(sp2);
+  var ends_nl = false;
+  if rf2.is_ok {
+    let s2 = rf2.value;
+    if s2.len() > 0 {
+      ends_nl = s2.byte_at(s2.len() - 1) == 10u8;
+    }
+  }
+  f = f + check("durable append newline-terminated", ends_nl);
+  let _rm3 = io.remove_file(sp2);
   let m16 = router.route_match("POST", "/api/events/compact");
   f = f + check("route compact matched", m16.kind == 1 && m16.route_id == 16);
   let e405 = route_req("PUT", "/api/events", "");

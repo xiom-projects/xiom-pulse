@@ -54,9 +54,10 @@ server {
 }
 ```
 
-Notes: enforce proxy-side client timeouts (PULSE has no receive
-deadlines yet), restrict `/metrics` to your monitoring network, and keep
-TLS/HSTS at the proxy.
+Notes: PULSE enforces its own read/write/idle deadlines
+(`PULSE_READ_TIMEOUT` / `PULSE_WRITE_TIMEOUT` / `PULSE_IDLE_TIMEOUT`);
+keep proxy-side client timeouts as a second layer, restrict `/metrics`
+to your monitoring network, and keep TLS/HSTS at the proxy.
 
 ## Backup and restore
 
@@ -66,7 +67,8 @@ TLS/HSTS at the proxy.
   `PULSE_STORE_BACKEND=kv`) to snapshot the kv directory instead.
 - Restore: stop the service, copy the snapshot back over the store path
   (or the kv directory), start, and verify with `/api/events/count`.
-  The JSONL store tolerates a torn tail, so a slightly-live copy is safe.
+  The JSONL store tolerates a torn tail, so a slightly-live copy is safe;
+  acknowledged appends are already fsynced (`PULSE_STORE_SYNC=1`, default).
 - Uploads: `PULSE_UPLOAD_DIR` holds uploaded files (generated names) and
   is **not** part of the built-in snapshot -- include it in your backup
   policy when uploads are enabled.

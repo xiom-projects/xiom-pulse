@@ -73,6 +73,11 @@ Any of the documented keys can be set in the JSON file (`port`,
   directory back with the service stopped; verify with
   `/api/events/count`.
 
+Durability: store appends are fsynced before acknowledgement
+(`PULSE_STORE_SYNC=1`, default) and the audit log syncs before the
+response returns (`PULSE_AUDIT_SYNC=1`, default); set either to `0` for
+the healing-only mode (crash-safe reopen, not power-loss durable).
+
 `scripts/backup.sh` / `scripts/backup.ps1` snapshot the store and the
 audit log (kv-aware with `--kv-dir` / `-KvDir`; the kv dir is picked up
 automatically when `PULSE_STORE_BACKEND=kv`).

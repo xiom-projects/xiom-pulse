@@ -23,6 +23,7 @@ use xiom.convert;
 use xiom.serialize.json;
 use xiom.env;
 use xiom.kv;
+use xiom.pulse.config;
 
 const SCHEMA_VERSION: Int = 1;
 
@@ -138,7 +139,9 @@ fn file_ends_with_newline(path: Str) -> Bool {
 }
 
 /// store_append appends one already-valid JSON record. jsonl: heals a torn
-/// trailing line first. kv: puts the next sequence key. Complexity: O(n).
+/// trailing line; with PULSE_STORE_SYNC (default on) the append is fsynced
+/// before returning (durability Phase A). kv: puts the next sequence key.
+/// Complexity: O(n).
 pub fn store_append(path: Str, record: Str) -> Bool {
   if backend_kv() {
     if !kv_ensure() { return false; }
@@ -147,6 +150,13 @@ pub fn store_append(path: Str, record: Str) -> Bool {
     let r = kv_put(&mut g_kvs[0], key, record);
     if r.is_err { g_seq = g_seq - 1; }
     return r.is_ok;
+  }
+  // Durability Phase A (docs/DESIGN-STORE-DURABILITY.md P1): sync-before-ack.
+  // append_line_sync terminates a torn tail itself and fsyncs the append
+  // handle before returning; PULSE_STORE_SYNC=0 keeps the healing-only path.
+  if config.cfg_store_sync() {
+    let rs = io.append_line_sync(path, record);
+    return rs.is_ok;
   }
   if !file_ends_with_newline(path) {
     let heal = io.append_file(path, "\n");

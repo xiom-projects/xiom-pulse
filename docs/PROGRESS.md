@@ -717,6 +717,21 @@ DX note: dependency builds auto-apply the package's port.args.json. The
 top-tier package-path asks are now all consumer-verified except the
 Beacon publish itself. Score holds._
 
+_Delta 2026-10-16 (durability Phase A): **sync-before-ack landed** --
+`store_append` fsyncs the append before acknowledging
+(`io.append_line_sync`; `PULSE_STORE_SYNC`, default 1; `0` = documented
+healing-only) and `audit_event` syncs before returning on the mutating
+path (`PULSE_AUDIT_SYNC`, default 1); torn-tail healing preserved
+(append_line_sync terminates the tail itself); `--check-config` prints
+both + startup warnings when disabled; the claim table now allows
+"writes acknowledged only after fsync" (DESIGN-STORE-DURABILITY P5).
+test_app +11 checks (config surface + durable append); crash harness
+re-run x2 both platforms; suites x2 + smoke both platforms green
+(evidence: `probe-logs/toolchain-v0645/*-SWEEP-SUMMARY*.txt`; the first
+linux pass was red on a stale runner pin -- `dd352f6` hardcode corrected
+to `092dfa0c`, red summary preserved). Storage 68 -> 72.
+Total ~55.4% -> ~55.8%._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
@@ -819,18 +834,18 @@ fallbacks._
 
 | # | Area | Weight | Done | Weighted | Status |
 |---|---|---:|---:|---:|---|
-| 1 | HTTP core (parse/build/limits) | 12% | 84% | 10.1 | query strings, header caps, HEAD, shared stdlib parser + invalid-CL reject, **chunked request decode** + TE/CL smuggling guard, Expect: 100-continue, Date header; keep-alive + chunked responses missing |
+| 1 | HTTP core (parse/build/limits) | 12% | 84% | 10.1 | query strings, header caps, HEAD, shared stdlib parser + invalid-CL reject, **chunked request decode** + TE/CL smuggling guard, Expect: 100-continue, Date header; **keep-alive + deadlines landed (A+B)**; chunked responses missing |
 | 2 | Routing | 8% | 78% | 6.2 | registry `xiom.router` adopted (multi-`:param`, 404/405 + Allow); no wildcards/groups |
 | 3 | Middleware framework | 8% | 30% | 2.4 | registry CSRF/CORS/error helpers adopted; still no composable chain |
 | 4 | Configuration | 5% | 85% | 4.3 | env + JSON file (env-wins) incl. `PULSE_STATIC_DIR`; `--check-config` pre-flight with effective dump; **value validation warnings** (bad port/uint/TTL/bool/enum -> startup + check-config warnings); no schema library |
-| 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush no-op |
+| 5 | Observability (log/metrics/audit) | 8% | 80% | 6.4 | registry metrics (labeled counters, latency-bounds histogram, exposition) + JSON log + audit with **rotation** + rid + gauges; flush real (wave 115); **audit sync (Phase A)** |
 | 6 | AuthN/AuthZ | 10% | 35% | 3.5 | sessions + JWT HS256 + CSRF (constant-time via registry); no credentials, RBAC, rotation |
-| 7 | Storage | 10% | 68% | 6.8 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.2+, verified on both platforms incl. a **45m kv soak** -- 977/0, compact + hard-kill reopen intact), crash-safe append, `?limit`/`?kind`, compaction; no update/delete/index, no fsync || 8 | Security hardening | 12% | 42% | 5.0 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; **C-PULSE-16: `PULSE_BIND` advisory (wildcard bind below the app; host firewall mitigates) -- fix queued with the next release**; no RBAC |
+| 7 | Storage | 10% | 72% | 7.2 | JSONL store (default) + **xiom.kv backend** (opt-in, v0.64.2+, verified on both platforms incl. a **45m kv soak** -- 977/0, compact + hard-kill reopen intact), crash-safe append + **sync-before-ack (durability Phase A)**, `?limit`/`?kind`, compaction; no update/delete/index || 8 | Security hardening | 12% | 42% | 5.0 | rate limit + CSRF + opt-in CORS + security headers + caps + static traversal guard + schema helper + TE/CL.TE smuggling guard; **C-PULSE-16: `PULSE_BIND` advisory (wildcard bind below the app; host firewall mitigates) -- fix queued with the next release**; no RBAC |
 | 9 | Static / assets | 4% | 70% | 2.8 | registry `xiom.static`: mime/ETag/Cache-Control/304/Range + favicon + `/assets/*` showcase route (`PULSE_ASSETS_DIR`) + `PULSE_LANDING_PATH`; no directory index/listing |
 | 10 | Protocol extras (SSE/WS/REST/GraphQL/templates) | 8% | 0% | 0.0 | none started |
-| 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14: Windows FIXED on v0.64.2 (flat); Linux still grows ~87 KB/req steady (worse than v0.64.1's ~48)**; single-thread, no timeouts, no signals |
+| 11 | Reliability & concurrency | 10% | 35% | 3.5 | **C-PULSE-14: Windows FIXED on v0.64.2 (flat); Linux still grows ~87 KB/req steady (worse than v0.64.1's ~48)**; single-thread, no signals; **read/write/idle deadlines landed (keep-alive A)** |
 | 12 | Testing / CI / release | 5% | 88% | 4.4 | suites+smoke (78) on **Windows and Linux**; twins everywhere; **CI live (wrap 7): PR gates + SHA-pinned release workflow cut 0.1.0 end-to-end + weekly heavy soaks; macOS legs prepared, gated on upstream darwin fixes**; soak sampler fix + rss_probe twins; release packager + backup tooling; Dockerfile verified |
-| | **Total** | **100%** | | **55.4** | |
+| | **Total** | **100%** | | **55.8** | |
 
 **Framework roadmap:** `docs/FRAMEWORK-ROADMAP-PULSE.md` -- the 0.2-1.0
 production-grade contract (driver seam, auth core, OpenAPI, CLI

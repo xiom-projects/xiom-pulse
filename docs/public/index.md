@@ -9,7 +9,8 @@ PULSE is the official XIOM web backend: a single, self-contained HTTP
 server binary written in XIOM, built for small production services and
 showcases. It runs behind a TLS-terminating proxy (nginx is the
 supported shape), binds loopback by default, and keeps its state in a
-crash-safe append store with an audit trail.
+crash-safe append store with an audit trail; acknowledged appends are
+fsynced (`PULSE_STORE_SYNC`, on by default).
 
 - Source: https://github.com/xiom-projects/xiom-pulse (MIT OR Apache-2.0)
 - Releases: https://github.com/xiom-projects/xiom-pulse/releases
