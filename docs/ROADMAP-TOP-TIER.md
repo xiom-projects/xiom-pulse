@@ -202,21 +202,33 @@ on every lane ask, and the SESSION.md digest + PROGRESS delta. The
 benchmark report is the public-facing proof of the T9 gate; the LB
 scaling curve is the proof of T2.
 
-## 9. Product split: pulse-sails (light) + PULSE (top-tier)
+## 9. Product split: PULSE Beacon (embeddable) + PULSE Station (hosted)
 
-Owner proposal (2026-10-16): ship TWO products from the same engine --
-(1) a light framework package on the registry for the Flask-class job
-(routes, handlers, run-in-three-lines; embeddable in any XIOM program:
-engine control endpoints, playground workers, xvector services, docs
-tooling, user apps), working name **pulse-sails**; and (2) the top-tier
-product PULSE as the separate program we ship today (sessions, metrics,
-store, static, game CP, release machinery).
+Owner directive (2026-10-16): everything stays **PULSE**; codenames
+distinguish the two usage editions, matching the ecosystem pattern
+(orbitdb-satellite / orbitdb-station): one core, usage-separated
+products -- some integrate it into their app (Beacon), others host it
+on docker/kubernetes (Station).
 
-The rule that makes it work: **one protocol core, two products -- never
-a fork.** The light package IS the engine: request parser + response
-builders + connection loop (deadlines, keep-alive) + router + envelope.
-The product imports that package and adds the extras -- most of which
-are already registry packages (`xiom.session`, `xiom.static`,
+- **PULSE Beacon** -- the embeddable edition: the light framework
+  package on the registry (id `xiom.pulse`) that you add to an existing
+  XIOM app -- routes, handlers, run-in-three-lines; engine control
+  endpoints, playground workers, xvector services, docs tooling, user
+  apps.
+- **PULSE Station** -- the hosted edition: the full product we ship
+  today (sessions, metrics, store, static, game CP, release machinery;
+  docker/k8s deployment) -- what most people mean by "run PULSE".
+
+(Working names considered: pulse-sails, pulse-satellite, pulse-sonde.
+"Beacon" won: radio-native fit with "pulse", clean contrast with
+"Station", and it stays distinct from the orbitdb pair while sharing
+one ecosystem vocabulary.)
+
+The rule that makes it work: **one protocol core, two editions -- never
+a fork.** The core IS the engine: request parser + response builders +
+connection loop (deadlines, keep-alive) + router + envelope. Beacon IS
+that core as a package; Station imports it and adds the extras -- most
+of which are already registry packages (`xiom.session`, `xiom.static`,
 `xiom.kv`, `xiom.metrics`, `xiom.rate`, `xiom.http.middleware`,
 `xiom.sqlite`).
 
@@ -232,17 +244,18 @@ modules (`src/http.xi`, `src/router.xi`, `src/envelope.xi`,
 Sequence:
 
 1. Finish keep-alive Phase A + B in the monolith -- they define the
-   core package's connection semantics (the API freeze candidate).
-2. Extract `xiom.pulse` (package id TBD: `xiom.pulse` recommended;
-   "pulse-sails" as the friendly variant name -- note the Sails.js
-   perception overlap) with a `minimal.xi` example and its own CI.
-3. The PULSE product consumes the package; the extras stay product-side.
+   core's connection semantics (freeze gate: "keep-alive A+B green").
+2. Extract `xiom.pulse` (the Beacon core) with a `minimal.xi` example
+   and its own CI.
+3. The PULSE Station product consumes the package; the extras stay
+   Station-side.
 4. Publish via the packages lane; the registry reserves the name and
    sets up the read-path canary (`REL-20261013-1707` flow).
 
-What the light one is **not**: no sessions/metrics/store/static by
-default (those become opt-in package composition). What it keeps: the
-full protocol hardening -- the light path must never be the unsafe
-path.
+What Beacon is **not**: no sessions/metrics/store/static by default
+(those become opt-in package composition). What it keeps: the full
+protocol hardening -- the light path must never be the unsafe path.
 
-Bus: publish/coordination ask filed to packages (`REL-20261016-1110-pulse`).
+Bus: publish/coordination ask `REL-20261016-1108-pulse` (packages;
+acked -- `xiom.pulse` slot free, porter-flow scoping agreed at the
+keep-alive A+B freeze); codename decision `REL-20261016-1121-pulse`.

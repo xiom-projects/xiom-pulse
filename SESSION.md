@@ -403,13 +403,16 @@
   sweep, fixed pre-commit). `74cd0f9`, three new site checks, both
   platforms FAILED=0; `run.sh` log cap 200->400. Reply
   `REL-20261015-2344-pulse`; ships in 0.2.2.
-- **Product-split directive (2026-10-16):** owner proposed a second
-  product -- a light Flask-class framework package (working name
-  `pulse-sails`) beside the top-tier product; **one protocol core, two
-  products, never a fork**. Roadmap §9 (`docs/ROADMAP-TOP-TIER.md`);
-  publish/coordination ask `REL-20261016-1110-pulse` (packages).
-  Sequence: keep-alive A/B -> core extraction (`xiom.pulse`) -> the
-  product consumes the package -> publish + registry canary.
+- **Product-split directive (2026-10-16):** owner locked the codenames --
+  **PULSE Beacon** (embeddable edition: the `xiom.pulse` package you
+  add to an app) / **PULSE Station** (hosted edition: the full product,
+  docker/k8s); one protocol core, two editions, never a fork (the
+  orbitdb satellite/station pattern; the product is PULSE on both).
+  Roadmap §9 (`docs/ROADMAP-TOP-TIER.md`); publish ask
+  `REL-20261016-1108-pulse` (packages acked -- `xiom.pulse` slot free,
+  porter-flow scoping agreed at the keep-alive A+B freeze); codenames
+  note `REL-20261016-1121-pulse`. Sequence: keep-alive A/B -> core
+  extraction (Beacon) -> Station consumes -> publish + registry canary.
 - **Keep-alive Phase A (in flight, 2026-10-16):** deadlines landed in
   the tree (PULSE_READ_TIMEOUT/PULSE_WRITE_TIMEOUT/PULSE_IDLE_TIMEOUT +
   check-config + warns; bounded recv per-request; poll-gated send);
