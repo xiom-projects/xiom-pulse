@@ -1,0 +1,12 @@
+# Consumer-verify manifest: xiom.brotli 0.1.0 from the registry (eco-v0.1.189).
+# Local to docs/repro/brotli-verify/ -- consumes the INSTALLED registry
+# artifact; run from this directory with the pinned v0.64.5 toolchain plus
+# the --c-source set from the installed package's port.args.json
+# (${PACKAGE_DIR} -> the installed package root). See README.md.
+[project]
+name = "brotli-verify"
+version = "0.1.0"
+root = "."
+
+[dependencies]
+"xiom.brotli" = "0.1.0"
