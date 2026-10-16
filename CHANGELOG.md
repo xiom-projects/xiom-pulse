@@ -13,6 +13,12 @@ GitHub release body.
   -- a slowloris gets `408 Request Timeout`, a stalled reader is
   dropped mid-write, and one slow client can no longer hold the loop.
   `--check-config` prints the values and warns on `0` (dev only).
+- Connection reuse (keep-alive Phase B): HTTP/1.1 connections serve
+  sequential requests without closing (`PULSE_KEEPALIVE=0` restores
+  close-per-request); `Connection: close` and HTTP/1.0 peers close
+  correctly; pipelined requests are answered in order with no data
+  loss; idle connections close silently after `PULSE_IDLE_TIMEOUT`;
+  and an incomplete body never leaks into the next request.
 
 ### Changed
 

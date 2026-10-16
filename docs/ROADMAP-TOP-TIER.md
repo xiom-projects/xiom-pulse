@@ -113,11 +113,12 @@ knex, bullmq + the two benchmark suites):
 
 Owner tags: Q=PULSE unit, S=stdlib, C=compiler, P=packages, O=ops.
 
-**W1 Runtime & scale-out.** keep-alive A/B [Q, next]; worker supervisor
-+ CLI (`--workers`) [Q] over S: spawn-with-pipes + real threads or a
-blessed process model; TCP_NODELAY/backlog [S]; trust-proxy unit [Q];
-drain/reload [Q over S signals (done)]; systemd + nginx templates [O];
-stateless mode: shared sessions/rate/idempotency [Q, after W5].
+**W1 Runtime & scale-out.** keep-alive A/B [Q, **done 2026-10-16**];
+worker supervisor + CLI (`--workers`) [Q] over S: spawn-with-pipes +
+real threads or a blessed process model; TCP_NODELAY/backlog [S];
+trust-proxy unit [Q]; drain/reload [Q over S signals (done)]; systemd +
+nginx templates [O]; stateless mode: shared sessions/rate/idempotency
+[Q, after W5].
 
 **W2 Modern protocol.** TLS server+client + ALPN [S, the ceiling];
 native h2 framing/HPACK [S scoping + Q unit] after TLS; h3 stays
@@ -166,7 +167,8 @@ markdown in-repo.
 
 ## 6. Milestones
 
-- **0.3 (data + realtime + static):** keep-alive A/B; durability A/B;
+- **0.3 (data + realtime + static):** keep-alive A/B (**done
+  2026-10-16**); durability A/B;
   middleware + jobs; SQL runner; SSE + WS units; static
   conditional/Range; bench baseline (pre-keep-alive numbers); templates
   v0 if the package lands.
@@ -243,10 +245,12 @@ modules (`src/http.xi`, `src/router.xi`, `src/envelope.xi`,
 
 Sequence:
 
-1. Finish keep-alive Phase A + B in the monolith -- they define the
-   core's connection semantics (freeze gate: "keep-alive A+B green").
+1. ~~Finish keep-alive Phase A + B~~ **DONE (2026-10-16)**: both phases
+   landed and verified (smoke 134/134 x2 on both platforms) -- the
+   core's connection semantics are frozen; the freeze gate is GREEN.
 2. Extract `xiom.pulse` (the Beacon core) with a `minimal.xi` example
-   and its own CI.
+   and its own CI -- the NEXT step; the packages porter flow is armed
+   (`REL-20261016-1108-pulse` acked, slot reserved).
 3. The PULSE Station product consumes the package; the extras stay
    Station-side.
 4. Publish via the packages lane; the registry reserves the name and

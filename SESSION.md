@@ -413,15 +413,16 @@
   porter-flow scoping agreed at the keep-alive A+B freeze); codenames
   note `REL-20261016-1121-pulse`. Sequence: keep-alive A/B -> core
   extraction (Beacon) -> Station consumes -> publish + registry canary.
-- **Keep-alive Phase A LANDED (2026-10-16):** connection deadlines --
-  `PULSE_READ_TIMEOUT`/`PULSE_WRITE_TIMEOUT`/`PULSE_IDLE_TIMEOUT`
-  (+ check-config + warns), bounded recv per request, non-blocking
-  poll-gated send (the Linux sweep caught the blocking-send bypass --
-  a blocking `send()` froze past the poll gate on partial buffer space;
-  fixed with O_NONBLOCK sends + a 50 MB stream test), `408` from IDLE.
-  Smoke grew 119->124 checks (raw slowloris + write-stall +
-  check-config); both platforms FAILED=0, 124/124 x2. Phase B (reuse)
-  next -- A+B green is the PULSE Beacon freeze gate.
+- **Keep-alive A+B LANDED (2026-10-16) -- Beacon freeze gate GREEN:**
+  Phase A (deadlines: `PULSE_READ_TIMEOUT`/`PULSE_WRITE_TIMEOUT`/
+  `PULSE_IDLE_TIMEOUT`, bounded recv per request, non-blocking
+  poll-gated send, `408` from IDLE) + Phase B (reuse latch,
+  `Connection: close`/HTTP-1.0/incomplete-framing close, in-order
+  pipelining via the trailing buffer, silent idle expiry, garbage
+  close). Smoke 119->134 checks; both platforms 134/134 x2. The
+  packages porter flow for `xiom.pulse` (Beacon) is now UNBLOCKED --
+  file the publish-ready milestone item next (SESSION §3 item 1b /
+  REL-20261016-1108-pulse acked).
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive

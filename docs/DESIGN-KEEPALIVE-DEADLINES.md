@@ -9,11 +9,16 @@ MIT) and `E:\repos\fasthttp` (valyala, MIT), light clones; bus asks
 receive).
 
 Status update 2026-10-16: **Phase A IMPLEMENTED** -- bounded recv per
-request (shrinking budget), poll-gated send (stalled readers dropped),
-`408 Request Timeout` from IDLE, the three `PULSE_*_TIMEOUT` knobs with
-check-config + warnings; socket-verified on Windows and WSL (slowloris
--> 408 + loop alive; write-stall dropped at 64 KiB + loop alive).
-Phase B (keep-alive reuse) is next, and the A+B pair freezes the API
+request (shrinking budget), poll-gated send (non-blocking; stalled
+readers dropped), `408 Request Timeout` from IDLE, the three
+`PULSE_*_TIMEOUT` knobs with check-config + warnings; socket-verified
+on Windows and WSL (slowloris -> 408 + loop alive; write-stall dropped
+at 64 KiB + loop alive). **Phase B IMPLEMENTED (same day)** --
+per-connection trailing buffer, the one-way reuse latch (`Connection:
+close` token / HTTP-1.0 peers / incomplete framing all close), in-order
+pipelining with no data loss (pre-checked buffered requests), silent
+idle expiry, and garbage-close at cycle 2; `PULSE_KEEPALIVE=0` restores
+close-per-request. Smoke 119 -> 134 checks. The A+B pair freezes the API
 for the PULSE Beacon package extraction.
 
 ## 1. Problem statement

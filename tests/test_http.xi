@@ -77,7 +77,7 @@ pub fn main() -> Int {
   f = f + check("malformed header rejected", !bad3.ok);
 
   // --- response building ---------------------------------------------------
-  let resp = http.build_response(200, "{\"status\":\"ok\"}");
+  let resp = http.build_response(200, "{\"status\":\"ok\"}", false);
   let resp_str = http.bytes_to_str(&resp, 0, resp.len());
   f = f + check("status line", string.str_contains(resp_str, "HTTP/1.1 200 OK\r\n"));
   f = f + check("status text 304", http.status_text(304) == "Not Modified");
@@ -166,7 +166,7 @@ pub fn main() -> Int {
   f = f + check("security csp absent by default", !string.str_contains(resp_str, "Content-Security-Policy:"));
   var no_hdrs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
   var empty_body: Vec[UInt8] = Vec[UInt8].new();
-  let rbytes = http.build_response_bytes(200, "image/x-icon", &no_hdrs, &empty_body);
+  let rbytes = http.build_response_bytes(200, "image/x-icon", &no_hdrs, &empty_body, false);
   let rbytes_str = http.bytes_to_str(&rbytes, 0, rbytes.len());
   f = f + check("security block on bytes path", string.str_contains(rbytes_str, "X-Content-Type-Options: nosniff") && string.str_contains(rbytes_str, "Cross-Origin-Opener-Policy: same-origin"));
 

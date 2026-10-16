@@ -666,6 +666,19 @@ checks, `run.sh` log cap 200->400. Both platforms FAILED=0 (suites x2 +
 smoke 119/119 jsonl+kv). Score holds -- correctness polish, no new
 capability._
 
+_Delta 2026-10-16 (keep-alive A+B): connection handling is production-
+complete for the single-worker model -- per-request read deadlines
+(408 from IDLE), non-blocking poll-gated write deadline (stalled
+readers dropped; the Linux 50 MB stream check caught the blocking-send
+bypass), and HTTP/1.1 keep-alive with the h11-adopted reuse rules:
+comma-token `Connection: close`, HTTP/1.0 never reuses, in-order
+pipelining via the trailing buffer with no data loss, silent idle
+expiry, EOF-mid-message closes with no answer. `PULSE_KEEPALIVE=0`
+restores close-per-request. Smoke 119->134; both platforms 134/134 x2.
+Score: connection-handling row moves from partial to complete; next is
+the Beacon freeze **and** the benchmark baseline (pre/post keep-alive
+numbers)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

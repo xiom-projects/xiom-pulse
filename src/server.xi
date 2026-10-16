@@ -618,28 +618,77 @@ fn recv_bounded(client: Int, budget_ms: Int, t0: Int) -> Result[Vec[UInt8], Str]
   return socket.socket_recv_timeout(client, 65536, remaining);
 }
 
+/// request_complete mirrors the read_request framing checks: true when
+/// `raw` already holds a fully framed request (head + body, or the capped
+/// oversize/overflow condition the read loop treats as done). Used to
+/// serve a fully-buffered pipelined request without another recv.
+/// Complexity: O(n). Pure.
+fn request_complete(raw: &Vec[UInt8]) -> Bool {
+  let he = find_header_end(raw);
+  if he < 0 { return header_overflow(raw); }
+  let te = http.transfer_encoding_of(raw, he);
+  if te.len() > 0 {
+    if !http.te_is_chunked(te) { return true; }
+    let tcap: Int = he + 4 + MAX_BODY + 16384;
+    return http.chunked_state(raw, he) != 0 || raw.len() >= tcap;
+  }
+  var want: Int = he + 4 + content_length_of(raw, he);
+  let cap: Int = he + 4 + MAX_BODY;
+  if want > cap { want = cap; }
+  return raw.len() >= want;
+}
+
 /// read_request buffers one request per connection until headers and the
-/// Content-Length body are complete, bounded by the read deadline.
-/// Returns (raw, err): err = 1 means the deadline expired or the socket
-/// errored before the request completed -- the caller answers 408
-/// (fasthttp model). Complexity: O(n) syscalls.
-fn read_request(client: Int, budget_ms: Int) -> (Vec[UInt8], Int) {
+/// Content-Length body are complete. `initial` seeds the buffer with
+/// trailing bytes from a pipelined keep-alive cycle; `first_ms` bounds
+/// the wait for the FIRST byte (the idle deadline on cycle > 0), after
+/// which `budget_ms` bounds the rest of the request. Returns
+/// (raw, err, idle): err = 1 deadline/socket error (408 path), err = 2
+/// clean EOF mid-message (close with no response, h11 rule 6), idle = 1
+/// the idle deadline expired before any byte (silent close, fasthttp
+/// model). Complexity: O(n) syscalls.
+fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int, cycling: Bool) -> (Vec[UInt8], Int, Int) {
   var raw: Vec[UInt8] = Vec[UInt8].new();
+  var i0: Int = 0;
+  while i0 < initial.len() {
+    raw.push(initial[i0]);
+    i0 = i0 + 1;
+  }
+  // A fully buffered pipelined request is served without another recv
+  // (its bytes may arrive with the previous cycle's last read).
+  if request_complete(&raw) {
+    return (raw, 0, 0);
+  }
   var done: Bool = false;
   var err: Int = 0;
+  var idle: Int = 0;
   var rounds: Int = 0;
   var sent100: Bool = false;
-  let t0 = time.monotonic_ms();
+  var started: Bool = raw.len() > 0;
+  var t0 = time.monotonic_ms();
   while !done && rounds < 1024 {
-    let rr = recv_bounded(client, budget_ms, t0);
+    var bud: Int = budget_ms;
+    if !started { bud = first_ms; }
+    let rr = recv_bounded(client, bud, t0);
     if rr.is_err {
-      err = 1;
+      if !started && cycling {
+        idle = 1;
+      } else {
+        err = 1;
+      }
       done = true;
     } else {
       let chunk = rr.value;
       if chunk.len() == 0 {
+        // EOF: a clean close only BETWEEN requests; mid-message it is a
+        // protocol error with no answer (h11 rule 6).
+        if raw.len() > 0 { err = 2; }
         done = true;
       } else {
+        if !started {
+          started = true;
+          t0 = time.monotonic_ms();
+        }
         var i: Int = 0;
         while i < chunk.len() {
           raw.push(chunk[i]);
@@ -683,7 +732,7 @@ fn read_request(client: Int, budget_ms: Int) -> (Vec[UInt8], Int) {
     }
     rounds = rounds + 1;
   }
-  return (raw, err);
+  return (raw, err, idle);
 }
 
 /// send_step queues one 64 KiB slice; -1 on failure. Complexity: O(chunk).
@@ -916,6 +965,9 @@ pub fn main() -> Int {
       io.println("read_timeout_ms=" + config.cfg_read_timeout().to_str());
       io.println("write_timeout_ms=" + config.cfg_write_timeout().to_str());
       io.println("idle_timeout_ms=" + config.cfg_idle_timeout().to_str());
+      var ka_note: Str = "on";
+      if !config.cfg_keepalive() { ka_note = "off"; }
+      io.println("keepalive=" + ka_note);
       let js = env.var_or("PULSE_JWT_SECRET", "");
       var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
       if js.len() > 0 { secret_note = "env"; }
@@ -997,6 +1049,10 @@ pub fn main() -> Int {
 
   io.println("pulse: deadlines read=" + config.cfg_read_timeout().to_str() + "ms write=" + config.cfg_write_timeout().to_str() + "ms idle=" + config.cfg_idle_timeout().to_str() + "ms");
   io.flush_stdout();
+  var ka_note: Str = "on";
+  if !config.cfg_keepalive() { ka_note = "off"; }
+  io.println("pulse: keep-alive " + ka_note + " (PULSE_KEEPALIVE=0 disables reuse)");
+  io.flush_stdout();
 
   var served: Int = 0;
   var running: Bool = true;
@@ -1008,137 +1064,171 @@ pub fn main() -> Int {
       return 1;
     }
     let client = ar.value;
-    let t0_ms = time.monotonic_ms();
-    let rreq = read_request(client, config.cfg_read_timeout());
-    let raw = rreq.0;
-    let read_err = rreq.1;
+    var conn_open: Bool = true;
+    var keep: Bool = config.cfg_keepalive();
+    var buf: Vec[UInt8] = Vec[UInt8].new();
+    var cycle: Int = 0;
+    while conn_open && running {
+      let t0_ms = time.monotonic_ms();
+      var first_ms: Int = config.cfg_read_timeout();
+      if cycle > 0 { first_ms = config.cfg_idle_timeout(); }
+      let rreq = read_request(client, config.cfg_read_timeout(), &buf, first_ms, cycle > 0);
+      let raw = rreq.0;
+      let read_err = rreq.1;
+      let idle_out = rreq.2;
+      var reuse: Bool = false;
 
-    if raw.len() == 0 && read_err == 0 {
-      socket.socket_close(client);
-    } else if read_err == 1 {
-      // Deadline (or socket error) before the request completed: answer
-      // 408 best-effort (the send fails harmlessly on a dead socket) and
-      // close -- one slow client cannot stall the loop (slowloris guard,
-      // fasthttp model).
-      let rid = next_rid();
-      reqctx.set_rid(rid);
-      var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-      let rbody = envelope.error_body("request_timeout", "request timed out");
-      var resp = http.build_response_full(408, CONTENT_JSON, &no_headers, rbody);
-      resp = with_std_headers(resp);
-      let _w = send_all(client, &resp);
-      socket.socket_close(client);
-      let dur = time.monotonic_ms() - t0_ms;
-      metrics.metrics_record(408, rbody.len());
-      metrics.metrics_record_duration(dur);
-      access_log(rid, "?", "-", 408, rbody.len(), dur);
-    } else {
-      let rid = next_rid();
-      reqctx.set_rid(rid);
-      let req = http.parse_request(&raw);
-      let cookie_header = http.header_get(&req, "cookie");
-      if !req.ok {
-        var status: Int = 400;
-        var code: Str = "bad_request";
-        if string.str_contains(req.error, "too large") {
-          status = 413;
-          code = "payload_too_large";
-        }
+      if idle_out == 1 {
+        // Idle keep-alive expiry: silent close, no 408 (fasthttp model).
+        conn_open = false;
+      } else if raw.len() == 0 && read_err == 0 {
+        conn_open = false;
+      } else if read_err == 2 {
+        // EOF mid-message: close with no response (h11 rule 6).
+        conn_open = false;
+      } else if read_err == 1 {
+        // Deadline (or socket error) before the request completed: answer
+        // 408 best-effort (the send fails harmlessly on a dead socket) and
+        // close -- one slow client cannot stall the loop (slowloris guard,
+        // fasthttp model).
+        let rid = next_rid();
+        reqctx.set_rid(rid);
         var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-        var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, "bad request"));
-        resp = with_std_headers(with_cors(resp, &req));
-        let w_ok = send_all(client, &resp);
-        if !w_ok { io.println("pulse: send failed (" + status.to_str() + ")"); io.flush_stdout(); }
-        socket.socket_close(client);
+        let rbody = envelope.error_body("request_timeout", "request timed out");
+        var resp = http.build_response_full(408, CONTENT_JSON, &no_headers, rbody, false);
+        resp = with_std_headers(resp);
+        let _w = send_all(client, &resp);
+        conn_open = false;
         let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(status, resp.len());
+        metrics.metrics_record(408, rbody.len());
         metrics.metrics_record_duration(dur);
-        access_log(rid, "?", "-", status, resp.len(), dur);
-      } else if http.header_get(&req, "x-pulse-quit") == "1" {
-        socket.socket_close(client);
-        running = false;
-      } else if req.method == "OPTIONS" && cors.cors_enabled() {
-        var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-        var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "");
-        resp = with_std_headers(with_cors(resp, &req));
-        let w_ok = send_all(client, &resp);
-        if !w_ok { io.println("pulse: send failed (204)"); io.flush_stdout(); }
-        socket.socket_close(client);
-        let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(204, 0);
-        metrics.metrics_record_duration(dur);
-        access_log(rid, req.method, req.target, 204, 0, dur);
-      } else if csrf_on && is_mutating(req.method) && sessions.session_id_from_cookie(cookie_header).len() > 0 && !sessions.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
-        var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-        let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
-        var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody);
-        resp = with_std_headers(with_cors(resp, &req));
-        let w_ok = send_all(client, &resp);
-        if !w_ok { io.println("pulse: send failed (403)"); io.flush_stdout(); }
-        socket.socket_close(client);
-        let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(403, rbody.len());
-        metrics.metrics_record_duration(dur);
-        access_log(rid, req.method, req.target, 403, rbody.len(), dur);
-      } else if !ratelimit.limiter_allow(&mut limiter, time.monotonic_ms()) {
-        let now_ms = time.monotonic_ms();
-        let retry_ms = ratelimit.limiter_retry_after_ms(&limiter, now_ms);
-        var secs: Int = retry_ms / 1000;
-        if secs < 1 { secs = 1; }
-        var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-        hs.push(("Retry-After", secs.to_str()));
-        let rbody = envelope.error_body("rate_limited", "too many requests");
-        var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody);
-        resp = with_std_headers(with_cors(resp, &req));
-        let w_ok = send_all(client, &resp);
-        if !w_ok { io.println("pulse: send failed (429)"); io.flush_stdout(); }
-        socket.socket_close(client);
-        let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(429, rbody.len());
-        metrics.metrics_record_duration(dur);
-        access_log(rid, req.method, req.target, 429, rbody.len(), dur);
+        access_log(rid, "?", "-", 408, rbody.len(), dur);
       } else {
-        let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
-        var eff_method: Str = req.method;
-        if req.method == "HEAD" { eff_method = "GET"; }
-        let out = dispatch_one(eff_method, &req, body_str);
-        var resp: Vec[UInt8] = Vec[UInt8].new();
-        var payload_len: Int = out.body.len();
-        if out.body_bytes.len() > 0 {
-          resp = http.build_response_bytes(out.status, out.content_type, &out.headers, &out.body_bytes);
-          payload_len = out.body_bytes.len();
+        let rid = next_rid();
+        reqctx.set_rid(rid);
+        let req = http.parse_request(&raw);
+        let cookie_header = http.header_get(&req, "cookie");
+        // Reuse gate (h11 rules): complete framing consumed, no close
+        // request from the peer, still open for reuse. The latch is
+        // one-way: once a cycle closes, the connection never reuses.
+        let fend = http.framed_end(&raw);
+        keep = keep && fend >= 0 && !http.connection_close_requested(&req);
+        reuse = keep;
+        if !req.ok {
+          var status: Int = 400;
+          var code: Str = "bad_request";
+          if string.str_contains(req.error, "too large") {
+            status = 413;
+            code = "payload_too_large";
+          }
+          var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+          var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, "bad request"), false);
+          resp = with_std_headers(with_cors(resp, &req));
+          let w_ok = send_all(client, &resp);
+          if !w_ok { io.println("pulse: send failed (" + status.to_str() + ")"); io.flush_stdout(); }
+          conn_open = false;
+          let dur = time.monotonic_ms() - t0_ms;
+          metrics.metrics_record(status, resp.len());
+          metrics.metrics_record_duration(dur);
+          access_log(rid, "?", "-", status, resp.len(), dur);
+        } else if http.header_get(&req, "x-pulse-quit") == "1" {
+          running = false;
+          conn_open = false;
+        } else if req.method == "OPTIONS" && cors.cors_enabled() {
+          var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+          var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "", reuse);
+          resp = with_std_headers(with_cors(resp, &req));
+          let w_ok = send_all(client, &resp);
+          if !w_ok { io.println("pulse: send failed (204)"); io.flush_stdout(); }
+          conn_open = reuse;
+          let dur = time.monotonic_ms() - t0_ms;
+          metrics.metrics_record(204, 0);
+          metrics.metrics_record_duration(dur);
+          access_log(rid, req.method, req.target, 204, 0, dur);
+        } else if csrf_on && is_mutating(req.method) && sessions.session_id_from_cookie(cookie_header).len() > 0 && !sessions.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
+          var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+          let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
+          var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody, reuse);
+          resp = with_std_headers(with_cors(resp, &req));
+          let w_ok = send_all(client, &resp);
+          if !w_ok { io.println("pulse: send failed (403)"); io.flush_stdout(); }
+          conn_open = reuse;
+          let dur = time.monotonic_ms() - t0_ms;
+          metrics.metrics_record(403, rbody.len());
+          metrics.metrics_record_duration(dur);
+          access_log(rid, req.method, req.target, 403, rbody.len(), dur);
+        } else if !ratelimit.limiter_allow(&mut limiter, time.monotonic_ms()) {
+          let now_ms = time.monotonic_ms();
+          let retry_ms = ratelimit.limiter_retry_after_ms(&limiter, now_ms);
+          var secs: Int = retry_ms / 1000;
+          if secs < 1 { secs = 1; }
+          var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+          hs.push(("Retry-After", secs.to_str()));
+          let rbody = envelope.error_body("rate_limited", "too many requests");
+          var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
+          resp = with_std_headers(with_cors(resp, &req));
+          let w_ok = send_all(client, &resp);
+          if !w_ok { io.println("pulse: send failed (429)"); io.flush_stdout(); }
+          conn_open = reuse;
+          let dur = time.monotonic_ms() - t0_ms;
+          metrics.metrics_record(429, rbody.len());
+          metrics.metrics_record_duration(dur);
+          access_log(rid, req.method, req.target, 429, rbody.len(), dur);
         } else {
-          resp = http.build_response_full(out.status, out.content_type, &out.headers, out.body);
-        }
-        if req.method == "HEAD" {
-          let he = find_header_end(&resp);
-          if he >= 0 {
-            var trimmed: Vec[UInt8] = Vec[UInt8].new();
-            var ti: Int = 0;
-            while ti < he + 4 {
-              trimmed.push(resp[ti]);
-              ti = ti + 1;
+          let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
+          var eff_method: Str = req.method;
+          if req.method == "HEAD" { eff_method = "GET"; }
+          let out = dispatch_one(eff_method, &req, body_str);
+          var resp: Vec[UInt8] = Vec[UInt8].new();
+          var payload_len: Int = out.body.len();
+          if out.body_bytes.len() > 0 {
+            resp = http.build_response_bytes(out.status, out.content_type, &out.headers, &out.body_bytes, reuse);
+            payload_len = out.body_bytes.len();
+          } else {
+            resp = http.build_response_full(out.status, out.content_type, &out.headers, out.body, reuse);
+          }
+          if req.method == "HEAD" {
+            let he = find_header_end(&resp);
+            if he >= 0 {
+              var trimmed: Vec[UInt8] = Vec[UInt8].new();
+              var ti: Int = 0;
+              while ti < he + 4 {
+                trimmed.push(resp[ti]);
+                ti = ti + 1;
+              }
+              resp = trimmed;
             }
-            resp = trimmed;
+          }
+          resp = with_std_headers(with_cors(resp, &req));
+          let w_ok = send_all(client, &resp);
+          if !w_ok {
+            io.println("pulse: send failed");
+            io.flush_stdout();
+          }
+          conn_open = reuse;
+          served = served + 1;
+          let dur = time.monotonic_ms() - t0_ms;
+          metrics.metrics_record(out.status, payload_len);
+          metrics.metrics_record_duration(dur);
+          access_log(rid, req.method, req.target, out.status, payload_len, dur);
+          if req.method != "GET" {
+            audit_event(rid, req.method, req.target, out.status);
           }
         }
-        resp = with_std_headers(with_cors(resp, &req));
-        let w_ok = send_all(client, &resp);
-        if !w_ok {
-          io.println("pulse: send failed");
-          io.flush_stdout();
-        }
-        socket.socket_close(client);
-        served = served + 1;
-        let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(out.status, payload_len);
-        metrics.metrics_record_duration(dur);
-        access_log(rid, req.method, req.target, out.status, payload_len, dur);
-        if req.method != "GET" {
-          audit_event(rid, req.method, req.target, out.status);
+        if conn_open && reuse {
+          // Carry pipelined trailing bytes into the next cycle (h11 rule
+          // 4: never lose unparsed bytes).
+          buf = Vec[UInt8].new();
+          var ti: Int = fend;
+          while ti < raw.len() {
+            buf.push(raw[ti]);
+            ti = ti + 1;
+          }
         }
       }
+      cycle = cycle + 1;
     }
+    socket.socket_close(client);
   }
 
   socket.socket_close(fd);

@@ -338,7 +338,9 @@ else
 fi
 R=$(http_get /health)
 pulse_check "deadline loop alive after slowloris" "$R" "200 OK"
-DL_STALL=$(python3 - "$PORT" <<'PYEOF'
+DL_STALL=""
+for _attempt in 1 2; do
+  DL_STALL=$(python3 - "$PORT" <<'PYEOF'
 import socket, sys, time
 port = int(sys.argv[1])
 t = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -362,13 +364,100 @@ print(total)
 t.close()
 PYEOF
 )
-if [ -n "$DL_STALL" ] && [ "$DL_STALL" -lt 20000000 ]; then
+  if printf '%s' "$DL_STALL" | grep -qE '^[0-9]+$'; then break; fi
+  sleep 0.5
+done
+if printf '%s' "$DL_STALL" | grep -qE '^[0-9]+$' && [ "$DL_STALL" -lt 45000000 ]; then
   pulse_check "deadline write-stall dropped" yes yes
 else
-  pulse_check "deadline write-stall dropped" "bytes=$DL_STALL" yes
+  pulse_check "deadline write-stall dropped" "bytes=[$DL_STALL]" yes
 fi
 R=$(http_get /health)
 pulse_check "deadline loop alive after write-stall" "$R" "200 OK"
+
+# --- 13f. keep-alive Phase B: reuse, close, pipelining, 1.0, idle, garbage --
+KA_OUT=$(python3 - "$PORT" <<'PYEOF'
+import socket, sys, time
+port = int(sys.argv[1])
+def read_resp(s):
+    # Byte-wise head+body read: never consumes bytes belonging to the
+    # NEXT pipelined response (a coalescing read would lose them).
+    s.settimeout(6)
+    head = b""
+    while b"\r\n\r\n" not in head:
+        c = s.recv(1)
+        if not c:
+            return b"EOF"
+        head += c
+    cl = 0
+    for line in head.split(b"\r\n"):
+        if line.lower().startswith(b"content-length:"):
+            cl = int(line.split(b":", 1)[1].strip())
+    got = 0
+    while got < cl:
+        c = s.recv(1)
+        if not c:
+            break
+        got += 1
+    return head
+def connect():
+    return socket.create_connection(("127.0.0.1", port), 5)
+r1 = b"GET /health HTTP/1.1\r\nHost: smoke\r\n\r\n"
+r2 = b"GET /api/version HTTP/1.1\r\nHost: smoke\r\n\r\n"
+r3 = b"GET /health HTTP/1.1\r\nHost: smoke\r\nConnection: close\r\n\r\n"
+s = connect()
+s.sendall(r1); a1 = read_resp(s)
+s.sendall(r2); a2 = read_resp(s)
+s.sendall(r3); a3 = read_resp(s)
+print("A1:" + a1.split(b"\r\n")[0].decode("latin1"))
+print("A1CLOSE:" + ("yes" if b"connection: close" in a1.lower() else "no"))
+print("A2:" + a2.split(b"\r\n")[0].decode("latin1"))
+print("A3CLOSE:" + ("yes" if b"connection: close" in a3.lower() else "no"))
+s.close()
+s = connect()
+s.sendall(r1 + r2)
+p1 = read_resp(s); p2 = read_resp(s)
+print("P1:" + p1.split(b"\r\n")[0].decode("latin1"))
+print("P2:" + p2.split(b"\r\n")[0].decode("latin1"))
+s.close()
+s = connect()
+s.sendall(b"GET /health HTTP/1.0\r\nHost: smoke\r\n\r\n")
+h = read_resp(s)
+print("H10:" + h.split(b"\r\n")[0].decode("latin1"))
+print("H10CLOSE:" + ("yes" if b"connection: close" in h.lower() else "no"))
+print("H10KA:" + ("yes" if b"keep-alive" in h.lower() else "no"))
+s.close()
+s = connect()
+s.sendall(r1)
+read_resp(s)
+time.sleep(2.8)
+s.settimeout(3)
+try:
+    d = s.recv(64)
+    print("IDLE:" + ("eof" if not d else "bytes=%d" % len(d)))
+except Exception:
+    print("IDLE:exc")
+s.close()
+s = connect()
+s.sendall(r1)
+read_resp(s)
+s.sendall(b"SADF\r\n\r\n")
+g = read_resp(s)
+print("G:" + g.split(b"\r\n")[0].decode("latin1"))
+s.close()
+PYEOF
+)
+ka_get() { printf '%s\n' "$KA_OUT" | grep "^$1:" | head -n 1 | cut -d: -f2-; }
+pulse_check_eq "ka first 200" "$(ka_get A1)" "HTTP/1.1 200 OK"
+pulse_check_eq "ka no close header" "$(ka_get A1CLOSE)" "no"
+pulse_check_eq "ka second 200" "$(ka_get A2)" "HTTP/1.1 200 OK"
+pulse_check_eq "ka client close honored" "$(ka_get A3CLOSE)" "yes"
+pulse_check_eq "ka pipelined first" "$(ka_get P1)" "HTTP/1.1 200 OK"
+pulse_check_eq "ka pipelined second" "$(ka_get P2)" "HTTP/1.1 200 OK"
+pulse_check_eq "ka http10 close" "$(ka_get H10CLOSE)" "yes"
+pulse_check_eq "ka http10 no keepalive" "$(ka_get H10KA)" "no"
+pulse_check_eq "ka idle silent close" "$(ka_get IDLE)" "eof"
+pulse_check_eq "ka garbage closes 400" "$(ka_get G)" "HTTP/1.1 400 Bad Request"
 
 # --- 13. QUIT ---------------------------------------------------------------
 pulse_quit

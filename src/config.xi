@@ -112,6 +112,13 @@ pub fn cfg_idle_timeout() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_IDLE_TIMEOUT", "5000"), 5000);
 }
 
+/// cfg_keepalive is false when PULSE_KEEPALIVE=0 (connection reuse is on
+/// by default once Phase B landed; 0 restores close-per-request).
+/// Complexity: O(1). Pure.
+pub fn cfg_keepalive() -> Bool {
+  return env.var_or("PULSE_KEEPALIVE", "1") != "0";
+}
+
 /// cfg_cors_origin returns the allowed CORS origin ("" = CORS off).
 /// Complexity: O(1). Pure.
 pub fn cfg_cors_origin() -> Str {
@@ -483,6 +490,10 @@ pub fn cfg_validate() -> Vec[Str] {
     if iv < 0 {
       w.push("PULSE_IDLE_TIMEOUT=\"" + ito + "\" is not a non-negative integer; using 5000");
     }
+  }
+  let ka = env.var_or("PULSE_KEEPALIVE", "");
+  if ka.len() > 0 && ka != "0" && ka != "1" {
+    w.push("PULSE_KEEPALIVE=\"" + ka + "\" is not 0 or 1; treating as enabled");
   }
 
   return w;

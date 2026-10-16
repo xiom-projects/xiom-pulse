@@ -10,6 +10,16 @@ All responses are JSON unless noted. `GET /health` returns
 mirrored additively:
 `{"error":{"status":404,"code":"not_found","message":"..."}}`.
 
+## Connections
+
+HTTP/1.1 connections are persistent by default (keep-alive): sequential
+requests are served on one socket, pipelined requests are answered in
+order, `Connection: close` is honored, and HTTP/1.0 peers are closed
+after one response. Idle connections close silently after
+`PULSE_IDLE_TIMEOUT` (default 5 s); set `PULSE_KEEPALIVE=0` to restore
+close-per-request. Slow clients are bounded by `PULSE_READ_TIMEOUT` /
+`PULSE_WRITE_TIMEOUT` (see Configuration).
+
 ## Versioning
 
 Every route also resolves under the `/v1` alias: `/v1/api/events` is

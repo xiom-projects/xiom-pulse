@@ -215,6 +215,29 @@ pub fn header_get(req: &PulseRequest, name: Str) -> Str {
   return "";
 }
 
+/// connection_close_requested is true when the peer asked for close
+/// (`Connection` comma-token "close", case-insensitive) or spoke a
+/// version below HTTP/1.1 -- a 1.0 peer never gets keep-alive, even with
+/// `Connection: keep-alive` (h11 rule; deliberately adopted).
+/// Complexity: O(value). Pure.
+pub fn connection_close_requested(req: &PulseRequest) -> Bool {
+  if req.version != "HTTP/1.1" { return true; }
+  let v = header_get(req, "connection");
+  if v.len() == 0 { return false; }
+  let lv = string.str_lower(v);
+  var i: Int = 0;
+  var start: Int = 0;
+  while i <= lv.len() {
+    if i == lv.len() || lv.byte_at(i) == 44u8 {
+      let tok = string.str_trim(string.str_slice(lv, start, i));
+      if tok == "close" { return true; }
+      start = i + 1;
+    }
+    i = i + 1;
+  }
+  return false;
+}
+
 /// content_length_of returns the request's Content-Length parsed from the
 /// header span [0, hdr_end), or 0 when absent/invalid. O(n). Pure.
 pub fn content_length_of(raw: &Vec[UInt8], hdr_end: Int) -> Int {
@@ -353,6 +376,60 @@ pub fn chunked_state(raw: &Vec[UInt8], hdr_end: Int) -> Int {
     p = de + 2;
   }
   return -1;
+}
+
+/// chunked_end returns the offset just past the terminating zero chunk
+/// (trailers included), or -1 when incomplete/malformed. Mirror of the
+/// chunked_state walk that also yields the consumed length for the
+/// keep-alive trailing buffer. Complexity: O(n). Pure.
+fn chunked_end(raw: &Vec[UInt8], hdr_end: Int) -> Int {
+  var p: Int = hdr_end + 4;
+  var guard: Int = 0;
+  while guard < 1000000 {
+    guard = guard + 1;
+    if p > raw.len() { return -1; }
+    let le = find_crlf(raw, p, raw.len());
+    if le < 0 { return -1; }
+    let sz = parse_hex_uint(chunk_size_text(bytes_to_str(raw, p, le)));
+    if sz < 0 { return -1; }
+    if sz == 0 {
+      var q: Int = le + 2;
+      var tg: Int = 0;
+      while tg < 1000 {
+        tg = tg + 1;
+        let te2 = find_crlf(raw, q, raw.len());
+        if te2 < 0 { return -1; }
+        if te2 == q { return te2 + 2; }
+        q = te2 + 2;
+      }
+      return -1;
+    }
+    let de: Int = le + 2 + sz;
+    if de + 2 > raw.len() { return -1; }
+    if raw[de] != 13u8 || raw[de + 1] != 10u8 { return -1; }
+    p = de + 2;
+  }
+  return -1;
+}
+
+/// framed_end returns the byte offset just past the complete request
+/// framed by `raw` (head + body), or -1 when incomplete, oversize, or
+/// TE-framed with an unsupported coding -- the keep-alive loop closes
+/// after responding on -1 (an unread body must never be reused as a
+/// request). Complexity: O(n). Pure.
+pub fn framed_end(raw: &Vec[UInt8]) -> Int {
+  let he = find_header_end(raw);
+  if he < 0 { return -1; }
+  let te = transfer_encoding_of(raw, he);
+  if te.len() > 0 {
+    if !te_is_chunked(te) { return -1; }
+    return chunked_end(raw, he);
+  }
+  let cl = content_length_of(raw, he);
+  if cl > body_limit_bytes() { return -1; }
+  let end = he + 4 + cl;
+  if end > raw.len() { return -1; }
+  return end;
 }
 
 /// ChunkedBody - decoded chunked-transfer body or the failure reason.
@@ -513,8 +590,11 @@ pub fn security_head_lines() -> Str {
 }
 
 /// build_response_full builds a response with a custom content type and
-/// extra headers (Set-Cookie, Allow, ...). Complexity: O(n). Pure.
-pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: Str) -> Vec[UInt8] {
+/// extra headers (Set-Cookie, Allow, ...). `keep` controls the Connection
+/// header: false emits `Connection: close`; true emits nothing (the
+/// HTTP/1.1 keep-alive default; a 1.0 peer never sees keep-alive).
+/// Complexity: O(n). Pure.
+pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: Str, keep: Bool) -> Vec[UInt8] {
   var head: Str = "HTTP/1.1 " + status.to_str() + " " + status_text(status) + "\r\n";
   head = head + "Content-Type: " + content_type + "\r\n";
   var i: Int = 0;
@@ -525,7 +605,9 @@ pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(
   }
   head = head + security_head_lines();
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
-  head = head + "Connection: close\r\n";
+  if !keep {
+    head = head + "Connection: close\r\n";
+  }
   head = head + "Server: xiom-pulse/0.2.1\r\n";
   head = head + "\r\n";
   var out: Vec[UInt8] = str_to_bytes(head);
@@ -539,8 +621,9 @@ pub fn build_response_full(status: Int, content_type: Str, extra_headers: &Vec[(
 }
 
 /// build_response_bytes builds a response with a raw byte body (icons,
-/// binary assets). Complexity: O(n). Pure.
-pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: &Vec[UInt8]) -> Vec[UInt8] {
+/// binary assets). `keep` as in build_response_full. Complexity: O(n).
+/// Pure.
+pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: &Vec[UInt8], keep: Bool) -> Vec[UInt8] {
   var head: Str = "HTTP/1.1 " + status.to_str() + " " + status_text(status) + "\r\n";
   head = head + "Content-Type: " + content_type + "\r\n";
   var i: Int = 0;
@@ -551,7 +634,9 @@ pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[
   }
   head = head + security_head_lines();
   head = head + "Content-Length: " + body.len().to_str() + "\r\n";
-  head = head + "Connection: close\r\n";
+  if !keep {
+    head = head + "Connection: close\r\n";
+  }
   head = head + "Server: xiom-pulse/0.2.1\r\n";
   head = head + "\r\n";
   var out: Vec[UInt8] = str_to_bytes(head);
@@ -563,11 +648,11 @@ pub fn build_response_bytes(status: Int, content_type: Str, extra_headers: &Vec[
   return out;
 }
 
-/// build_response builds a JSON response with Connection: close.
+/// build_response builds a JSON response (close unless keep).
 /// Complexity: O(n). Pure.
-pub fn build_response(status: Int, body: Str) -> Vec[UInt8] {
+pub fn build_response(status: Int, body: Str, keep: Bool) -> Vec[UInt8] {
   var none: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-  return build_response_full(status, "application/json; charset=utf-8", &none, body);
+  return build_response_full(status, "application/json; charset=utf-8", &none, body, keep);
 }
 
 /// bearer_token extracts the token from an `Authorization: Bearer x`

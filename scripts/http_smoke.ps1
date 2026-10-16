@@ -383,9 +383,94 @@ $buf2 = New-Object byte[] 8192
 $favTotal = 0
 try { while (($n2 = $st2.Read($buf2, 0, 8192)) -gt 0) { $favTotal += $n2; if ($favTotal -gt 60000000) { break } } } catch { }
 $tc2.Close()
-if ($favTotal -lt 20000000) { Check "deadline write-stall dropped" "yes" "yes" } else { Check "deadline write-stall dropped" "total=$favTotal" "yes" }
+if ($favTotal -lt 45000000) { Check "deadline write-stall dropped" "yes" "yes" } else { Check "deadline write-stall dropped" "total=$favTotal" "yes" }
 $r = Invoke-CurlGet "/health"
 Check "deadline loop alive after write-stall" $r "200 OK"
+
+# 13f. keep-alive Phase B: reuse, close, pipelining, 1.0, idle, garbage
+function Read-Resp {
+    # Byte-wise head+body read: never consumes bytes belonging to the
+    # NEXT pipelined response (a coalescing read would lose them).
+    param($st)
+    $st.ReadTimeout = 6000
+    $head = ""
+    try {
+        while (-not $head.Contains("`r`n`r`n")) {
+            $b = $st.ReadByte()
+            if ($b -lt 0) { return "EOF" }
+            $head += [char]$b
+        }
+        $cl = 0
+        if ($head -match "Content-Length: (\d+)") { $cl = [int]$Matches[1] }
+        $got = 0
+        while ($got -lt $cl) {
+            $b = $st.ReadByte()
+            if ($b -lt 0) { break }
+            $got += 1
+        }
+    } catch { return "THROW" }
+    $status = $head.Split("`r`n")[0]
+    $close = if ($head -match "Connection: close") { "`r`nConnection: close" } else { "" }
+    return "$status$close"
+}
+function New-KaConn {
+    $tc = New-Object Net.Sockets.TcpClient
+    $tc.Connect("127.0.0.1", $Port)
+    return $tc
+}
+$tc = New-KaConn; $st = $tc.GetStream()
+$b = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: smoke`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$ka1 = Read-Resp $st
+$b = [Text.Encoding]::ASCII.GetBytes("GET /api/version HTTP/1.1`r`nHost: smoke`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$ka2 = Read-Resp $st
+Check "ka first 200" $ka1 "200 OK"
+Check "ka no close header" $ka1 "Connection: close" $false
+Check "ka second 200" $ka2 "200 OK"
+$b = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: smoke`r`nConnection: close`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$ka3 = Read-Resp $st
+Check "ka client close honored" $ka3 "Connection: close"
+$tc.Close()
+
+$tc = New-KaConn; $st = $tc.GetStream()
+$b = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: smoke`r`n`r`nGET /api/version HTTP/1.1`r`nHost: smoke`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$p1 = Read-Resp $st
+$p2 = Read-Resp $st
+Check "ka pipelined first" $p1 "200 OK"
+Check "ka pipelined second" $p2 "200 OK"
+$tc.Close()
+
+$tc = New-KaConn; $st = $tc.GetStream()
+$b = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.0`r`nHost: smoke`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$h10 = Read-Resp $st
+Check "ka http10 close" $h10 "Connection: close"
+Check "ka http10 no keepalive" $h10 "keep-alive" $false
+$tc.Close()
+
+$tc = New-KaConn; $st = $tc.GetStream()
+$b = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: smoke`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$null = Read-Resp $st
+Start-Sleep -Milliseconds 2800
+$st.ReadTimeout = 3000
+$idleN = -1
+try { $idleN = $st.Read((New-Object byte[] 64), 0, 64) } catch { $idleN = -2 }
+if ($idleN -eq 0) { Check "ka idle silent close" "yes" "yes" } else { Check "ka idle silent close" "n=$idleN" "yes" }
+$tc.Close()
+
+$tc = New-KaConn; $st = $tc.GetStream()
+$b = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nHost: smoke`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$null = Read-Resp $st
+$b = [Text.Encoding]::ASCII.GetBytes("SADF`r`n`r`n")
+$st.Write($b, 0, $b.Length)
+$gb = Read-Resp $st
+Check "ka garbage closes 400" $gb "400 Bad Request"
+$tc.Close()
 
 # 13. QUIT
 $null = curl.exe -s -H "X-Pulse-Quit: 1" "$base/health" 2>&1

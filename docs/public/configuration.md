@@ -44,6 +44,7 @@ values fall back to the default and produce a warning (startup and
 | `PULSE_READ_TIMEOUT` | `30000` | full-request read deadline (ms); `0` = off (dev only) |
 | `PULSE_WRITE_TIMEOUT` | `30000` | response write deadline (ms); stalled readers are dropped; `0` = off (dev only) |
 | `PULSE_IDLE_TIMEOUT` | `5000` | keep-alive idle deadline (ms), honored from Phase B |
+| `PULSE_KEEPALIVE` | `1` | connection reuse; `0` = close per request |
 
 `PULSE_BIND` takes the **address only** (`127.0.0.1`, `::1`, `0.0.0.0`
 in containers); the port belongs to `PULSE_PORT`. A combined value such
