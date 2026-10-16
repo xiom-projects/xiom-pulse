@@ -202,8 +202,10 @@ machine-state variance, no finding).
 **Lane replies folded (2026-10-16, post-wrap-18):** the packages
 `-2202-pulse-3` slate is COMPLETE -- `xiom.template 0.2.0` LIVE
 (eco-v0.1.186; consumer-verify 15/15 x2), `xiom.ssl 0.1.0` LIVE
-(eco-v0.1.189; the TLS headline is closed on the packages path),
-`xiom.brotli 0.1.0` LIVE (eco-v0.1.189), `xiom.otel 0.1.0` LIVE
+(eco-v0.1.189; the TLS headline is closed on the packages path;
+consumer-verify 14/14 live x2 + 4/4 SKIP x2),
+`xiom.brotli 0.1.0` LIVE (eco-v0.1.189; consumer-verify 11/11 x2),
+`xiom.otel 0.1.0` LIVE
 (eco-v0.1.188; OTLP core), `xiom.zstd 0.3.0` real (vendored 1.5.7).
 **`xiom.pulse` (Beacon) extraction GREEN + IN-TREE** (`053cab87`;
 125/125 x2 on the pin; PULSE co-verify: all PROVENANCE hashes match at

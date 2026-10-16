@@ -705,6 +705,18 @@ changes requested. Next: publish at LIVE -> consumer-verify the installed
 artifact + prepare the Station-consumes refactor. Score holds (delivery +
 verification units)._
 
+_Delta 2026-10-16 (consumer-verify `xiom.ssl` + `xiom.brotli` -- top-tier
+items 2 + 4): both registry artifacts (eco-v0.1.189) verified against the
+INSTALLED package on the v0.64.5 pin -- **ssl: 14/14 live x2 (Windows)**:
+a real TLS 1.3 handshake entirely over memory BIOs (no socket), app data
+both ways, ALPN negotiated-read, clean shutdown, untrusted-cert rejection
+with verify_result != 0; **4/4 SKIP leg x2 (WSL)**: the documented
+no-libssl contract. **brotli: 11/11 x2 both platforms**: quality sweeps,
+streaming both ways byte-exact, typed corrupt/truncated errors. Consumer
+DX note: dependency builds auto-apply the package's port.args.json. The
+top-tier package-path asks are now all consumer-verified except the
+Beacon publish itself. Score holds._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
