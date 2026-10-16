@@ -733,6 +733,18 @@ to `092dfa0c`, red summary preserved). CI dry run `38947560303` green on
 both platforms. Storage 68 -> 72.
 Total ~55.4% -> ~55.8%._
 
+_Delta 2026-10-16 (Beacon publish + acceptance stage 1): **`xiom.pulse`
+0.1.0 is LIVE in the registry** (eco-v0.1.192; sha256 `53fcc56e...`;
+publish close `REL-20261016-1810-packages-3`) -- the extraction milestone
+is closed end-to-end (freeze `56eb9f8` -> carve `053cab87` -> ops scope
+553 -> publish). Consumer acceptance stage 1 GREEN on the INSTALLED
+artifact: checksum + signature verified on both stores, the carved
+conformance suite **125/125 x2 on both platforms**, and `minimal.xi` live
+x2 both platforms (`/health` 200 `{"status":"ok"}` + `X-Pulse-Quit` clean
+exit; `docs/repro/beacon-acceptance/`). Stage 2 (the closing half) =
+PULSE Station consumes the published package + the full smoke/fleet.
+Score holds._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
