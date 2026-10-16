@@ -201,3 +201,48 @@ x2, smoke jsonl+kv), updated evidence under `probe-logs/`, bus updates
 on every lane ask, and the SESSION.md digest + PROGRESS delta. The
 benchmark report is the public-facing proof of the T9 gate; the LB
 scaling curve is the proof of T2.
+
+## 9. Product split: pulse-sails (light) + PULSE (top-tier)
+
+Owner proposal (2026-10-16): ship TWO products from the same engine --
+(1) a light framework package on the registry for the Flask-class job
+(routes, handlers, run-in-three-lines; embeddable in any XIOM program:
+engine control endpoints, playground workers, xvector services, docs
+tooling, user apps), working name **pulse-sails**; and (2) the top-tier
+product PULSE as the separate program we ship today (sessions, metrics,
+store, static, game CP, release machinery).
+
+The rule that makes it work: **one protocol core, two products -- never
+a fork.** The light package IS the engine: request parser + response
+builders + connection loop (deadlines, keep-alive) + router + envelope.
+The product imports that package and adds the extras -- most of which
+are already registry packages (`xiom.session`, `xiom.static`,
+`xiom.kv`, `xiom.metrics`, `xiom.rate`, `xiom.http.middleware`,
+`xiom.sqlite`).
+
+Structurally this is ~80% ready today: the hard-won correctness
+(smuggling hardening, TE/CL rules, chunked, 100-continue, site mode,
+now the deadline/keep-alive core) already lives in separately-seamed
+modules (`src/http.xi`, `src/router.xi`, `src/envelope.xi`,
+`src/server.xi`). The Flask analogy is exact: Flask = Werkzeug
+(protocol) + Jinja (templates) + WSGI (runner); here: `xiom.pulse`
+(protocol + router + runner) + the templates package (wishlist filed)
++ the existing package set.
+
+Sequence:
+
+1. Finish keep-alive Phase A + B in the monolith -- they define the
+   core package's connection semantics (the API freeze candidate).
+2. Extract `xiom.pulse` (package id TBD: `xiom.pulse` recommended;
+   "pulse-sails" as the friendly variant name -- note the Sails.js
+   perception overlap) with a `minimal.xi` example and its own CI.
+3. The PULSE product consumes the package; the extras stay product-side.
+4. Publish via the packages lane; the registry reserves the name and
+   sets up the read-path canary (`REL-20261013-1707` flow).
+
+What the light one is **not**: no sessions/metrics/store/static by
+default (those become opt-in package composition). What it keeps: the
+full protocol hardening -- the light path must never be the unsafe
+path.
+
+Bus: publish/coordination ask filed to packages (`REL-20261016-1110-pulse`).

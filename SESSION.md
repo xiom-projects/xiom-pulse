@@ -403,6 +403,19 @@
   sweep, fixed pre-commit). `74cd0f9`, three new site checks, both
   platforms FAILED=0; `run.sh` log cap 200->400. Reply
   `REL-20261015-2344-pulse`; ships in 0.2.2.
+- **Product-split directive (2026-10-16):** owner proposed a second
+  product -- a light Flask-class framework package (working name
+  `pulse-sails`) beside the top-tier product; **one protocol core, two
+  products, never a fork**. Roadmap §9 (`docs/ROADMAP-TOP-TIER.md`);
+  publish/coordination ask `REL-20261016-1110-pulse` (packages).
+  Sequence: keep-alive A/B -> core extraction (`xiom.pulse`) -> the
+  product consumes the package -> publish + registry canary.
+- **Keep-alive Phase A (in flight, 2026-10-16):** deadlines landed in
+  the tree (PULSE_READ_TIMEOUT/PULSE_WRITE_TIMEOUT/PULSE_IDLE_TIMEOUT +
+  check-config + warns; bounded recv per-request; poll-gated send);
+  Windows manual proof: slowloris -> `408` + loop alive; write-stall ->
+  dropped at 64 KiB + loop alive. Remaining: WSL proof, smoke raw
+  sections, suites/sweeps, commit. Phase B (reuse) next.
 - **0.2 PULSE-side progress:** DONE -- OpenAPI 3.1 served
   (`/openapi.json`, version token substituted at serve time) + `pulse
   openapi`; full CLI set (`routes`, `version`, `check-config`); additive
