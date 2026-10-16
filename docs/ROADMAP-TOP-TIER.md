@@ -224,9 +224,12 @@ scaling curve is the proof of T2.
 ## 9. Product split: PULSE Beacon (embeddable) + PULSE Station (hosted)
 
 Owner directive (2026-10-16): everything stays **PULSE**; codenames
-distinguish the two usage editions, matching the ecosystem pattern
-(orbitdb-satellite / orbitdb-station): one core, usage-separated
-products -- some integrate it into their app (Beacon), others host it
+distinguish the two tiers, matching the ecosystem pattern (orbitdb
+satellite/station, xvector mote/lattice; codename convention
+`REL-20261016-1446-packages`): **tier 1 = the registry tier** (**PULSE
+Beacon**, the embeddable `xiom.pulse` package), **tier 2 = the standalone
+tier** (**PULSE Station**, the hosted product) -- one core,
+usage-separated; some integrate it into their app (Beacon), others host it
 on docker/kubernetes (Station).
 
 - **PULSE Beacon** -- the embeddable edition: the light framework
