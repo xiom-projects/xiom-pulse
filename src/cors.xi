@@ -9,7 +9,7 @@
 module xiom.pulse.cors
 
 use xiom.string;
-use xiom.pulse.config;
+use xiom.pulse.station.config;
 use xiom.http.middleware;
 
 /// cors_enabled reports whether an allowed origin is configured.

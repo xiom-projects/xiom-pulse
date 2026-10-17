@@ -14,9 +14,9 @@ use xiom.time;
 use xiom.env;
 use xiom.jwt;
 use xiom.pulse.http;
-use xiom.pulse.router;
+use xiom.pulse.station.router;
 use xiom.pulse.envelope;
-use xiom.pulse.config;
+use xiom.pulse.station.config;
 use xiom.pulse.cors;
 use xiom.pulse.metrics;
 use xiom.pulse.sessions;
@@ -26,7 +26,7 @@ use xiom.pulse.validate;
 use xiom.pulse.reqctx;
 use xiom.pulse.outbound;
 use xiom.pulse.openapi;
-use xiom.pulse.app;
+use xiom.pulse.station.app;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -97,6 +97,18 @@ fn json_field(body: Str, field: Str) -> Str {
   let end = string.str_index_of(rest, "\"");
   if end.is_none { return ""; }
   return string.str_slice(body, start, start + end.value);
+}
+
+fn count_substr_from(s: Str, needle: Str, n: Int) -> Int {
+  let idx = string.str_index_of(s, needle);
+  if idx.is_none { return n; }
+  let next = idx.value + needle.len();
+  if next >= s.len() { return n + 1; }
+  return count_substr_from(string.str_slice(s, next, s.len()), needle, n + 1);
+}
+
+fn count_substr(s: Str, needle: Str) -> Int {
+  return count_substr_from(s, needle, 0);
 }
 
 
@@ -572,6 +584,11 @@ pub fn main() -> Int {
   env.set_var("PULSE_SITE_DIR", sdir);
   let s1 = route_req("GET", "/", "");
   f = f + check("site index 200", s1.status == 200 && string.str_contains(http.bytes_to_str(&s1.body_bytes, 0, s1.body_bytes.len()), "SITE_INDEX"));
+  // Ops regression (REL-20261017-1141): the static engine's Content-Length
+  // and the response builder's must not both be emitted (nginx 502).
+  let s1_raw = http.build_response_bytes(s1.status, s1.content_type, &s1.headers, &s1.body_bytes, false);
+  let s1_hdr = http.bytes_to_str(&s1_raw, 0, s1_raw.len());
+  f = f + check("site single content-length", count_substr(s1_hdr, "Content-Length:") == 1);
   let s2 = route_req("GET", "/about", "");
   f = f + check("site clean url", s2.status == 200 && string.str_contains(http.bytes_to_str(&s2.body_bytes, 0, s2.body_bytes.len()), "SITE_ABOUT"));
   let s3 = route_req("GET", "/sub/", "");

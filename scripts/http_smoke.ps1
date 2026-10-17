@@ -377,10 +377,22 @@ $tc2.Connect("127.0.0.1", $Port)
 $st2 = $tc2.GetStream()
 $favReq = [Text.Encoding]::ASCII.GetBytes("GET /assets/big.bin HTTP/1.1`r`nHost: smoke`r`n`r`n")
 $st2.Write($favReq, 0, $favReq.Length)
+# Read only the head first: the stall clock must start when the server
+# begins the response, not while it is still reading/building the 50 MB
+# body (the slow build used to consume the whole sleep window).
+$st2.ReadTimeout = 15000
+$headBytes = New-Object System.Collections.Generic.List[byte]
+$headText = ""
+while (-not $headText.Contains("`r`n`r`n")) {
+    $b = $st2.ReadByte()
+    if ($b -lt 0) { break }
+    $headBytes.Add([byte]$b)
+    $headText = [Text.Encoding]::ASCII.GetString($headBytes.ToArray())
+}
 Start-Sleep -Milliseconds 5600
 $st2.ReadTimeout = 4000
 $buf2 = New-Object byte[] 8192
-$favTotal = 0
+$favTotal = $headBytes.Count
 try { while (($n2 = $st2.Read($buf2, 0, 8192)) -gt 0) { $favTotal += $n2; if ($favTotal -gt 60000000) { break } } } catch { }
 $tc2.Close()
 if ($favTotal -lt 45000000) { Check "deadline write-stall dropped" "yes" "yes" } else { Check "deadline write-stall dropped" "total=$favTotal" "yes" }

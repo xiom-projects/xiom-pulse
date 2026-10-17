@@ -14,11 +14,12 @@
 // Build: .\scripts\build.ps1 src\server.xi -Name pulse_app
 // Quit:  send any request with header `X-Pulse-Quit: 1`
 //
-// Module name note (2026-10-08): renamed from xiom.pulse.server to
-// xiom.pulse.app -- a module whose last segment is `server` shadows the
-// stdlib alias `server` (xiom.net.server) in every compilation that
-// includes it, which broke src/http.xi's stdlib parser import.
-module xiom.pulse.app
+// Module name note: renamed from xiom.pulse.server to xiom.pulse.app
+// (2026-10-08) because a module whose last segment is `server` shadows the
+// stdlib alias `server` (xiom.net.server), and renamed again to
+// xiom.pulse.station.app (2026-10-17) so the product module no longer
+// collides with the published xiom.pulse package's `xiom.pulse.app`.
+module xiom.pulse.station.app
 
 use xiom.net.socket;
 use xiom.net;
@@ -28,9 +29,9 @@ use xiom.string;
 use xiom.convert;
 use xiom.serialize.json;
 use xiom.pulse.http;
-use xiom.pulse.router;
+use xiom.pulse.station.router;
 use xiom.pulse.envelope;
-use xiom.pulse.config;
+use xiom.pulse.station.config;
 use xiom.pulse.metrics;
 use xiom.pulse.sessions;
 use xiom.pulse.game;
@@ -53,7 +54,7 @@ use xiom.pulse.multipart;
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
 const CONTENT_TEXT: Str = "text/plain; charset=utf-8";
-// Keep in sync with src/pulse.xi pulse_version(). Not imported here: the
+// Keep in sync with src/version.xi pulse_version(). Not imported here: the
 // `pulse` alias resolves to the xiom.pulse.* family namespace inside this
 // compilation (same shadowing class as C-PULSE-12), so the alias call
 // cannot be used from a xiom.pulse.* module.
@@ -139,7 +140,12 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
     if h.name == "Content-Type" {
       ct = h.value;
     } else {
-      hs.push((h.name, h.value));
+      // Framing is owned by http.build_response_bytes(); copying the static
+      // engine's Content-Length would emit the header twice and break strict
+      // proxies (nginx rejects duplicate CL with a 502).
+      if h.name != "Content-Length" {
+        hs.push((h.name, h.value));
+      }
     }
     hi = hi + 1;
   }
@@ -1215,8 +1221,8 @@ pub fn main() -> Int {
               resp = trimmed;
             }
           }
-          resp = with_std_headers(with_cors(resp, &req));
-          let w_ok = send_all(client, &resp);
+          let resp_final = with_std_headers(with_cors(resp, &req));
+          let w_ok = send_all(client, &resp_final);
           if !w_ok {
             io.println("pulse: send failed");
             io.flush_stdout();

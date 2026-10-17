@@ -23,7 +23,7 @@ use xiom.convert;
 use xiom.serialize.json;
 use xiom.env;
 use xiom.kv;
-use xiom.pulse.config;
+use xiom.pulse.station.config;
 
 const SCHEMA_VERSION: Int = 1;
 

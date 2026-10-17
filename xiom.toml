@@ -18,9 +18,10 @@ version = "0.1.0"
 root = "src"
 
 [dependencies]
-"xiom.http" = "0.1.5"
-"xiom.cookie" = "0.1.1"
-"xiom.jwt" = "0.2.0"
+"xiom.pulse" = "0.1.0"
+"xiom.http" = "0.1.8"
+"xiom.cookie" = "0.1.2"
+"xiom.jwt" = "0.2.1"
 "xiom.router" = "0.1.0"
 "xiom.rate" = "0.2.0"
 "xiom.metrics" = "0.2.0"

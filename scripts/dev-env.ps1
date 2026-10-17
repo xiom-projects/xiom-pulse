@@ -8,11 +8,14 @@
 # fleet, file the finding, note the last known-good version in SESSION.md
 # as a ROLLBACK OPTION (owner-visible), and keep moving on other slices.
 #
-# As of 2026-10-05:
-#   compiler  v0.64.0  %LOCALAPPDATA%\xiom.new\bin\xiom.exe
-#   stdlib    E:\xiom-lang\stdlib (stdlib-lane checkout = latest lane work)
-#   packages  %LOCALAPPDATA%\xiom\packages (xiom.http 0.1.1, xiom.cookie
-#             0.1.1, xiom.jwt 0.2.0)
+# As of 2026-10-17:
+#   compiler  v0.64.6  %LOCALAPPDATA%\xiom.new\bin\xiom.exe
+#   stdlib    latest RELEASE tag, extracted to
+#             %LOCALAPPDATA%\xiom-pins\stdlib-tag-v0.64.6 (refresh the dir
+#             name when a new stdlib release is cut; falls back to the
+#             stdlib-lane checkout at E:\xiom-lang\stdlib)
+#   packages  %LOCALAPPDATA%\xiom\packages (latest registry versions; the
+#             owner directive is to consume the newest fixes)
 #
 # XIOM_RUNTIME_DIR is RETIRED on v0.64.0: release R65 makes the installed
 # compiler link lib\runtime and lib\xiom without overrides. Verified from
@@ -30,7 +33,12 @@ if (-not $env:XIOM_COMPILER) {
     $env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
 }
 if (-not $env:XIOM_STDLIB) {
-    $env:XIOM_STDLIB = "E:\xiom-lang\stdlib"
+    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.6"
+    if (Test-Path -LiteralPath $tagStdlib) {
+        $env:XIOM_STDLIB = $tagStdlib
+    } else {
+        $env:XIOM_STDLIB = "E:\xiom-lang\stdlib"
+    }
 }
 Remove-Item Env:XIOM_RUNTIME_DIR -ErrorAction SilentlyContinue   # retired
 

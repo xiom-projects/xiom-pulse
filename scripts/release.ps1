@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
 # Usage:
-#   .\scripts\release.ps1                    # version parsed from src\pulse.xi
+#   .\scripts\release.ps1                    # version parsed from src\version.xi
 #   .\scripts\release.ps1 -Version 0.2.0 -OutDir dist
 #   .\scripts\release.ps1 -NoBuild           # reuse out\pulse_app.exe as-is
 #
@@ -24,7 +24,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "dev-env.ps1")
 
 if (-not $Version) {
-    $m = Select-String -Path (Join-Path $repoRoot "src\pulse.xi") -Pattern '"([0-9]+\.[0-9]+\.[0-9]+)"'
+    $m = Select-String -Path (Join-Path $repoRoot "src\version.xi") -Pattern '"([0-9]+\.[0-9]+\.[0-9]+)"'
     if ($m) { $Version = $m.Matches[0].Groups[1].Value }
 }
 if (-not $Version) { throw "could not determine version (pass -Version)" }

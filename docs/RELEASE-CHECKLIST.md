@@ -26,10 +26,10 @@ preconditions are called out where they differ.
 
 | File | Literal |
 |---|---|
-| `src/pulse.xi` | `pulse_version()` return string |
+| `src/version.xi` | `pulse_version()` return string (Station product version) |
 | `src/server.xi` | `const APP_VERSION: Str` |
-| `src/http.xi` | `Server: xiom-pulse/<ver>` -- **two** occurrences (`response_head` paths) |
 | `package.xi` | `version:` field |
+| `xiom.pulse` 0.1.0 (consumed) | `Server: xiom-pulse/<ver>` -- **two** literals in the package's `http.xi`; not editable here. A product-version bump needs a package seam (version parameter/neutral header) or the header stays at the package's carved literal (flagged to packages 2026-10-17). |
 | `tests/test_smoke.xi` | expected `pulse_version()` literal |
 | `tests/test_http.xi` | `/api/version` body literal |
 | `tests/test_app.xi` | openapi `"version": "<ver>"` literal |

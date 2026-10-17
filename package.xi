@@ -14,6 +14,11 @@ package xiom_pulse {
   keywords: ["http", "server", "backend", "web"];
   license: "MIT OR Apache-2.0";
   authors: ["Lefteris Notas"];
-  modules: ["xiom.pulse", "xiom.pulse.http", "xiom.pulse.router", "xiom.pulse.envelope", "xiom.pulse.config", "xiom.pulse.metrics", "xiom.pulse.sessions", "xiom.pulse.store", "xiom.pulse.ratelimit", "xiom.pulse.cors", "xiom.pulse.validate", "xiom.pulse.reqctx", "xiom.pulse.app", "xiom.pulse.audit", "xiom.pulse.openapi", "xiom.pulse.schema", "xiom.pulse.multipart", "xiom.pulse.outbound", "xiom.pulse.outbound_transport"];
-  deps: { "xiom.std": ">=0.60.0 <1.0.0", "xiom.http": "0.1.5", "xiom.cookie": "0.1.1", "xiom.jwt": "0.2.0", "xiom.router": "0.1.0", "xiom.rate": "0.2.0", "xiom.metrics": "0.2.0", "xiom.http.middleware": "0.1.0", "xiom.session": "0.1.0", "xiom.static": "0.1.0", "xiom.kv": "0.1.0" };
+  // Product modules: the protocol core (root pulse, http, envelope, reqctx)
+  // and the generic router/config/loop are provided by the published
+  // xiom.pulse 0.1.0 package (Beacon); this manifest lists only Station's
+  // own modules. app/config/router were renamed to the station.* namespace
+  // so they no longer collide with the package's module names.
+  modules: ["xiom.pulse.station.version", "xiom.pulse.station.router", "xiom.pulse.station.config", "xiom.pulse.metrics", "xiom.pulse.sessions", "xiom.pulse.store", "xiom.pulse.ratelimit", "xiom.pulse.cors", "xiom.pulse.validate", "xiom.pulse.station.app", "xiom.pulse.audit", "xiom.pulse.openapi", "xiom.pulse.schema", "xiom.pulse.multipart", "xiom.pulse.outbound", "xiom.pulse.outbound_transport"];
+  deps: { "xiom.std": ">=0.60.0 <1.0.0", "xiom.pulse": "0.1.0", "xiom.http": "0.1.8", "xiom.cookie": "0.1.2", "xiom.jwt": "0.2.1", "xiom.router": "0.1.0", "xiom.rate": "0.2.0", "xiom.metrics": "0.2.0", "xiom.http.middleware": "0.1.0", "xiom.session": "0.1.0", "xiom.static": "0.1.0", "xiom.kv": "0.1.0" };
 }

@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
 # Usage:
-#   scripts/release.sh                 # version parsed from src/pulse.xi
+#   scripts/release.sh                 # version parsed from src/version.xi
 #   scripts/release.sh --version 0.2.0 --out-dir dist
 #   scripts/release.sh --no-build      # reuse out/pulse_app as-is
 #
@@ -22,7 +22,7 @@ usage() {
   cat <<'EOF'
 Usage: release.sh [--version V] [--out-dir DIR] [--no-build]
 
-  --version V   artifact version (default: parsed from src/pulse.xi)
+  --version V   artifact version (default: parsed from src/version.xi)
   --out-dir D   output directory (default: dist/)
   --no-build    skip the build step (reuse out/pulse_app)
 EOF
@@ -43,7 +43,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$VERSION" ]; then
-  VERSION=$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' "$PULSE_REPO_ROOT/src/pulse.xi" | head -n 1 | tr -d '"')
+  VERSION=$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' "$PULSE_REPO_ROOT/src/version.xi" | head -n 1 | tr -d '"')
 fi
 [ -n "$VERSION" ] || pulse_die "could not determine version (pass --version)"
 

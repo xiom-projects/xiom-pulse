@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-15 (v0.2.1 released on the v0.64.5 + `092dfa0c` pairing; wave-2 + SQL artifact co-verify green on both platforms)
+**Last updated:** 2026-10-17 (Station consumes the published `xiom.pulse` 0.1.0 core; v0.64.6 + stdlib `8d95815`; latest registry deps; ops site-mode CL fix)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -757,6 +757,22 @@ module names to the dependency (W001 only), so the product namespaces
 package core. Three blockers relayed: compiler resolver policy
 (`REL-20261017-1123-pulse`), packages 0.2 hook seam (`-2`), ops
 shared-home reset (`-3`). Score holds (~55.8%)._
+
+_Delta 2026-10-17 (station-consumes 2a): **Station now consumes the
+published `xiom.pulse` 0.1.0 core** -- the product modules `app`/`config`/
+`router` are namespaced `xiom.pulse.station.*` (18 imports / 10 files), the
+four byte-identical modules are deleted (SHA256 re-verified), the version
+source moved to `src/version.xi`, the dep is declared in both manifests +
+the CI installer, and the build runs on **v0.64.6 + stdlib `8d95815`**
+with the latest registry deps (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2,
+`xiom.jwt` 0.2.1). Gates on BOTH platforms: suites x2 (`test_http` 77,
+`test_app` 237, `test_smoke` 4), smoke **134/134 x2** (jsonl + kv), crash
+x2 GREEN. Also fixed the ops-blocking **duplicate `Content-Length`** on
+site-mode file responses (`REL-20261017-1141-ops`; one CL on 200/304,
+locked by a new suite check) and stabilized the write-stall/crash
+harnesses. Score holds (~55.8%; adoption + correctness, no new
+capability). Stage 2b is gated on the packages hook seam (acked,
+implementation dispatched)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

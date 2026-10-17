@@ -20,7 +20,7 @@
 // 25 POST /api/game/admin/command. Every route is also reachable
 // through the `/v1` alias prefix (v1_path strips it before matching); new
 // surfaces are introduced under `/v1` first.
-module xiom.pulse.router
+module xiom.pulse.station.router
 
 use xiom.string;
 use xiom.router;

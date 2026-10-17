@@ -4,7 +4,7 @@
 //
 // All settings are env-overridable with safe defaults so the test scripts
 // can run several instances (PULSE_PORT) and keep evidence in probe-logs.
-module xiom.pulse.config
+module xiom.pulse.station.config
 
 use xiom.env;
 use xiom.io;

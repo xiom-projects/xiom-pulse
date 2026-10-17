@@ -6,9 +6,9 @@ module pulse_probe_app_flow2
 use xiom.io;
 use xiom.env;
 use xiom.pulse.http;
-use xiom.pulse.router;
+use xiom.pulse.station.router;
 use xiom.pulse.store;
-use xiom.pulse.app;
+use xiom.pulse.station.app;
 
 fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   let raw_str = method + " " + target + " HTTP/1.1\r\nHost: t\r\nContent-Length: " + body.len().to_str() + "\r\n\r\n" + body;

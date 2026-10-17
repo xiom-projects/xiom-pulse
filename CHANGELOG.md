@@ -27,6 +27,26 @@ GitHub release body.
   the page resolve against the directory instead of its parent -- the
   nginx convention; found re-testing the full xiom-lang.org tree
   (`REL-20261015-2156-website-2`).
+- **Station consumes the published `xiom.pulse` 0.1.0 core** (Beacon):
+  the byte-identical `http`/`envelope`/`reqctx`/root modules are gone;
+  product modules are namespaced `xiom.pulse.station.*` and the product
+  version lives in `src/version.xi`. Built on XIOM v0.64.6 + stdlib
+  0.64.6 (`8d95815`) with latest registry deps (`xiom.http` 0.1.8,
+  `xiom.cookie` 0.1.2, `xiom.jwt` 0.2.1). One core, never a fork
+  (`docs/DESIGN-STATION-CONSUMES.md`).
+
+### Fixed
+
+- Site-mode file responses no longer emit `Content-Length` twice: the
+  static engine's copy is dropped and `http.build_response_bytes()` owns
+  framing. nginx rejected the duplicate header with a 502, blocking the
+  xiom-lang.org dogfood switch (`REL-20261017-1141-ops`); the suite now
+  locks a single CL on a site file response.
+- The smoke write-stall check reads the response head first, so the
+  write-deadline clock starts when the server begins the response rather
+  than while it is still reading/building the 50 MB body (removed a WSL
+  drvfs timing flake); the crash harness waits for the listener and
+  tolerates the Windows taskkill exit race.
 
 ## [0.2.1] - 2026-10-15
 

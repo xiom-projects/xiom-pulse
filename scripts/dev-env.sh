@@ -11,12 +11,14 @@
 # There is no fixed pin; record the exact versions and lane hashes in
 # SESSION.md at every wrap.
 #
-# As of 2026-10-07 (mirrors scripts/dev-env.ps1 on Windows):
-#   compiler  xiom (Linux install, canonical layout ~/.local/share/xiom)
-#   stdlib    $XIOM_STDLIB if set; else the WSL-mounted lane checkout
-#             /mnt/e/xiom-lang/stdlib when present; else the compiler's
-#             bundled lib/xiom tree (release-artifact behavior)
-#   packages  <xiom_home>/packages (xiom pkg install; WSL layout ~/xiom)
+# As of 2026-10-17 (mirrors scripts/dev-env.ps1 on Windows):
+#   compiler  v0.64.6 (Linux install, canonical layout ~/.local/share/xiom)
+#   stdlib    $XIOM_STDLIB if set; else the latest RELEASE tag extracted to
+#             ~/.cache/xiom-pin/stdlib-tag-v0.64.6 (refresh on a new stdlib
+#             release); else the WSL-mounted lane checkout
+#             /mnt/e/xiom-lang/stdlib; else the compiler's bundled lib/xiom
+#   packages  <xiom_home>/packages (latest registry versions; owner
+#             directive is to consume the newest fixes)
 #
 # XIOM_RUNTIME_DIR is RETIRED on v0.64.0: release R65 links the installed
 # lib/runtime + lib/xiom without overrides (verified env-free on Windows and
@@ -41,9 +43,13 @@ fi
 unset XIOM_RUNTIME_DIR
 
 # --- stdlib -----------------------------------------------------------------
-if [ -z "${XIOM_STDLIB:-}" ] && [ -d /mnt/e/xiom-lang/stdlib ]; then
-  # WSL on the development machine: use the same lane checkout as Windows.
-  XIOM_STDLIB=/mnt/e/xiom-lang/stdlib
+if [ -z "${XIOM_STDLIB:-}" ]; then
+  if [ -d "$HOME/.cache/xiom-pin/stdlib-tag-v0.64.6" ]; then
+    XIOM_STDLIB="$HOME/.cache/xiom-pin/stdlib-tag-v0.64.6"
+  elif [ -d /mnt/e/xiom-lang/stdlib ]; then
+    # WSL on the development machine: fall back to the lane checkout.
+    XIOM_STDLIB=/mnt/e/xiom-lang/stdlib
+  fi
 fi
 [ -n "${XIOM_STDLIB:-}" ] && export XIOM_STDLIB
 

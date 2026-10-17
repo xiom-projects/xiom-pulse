@@ -40,8 +40,21 @@ function Start-Pulse {
     $p = New-Object System.Diagnostics.Process
     $p.StartInfo = $psi
     $null = $p.Start()
-    Start-Sleep -Milliseconds 900
-    return $p
+    # Wait for the listener instead of a fixed sleep: a cold start can take
+    # longer than 900 ms after a rebuild and made the harness flaky.
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        if ($p.HasExited) { throw "crash: server exited before listening (see $Log)" }
+        try {
+            $probe = New-Object System.Net.Sockets.TcpClient
+            $probe.Connect("127.0.0.1", $Port)
+            $probe.Close()
+            return $p
+        } catch {
+            Start-Sleep -Milliseconds 150
+        }
+    }
+    throw "crash: server did not listen on port $Port within 10s"
 }
 
 function Send-Req {
@@ -86,8 +99,20 @@ Check "post events 200" ($last -like "*200 OK*")
 Check "count after writes" ((Get-Count) -eq $Events)
 
 # --- phase 2: crash + torn line -------------------------------------------
+# taskkill can report a transient "could not be terminated" while the tree
+# is already going down (Windows exit race); tolerate the message, then
+# prove the server is really gone (fallback: hard-kill the child).
+$oldEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 & taskkill /T /F /PID $srv1.Id 2>$null | Out-Null
+$ErrorActionPreference = $oldEap
 $srv1.WaitForExit(5000) | Out-Null
+$left = Get-Process pulse_app -ErrorAction SilentlyContinue
+if ($left) {
+    $left | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 300
+    if (Get-Process pulse_app -ErrorAction SilentlyContinue) { throw "crash: server still running after kill" }
+}
 Start-Sleep -Milliseconds 300
 Add-Content -LiteralPath $storeFile -Value '{"torn":' -NoNewline
 $sizeBefore = (Get-Item -LiteralPath $storeFile).Length

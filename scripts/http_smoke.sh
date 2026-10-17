@@ -347,8 +347,19 @@ t = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 t.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
 t.connect(("127.0.0.1", port))
 t.sendall(b"GET /assets/big.bin HTTP/1.1\r\nHost: smoke\r\n\r\n")
+# Read only the head first: the stall clock must start when the server
+# begins the response, not while it is still reading/building the 50 MB
+# body (a slow drvfs build used to consume the whole sleep window, making
+# this check flaky on WSL).
+t.settimeout(15)
+head = b""
+while b"\r\n\r\n" not in head:
+    c = t.recv(1)
+    if not c:
+        break
+    head += c
 time.sleep(5.6)
-total = 0
+total = len(head)
 t.settimeout(4)
 try:
     while True:

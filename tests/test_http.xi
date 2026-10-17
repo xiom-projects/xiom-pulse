@@ -9,8 +9,8 @@ module pulse_http_tests
 use xiom.io;
 use xiom.string;
 use xiom.pulse.http;
-use xiom.pulse.router;
-use xiom.pulse.app;
+use xiom.pulse.station.router;
+use xiom.pulse.station.app;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {

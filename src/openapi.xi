@@ -12,8 +12,8 @@ module xiom.pulse.openapi
 use xiom.io;
 use xiom.string;
 use xiom.serialize.json;
-use xiom.pulse.config;
-use xiom.pulse.router;
+use xiom.pulse.station.config;
+use xiom.pulse.station.router;
 
 // _replace_first returns s with the first occurrence of `from` replaced by
 // `to` (token substitution for the version placeholder). O(n).
