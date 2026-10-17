@@ -130,8 +130,14 @@ route then answered 400 `invalid_json`), instead of 413. The ladder now
 checks the declared CL against `MAX_BODY` before the CSRF/rate stages and
 answers 413 `payload_too_large` without dispatching; the package note
 (`REL-20261017-1533-pulse`) asks `parse_request` to reject a truncated
-declared body too. The afterResponse log/metrics count pin remains for
-the extraction step (single call site).
+declared body too.
+
+**Stage 7 landed (2026-10-17):** `after_response()` is now the single
+afterResponse call site -- send, metrics, access log, and the audit
+decision for every response path (408/parse/204/403/429/dispatch); the
+eight duplicated tails are gone. Behavior is unchanged (suites x2 + smoke
+135/135 x2 + crash x2 green both platforms; CI dry run `39051902537` was
+the pre-refactor run). Next: the stage-table extraction for 0-6.
 
 Smoke and both suites keep passing unchanged otherwise.
 

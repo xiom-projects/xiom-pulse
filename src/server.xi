@@ -827,6 +827,26 @@ fn is_mutating(method: Str) -> Bool {
   return method == "POST" || method == "PUT" || method == "DELETE" || method == "PATCH";
 }
 
+/// after_response is the single afterResponse call site (middleware Phase A):
+/// send the built response, then record metrics + the access log exactly
+/// once; audit only when the caller requests it (committed non-GET).
+/// Returns the send result. Complexity: O(n) send + O(1) bookkeeping.
+fn after_response(fd: Int, resp: Vec[UInt8], rid: Str, method: Str, target: Str, status: Int, bytes: Int, t0_ms: Int, audit: Bool) -> Bool {
+  let w_ok = send_all(fd, &resp);
+  if !w_ok {
+    io.println("pulse: send failed (" + status.to_str() + ")");
+    io.flush_stdout();
+  }
+  let dur = time.monotonic_ms() - t0_ms;
+  metrics.metrics_record(status, bytes);
+  metrics.metrics_record_duration(dur);
+  access_log(rid, method, target, status, bytes, dur);
+  if audit {
+    audit_event(rid, method, target, status);
+  }
+  return w_ok;
+}
+
 /// with_std_headers appends the Date header (RFC 1123 / IMF-fixdate) right
 /// after the status line, plus the configured CSP when PULSE_CSP is set;
 /// assembled here at the app layer, reusing the static package's
@@ -1119,12 +1139,8 @@ pub fn main() -> Int {
         let rbody = envelope.error_body("request_timeout", "request timed out");
         var resp = http.build_response_full(408, CONTENT_JSON, &no_headers, rbody, false);
         resp = with_std_headers(resp);
-        let _w = send_all(client, &resp);
+        let _w = after_response(client, resp, rid, "?", "-", 408, rbody.len(), t0_ms, false);
         conn_open = false;
-        let dur = time.monotonic_ms() - t0_ms;
-        metrics.metrics_record(408, rbody.len());
-        metrics.metrics_record_duration(dur);
-        access_log(rid, "?", "-", 408, rbody.len(), dur);
       } else {
         let rid = next_rid();
         reqctx.set_rid(rid);
@@ -1157,13 +1173,9 @@ pub fn main() -> Int {
           var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
           var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, msg), false);
           resp = with_std_headers(with_cors(resp, &req));
-          let w_ok = send_all(client, &resp);
-          if !w_ok { io.println("pulse: send failed (" + status.to_str() + ")"); io.flush_stdout(); }
+          let rlen = resp.len();
+          let _w = after_response(client, resp, rid, "?", "-", status, rlen, t0_ms, false);
           conn_open = false;
-          let dur = time.monotonic_ms() - t0_ms;
-          metrics.metrics_record(status, resp.len());
-          metrics.metrics_record_duration(dur);
-          access_log(rid, "?", "-", status, resp.len(), dur);
         } else if http.header_get(&req, "x-pulse-quit") == "1" {
           running = false;
           conn_open = false;
@@ -1171,25 +1183,15 @@ pub fn main() -> Int {
           var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
           var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "", reuse);
           resp = with_std_headers(with_cors(resp, &req));
-          let w_ok = send_all(client, &resp);
-          if !w_ok { io.println("pulse: send failed (204)"); io.flush_stdout(); }
+          let _w = after_response(client, resp, rid, req.method, req.target, 204, 0, t0_ms, false);
           conn_open = reuse;
-          let dur = time.monotonic_ms() - t0_ms;
-          metrics.metrics_record(204, 0);
-          metrics.metrics_record_duration(dur);
-          access_log(rid, req.method, req.target, 204, 0, dur);
         } else if csrf_on && is_mutating(req.method) && sessions.session_id_from_cookie(cookie_header).len() > 0 && !sessions.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
           var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
           let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
           var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody, reuse);
           resp = with_std_headers(with_cors(resp, &req));
-          let w_ok = send_all(client, &resp);
-          if !w_ok { io.println("pulse: send failed (403)"); io.flush_stdout(); }
+          let _w = after_response(client, resp, rid, req.method, req.target, 403, rbody.len(), t0_ms, false);
           conn_open = reuse;
-          let dur = time.monotonic_ms() - t0_ms;
-          metrics.metrics_record(403, rbody.len());
-          metrics.metrics_record_duration(dur);
-          access_log(rid, req.method, req.target, 403, rbody.len(), dur);
         } else if !ratelimit.limiter_allow(&mut limiter, time.monotonic_ms()) {
           let now_ms = time.monotonic_ms();
           let retry_ms = ratelimit.limiter_retry_after_ms(&limiter, now_ms);
@@ -1200,13 +1202,8 @@ pub fn main() -> Int {
           let rbody = envelope.error_body("rate_limited", "too many requests");
           var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
           resp = with_std_headers(with_cors(resp, &req));
-          let w_ok = send_all(client, &resp);
-          if !w_ok { io.println("pulse: send failed (429)"); io.flush_stdout(); }
+          let _w = after_response(client, resp, rid, req.method, req.target, 429, rbody.len(), t0_ms, false);
           conn_open = reuse;
-          let dur = time.monotonic_ms() - t0_ms;
-          metrics.metrics_record(429, rbody.len());
-          metrics.metrics_record_duration(dur);
-          access_log(rid, req.method, req.target, 429, rbody.len(), dur);
         } else {
           let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
           var eff_method: Str = req.method;
@@ -1233,20 +1230,9 @@ pub fn main() -> Int {
             }
           }
           let resp_final = with_std_headers(with_cors(resp, &req));
-          let w_ok = send_all(client, &resp_final);
-          if !w_ok {
-            io.println("pulse: send failed");
-            io.flush_stdout();
-          }
+          let _w = after_response(client, resp_final, rid, req.method, req.target, out.status, payload_len, t0_ms, req.method != "GET");
           conn_open = reuse;
           served = served + 1;
-          let dur = time.monotonic_ms() - t0_ms;
-          metrics.metrics_record(out.status, payload_len);
-          metrics.metrics_record_duration(dur);
-          access_log(rid, req.method, req.target, out.status, payload_len, dur);
-          if req.method != "GET" {
-            audit_event(rid, req.method, req.target, out.status);
-          }
         }
         if conn_open && reuse {
           // Carry pipelined trailing bytes into the next cycle (h11 rule

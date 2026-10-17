@@ -786,8 +786,11 @@ invalid_json); the ladder now rejects declared CL > MAX_BODY with 413
 `REL-20261017-1533-pulse`). Both smoke scripts run the harness (smoke
 135/135); suites x2 + crash x2 green both platforms; CI dry run
 `39051902537` green on both platforms. Score holds (~55.8%;
-correctness + test coverage, no new capability). Next: the nine-stage
-extraction._
+correctness + test coverage, no new capability). Follow-up landed:
+the afterResponse bookkeeping is a single call site (send, metrics,
+access log, audit) for every response path -- eight duplicated tails
+removed, behavior unchanged, gates green both platforms. Next: the
+stage-table extraction for stages 0-6._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

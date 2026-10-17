@@ -27,6 +27,11 @@ GitHub release body.
   the page resolve against the directory instead of its parent -- the
   nginx convention; found re-testing the full xiom-lang.org tree
   (`REL-20261015-2156-website-2`).
+- **Middleware Phase A started**: the afterResponse bookkeeping
+  (send result, metrics, access log, audit decision) now lives in one
+  `after_response()` call site for every response path, replacing eight
+  duplicated tails with no behavior change; the request-gate order is
+  locked by `scripts/gate_order.py`.
 - **Station consumes the published `xiom.pulse` 0.1.0 core** (Beacon):
   the byte-identical `http`/`envelope`/`reqctx`/root modules are gone;
   product modules are namespaced `xiom.pulse.station.*` and the product
