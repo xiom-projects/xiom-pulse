@@ -112,13 +112,27 @@ is unchanged in a mechanical refactor.
   allocation beyond what exists. If profiling ever demands it, the
   gin pattern (precomputed flat array per route) is the escape hatch.
 
-### 3.3 Compatibility tests to add with the implementation
+### 3.3 Compatibility tests -- LANDED 2026-10-17
 
-Pin the currently-unpinned orderings before refactoring: CSRF 403 beats
-rate limit 429 for mutating cookie requests; OPTIONS bypasses CSRF and
-rate limit; quit is honored only after a well-formed parse; 413 vs 400
-selection; afterResponse runs for every committed response (log/metrics
-counts). Smoke and both suites keep passing untouched otherwise.
+`scripts/gate_order.py` starts its own server (CSRF + rate limit enabled,
+isolated store/audit dirs) and pins 11 checks before the refactor:
+CSRF 403 beats rate 429 for mutating cookie requests (bucket emptied
+first and verified with a 429); OPTIONS 204 bypasses both; a malformed
+head carrying `X-Pulse-Quit` gets 400 and the loop stays alive; the
+well-formed quit closes silently and exits 0; oversized CL bodies get
+413. Both smoke scripts invoke it (one smoke check; the score is now
+135/135).
+
+**Found while writing the pin:** a plain `Content-Length` body above the
+1 MiB cap was silently truncated by `read_request` and dispatched (the
+route then answered 400 `invalid_json`), instead of 413. The ladder now
+checks the declared CL against `MAX_BODY` before the CSRF/rate stages and
+answers 413 `payload_too_large` without dispatching; the package note
+(`REL-20261017-1533-pulse`) asks `parse_request` to reject a truncated
+declared body too. The afterResponse log/metrics count pin remains for
+the extraction step (single call site).
+
+Smoke and both suites keep passing unchanged otherwise.
 
 ## 4. Adopted jobs model (PULSE 0.4, bullmq port)
 

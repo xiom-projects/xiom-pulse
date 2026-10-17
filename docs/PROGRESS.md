@@ -775,6 +775,19 @@ harnesses. Score holds (~55.8%; adoption + correctness, no new
 capability). Stage 2b is gated on the packages hook seam (acked,
 implementation dispatched)._
 
+_Delta 2026-10-17 (middleware Phase A -- order tests): the currently
+unpinned gate order is now locked by `scripts/gate_order.py` (11 checks,
+its own CSRF+rate server): CSRF 403 beats rate 429, OPTIONS 204 bypasses
+both, quit is honored only after a well-formed parse, and oversized
+bodies get 413. Writing the pin found a real gap -- a plain CL body over
+1 MiB was silently truncated and dispatched (route answered 400
+invalid_json); the ladder now rejects declared CL > MAX_BODY with 413
+`payload_too_large` before dispatch (package note
+`REL-20261017-1533-pulse`). Both smoke scripts run the harness (smoke
+135/135); suites x2 + crash x2 green both platforms. Score holds
+(~55.8%; correctness + test coverage, no new capability). Next: the
+nine-stage extraction._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

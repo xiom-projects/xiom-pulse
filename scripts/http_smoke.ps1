@@ -498,6 +498,20 @@ if (Test-Path -LiteralPath $srvErrFile) { $srvLog = $srvLog + (Get-Content -Lite
 Remove-Item -LiteralPath $srvOutFile, $srvErrFile -Force -ErrorAction SilentlyContinue
 Set-Content -LiteralPath (Join-Path $logDir "http-smoke.out") -Value $srvLog
 
+# Gate order (middleware Phase A): dedicated server with CSRF + rate limit
+# enabled so the ordering is pinned before the nine-stage refactor.
+$gateLog = Join-Path $logDir "gate-order-win.log"
+& python (Join-Path $repoRoot "scripts\gate_order.py") --server-exe $ServerExe --port ($Port + 2) --out-dir (Join-Path $logDir "gate-order-win") *> $gateLog
+$gateRc = $LASTEXITCODE
+Get-Content -LiteralPath $gateLog -ErrorAction SilentlyContinue | Write-Host
+if ($gateRc -eq 0) {
+    Write-Host "[PASS] gate order (script)"
+    $pass++
+} else {
+    Write-Host "[FAIL] gate order (script)"
+    $fail++
+}
+
 Write-Host "--- server output ---"
 Write-Host $srvLog.TrimEnd()
 Write-Host ("smoke: pass={0} fail={1} server_exit={2}" -f $pass, $fail, $srvExit)

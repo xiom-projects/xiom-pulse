@@ -479,6 +479,18 @@ fi
 wait "$SRV_PID" 2>/dev/null
 SRV_EXIT=$?
 
+# Gate order (middleware Phase A): dedicated server with CSRF + rate limit
+# enabled so the ordering is pinned before the nine-stage refactor.
+GATE_LOG="$LOG_DIR/gate-order-linux.log"
+if python3 "$PULSE_REPO_ROOT/scripts/gate_order.py" --server-exe "$SERVER_EXE" --port $((PORT + 2)) --out-dir "$LOG_DIR/gate-order-linux" >"$GATE_LOG" 2>&1; then
+  pulse_log "[PASS] gate order (script)"
+  PULSE_PASS=$((PULSE_PASS + 1))
+else
+  pulse_log "[FAIL] gate order (script)"
+  cat "$GATE_LOG" || true
+  PULSE_FAIL=$((PULSE_FAIL + 1))
+fi
+
 pulse_log "--- server log tail ---"
 tail -n 8 "$SERVER_LOG" 2>/dev/null || true
 pulse_summary "smoke"

@@ -1130,21 +1130,32 @@ pub fn main() -> Int {
         reqctx.set_rid(rid);
         let req = http.parse_request(&raw);
         let cookie_header = http.header_get(&req, "cookie");
+        // Plain Content-Length bodies above the cap must be rejected, not
+        // silently truncated: read_request stops at MAX_BODY, so parse can
+        // otherwise dispatch a partial body (found by scripts/gate_order.py).
+        // Chunked requests carry their own decoded-cap error.
+        let he = find_header_end(&raw);
+        var declared_cl: Int = 0;
+        if he >= 0 { declared_cl = http.content_length_of(&raw, he); }
+        let te_header = http.header_get(&req, "transfer-encoding");
+        let too_large = declared_cl > MAX_BODY && te_header.len() == 0;
         // Reuse gate (h11 rules): complete framing consumed, no close
         // request from the peer, still open for reuse. The latch is
         // one-way: once a cycle closes, the connection never reuses.
         let fend = http.framed_end(&raw);
         keep = keep && fend >= 0 && !http.connection_close_requested(&req);
         reuse = keep;
-        if !req.ok {
+        if !req.ok || too_large {
           var status: Int = 400;
           var code: Str = "bad_request";
-          if string.str_contains(req.error, "too large") {
+          var msg: Str = "bad request";
+          if too_large || string.str_contains(req.error, "too large") {
             status = 413;
             code = "payload_too_large";
+            msg = "payload too large";
           }
           var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-          var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, "bad request"), false);
+          var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, msg), false);
           resp = with_std_headers(with_cors(resp, &req));
           let w_ok = send_all(client, &resp);
           if !w_ok { io.println("pulse: send failed (" + status.to_str() + ")"); io.flush_stdout(); }

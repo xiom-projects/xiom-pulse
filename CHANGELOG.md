@@ -47,6 +47,11 @@ GitHub release body.
   than while it is still reading/building the 50 MB body (removed a WSL
   drvfs timing flake); the crash harness waits for the listener and
   tolerates the Windows taskkill exit race.
+- A plain `Content-Length` body above the 1 MiB cap now answers `413
+  payload_too_large` before dispatch instead of being silently truncated
+  and handed to the route (found while pinning the middleware gate order;
+  the new `scripts/gate_order.py` also locks CSRF-before-rate, the
+  OPTIONS bypass, and quit-after-parse).
 
 ## [0.2.1] - 2026-10-15
 
