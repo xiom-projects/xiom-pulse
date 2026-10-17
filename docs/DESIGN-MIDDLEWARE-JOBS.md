@@ -137,7 +137,15 @@ afterResponse call site -- send, metrics, access log, and the audit
 decision for every response path (408/parse/204/403/429/dispatch); the
 eight duplicated tails are gone. Behavior is unchanged (suites x2 + smoke
 135/135 x2 + crash x2 green both platforms; CI dry run `39062233020`
-green on both platforms). Next: the stage-table extraction for 0-6.
+green on both platforms).
+
+**Stages 0-3 landed (2026-10-17):** `gate_request()` owns parse/too-large
+-> quit -> OPTIONS -> CSRF -> rate and returns a `GateResult`
+(action 0 dispatch / 1 send / 2 quit), preserving the frozen order.
+`gate_order.py` (11 checks) plus suites x2 + smoke 135/135 x2 + crash x2
+are green on both platforms. Next: stages 4-6 (`build_dispatch_response`
+extraction: dispatch -> build -> HEAD trim -> std headers/CORS), then the
+static stage table if the profiling note still wants it.
 
 Smoke and both suites keep passing unchanged otherwise.
 

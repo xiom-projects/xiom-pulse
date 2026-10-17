@@ -847,6 +847,103 @@ fn after_response(fd: Int, resp: Vec[UInt8], rid: Str, method: Str, target: Str,
   return w_ok;
 }
 
+/// GateResult - middleware stages 0-3 outcome: action 0 = dispatch the
+/// route, 1 = send the built `resp`, 2 = stop the accept loop (quit).
+pub type GateResult = {
+  action: Int;
+  resp: Vec[UInt8];
+  status: Int;
+  bytes: Int;
+  method: Str;
+  target: Str;
+  reuse: Bool;
+}
+
+/// gate_request runs the request-side stages in their frozen order (the
+/// gate_order.py pins): parse/too-large -> quit -> OPTIONS preflight ->
+/// CSRF -> global rate limit. A committed gate response skips the rest
+/// (fastify's sent-guard); the dispatch path returns action 0.
+/// Complexity: O(n) header reads + O(1) decisions.
+fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, cookie_header: Str, reuse: Bool, limiter: &mut ratelimit.Limiter) -> GateResult {
+  var res: GateResult = GateResult{ action: 0; resp: Vec[UInt8].new(); status: 0; bytes: 0; method: req.method; target: req.target; reuse: reuse; };
+  // Plain Content-Length bodies above the cap must be rejected, not
+  // silently truncated: read_request stops at MAX_BODY, so parse can
+  // otherwise dispatch a partial body (found by scripts/gate_order.py).
+  let he = find_header_end(raw);
+  var declared_cl: Int = 0;
+  if he >= 0 { declared_cl = http.content_length_of(raw, he); }
+  let te_header = http.header_get(req, "transfer-encoding");
+  let too_large = declared_cl > MAX_BODY && te_header.len() == 0;
+  if !req.ok || too_large {
+    var status: Int = 400;
+    var code: Str = "bad_request";
+    var msg: Str = "bad request";
+    if too_large || string.str_contains(req.error, "too large") {
+      status = 413;
+      code = "payload_too_large";
+      msg = "payload too large";
+    }
+    var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, msg), false);
+    resp = with_std_headers(with_cors(resp, req));
+    let rlen = resp.len();
+    res.action = 1;
+    res.resp = resp;
+    res.status = status;
+    res.bytes = rlen;
+    res.method = "?";
+    res.target = "-";
+    res.reuse = false;
+    return res;
+  }
+  if http.header_get(req, "x-pulse-quit") == "1" {
+    res.action = 2;
+    res.reuse = false;
+    return res;
+  }
+  if req.method == "OPTIONS" && cors.cors_enabled() {
+    var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "", reuse);
+    resp = with_std_headers(with_cors(resp, req));
+    res.action = 1;
+    res.resp = resp;
+    res.status = 204;
+    res.bytes = 0;
+    res.reuse = reuse;
+    return res;
+  }
+  if csrf_on && is_mutating(req.method) && sessions.session_id_from_cookie(cookie_header).len() > 0 && !sessions.csrf_matches(cookie_header, http.header_get(req, "x-csrf-token")) {
+    var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
+    var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody, reuse);
+    resp = with_std_headers(with_cors(resp, req));
+    res.action = 1;
+    res.resp = resp;
+    res.status = 403;
+    res.bytes = rbody.len();
+    res.reuse = reuse;
+    return res;
+  }
+  let now_ms = time.monotonic_ms();
+  if !ratelimit.limiter_allow(limiter, now_ms) {
+    let retry_ms = ratelimit.limiter_retry_after_ms(limiter, now_ms);
+    var secs: Int = retry_ms / 1000;
+    if secs < 1 { secs = 1; }
+    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    hs.push(("Retry-After", secs.to_str()));
+    let rbody = envelope.error_body("rate_limited", "too many requests");
+    var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
+    resp = with_std_headers(with_cors(resp, req));
+    res.action = 1;
+    res.resp = resp;
+    res.status = 429;
+    res.bytes = rbody.len();
+    res.reuse = reuse;
+    return res;
+  }
+  return res;
+}
+
 /// with_std_headers appends the Date header (RFC 1123 / IMF-fixdate) right
 /// after the status line, plus the configured CSP when PULSE_CSP is set;
 /// assembled here at the app layer, reusing the static package's
@@ -1146,64 +1243,26 @@ pub fn main() -> Int {
         reqctx.set_rid(rid);
         let req = http.parse_request(&raw);
         let cookie_header = http.header_get(&req, "cookie");
-        // Plain Content-Length bodies above the cap must be rejected, not
-        // silently truncated: read_request stops at MAX_BODY, so parse can
-        // otherwise dispatch a partial body (found by scripts/gate_order.py).
-        // Chunked requests carry their own decoded-cap error.
-        let he = find_header_end(&raw);
-        var declared_cl: Int = 0;
-        if he >= 0 { declared_cl = http.content_length_of(&raw, he); }
-        let te_header = http.header_get(&req, "transfer-encoding");
-        let too_large = declared_cl > MAX_BODY && te_header.len() == 0;
         // Reuse gate (h11 rules): complete framing consumed, no close
         // request from the peer, still open for reuse. The latch is
         // one-way: once a cycle closes, the connection never reuses.
         let fend = http.framed_end(&raw);
         keep = keep && fend >= 0 && !http.connection_close_requested(&req);
         reuse = keep;
-        if !req.ok || too_large {
-          var status: Int = 400;
-          var code: Str = "bad_request";
-          var msg: Str = "bad request";
-          if too_large || string.str_contains(req.error, "too large") {
-            status = 413;
-            code = "payload_too_large";
-            msg = "payload too large";
-          }
-          var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-          var resp = http.build_response_full(status, CONTENT_JSON, &no_headers, envelope.error_body(code, msg), false);
-          resp = with_std_headers(with_cors(resp, &req));
-          let rlen = resp.len();
-          let _w = after_response(client, resp, rid, "?", "-", status, rlen, t0_ms, false);
-          conn_open = false;
-        } else if http.header_get(&req, "x-pulse-quit") == "1" {
+        // Stages 0-3 (parse/quit/OPTIONS/CSRF/rate) in one named gate;
+        // action 0 continues to dispatch, 1 sends its response, 2 quits.
+        let gate = gate_request(&raw, &req, rid, csrf_on, cookie_header, reuse, &mut limiter);
+        if gate.action == 2 {
           running = false;
           conn_open = false;
-        } else if req.method == "OPTIONS" && cors.cors_enabled() {
-          var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-          var resp = http.build_response_full(204, CONTENT_TEXT, &no_headers, "", reuse);
-          resp = with_std_headers(with_cors(resp, &req));
-          let _w = after_response(client, resp, rid, req.method, req.target, 204, 0, t0_ms, false);
-          conn_open = reuse;
-        } else if csrf_on && is_mutating(req.method) && sessions.session_id_from_cookie(cookie_header).len() > 0 && !sessions.csrf_matches(cookie_header, http.header_get(&req, "x-csrf-token")) {
-          var no_headers: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-          let rbody = envelope.error_body("csrf", "missing or invalid CSRF token");
-          var resp = http.build_response_full(403, CONTENT_JSON, &no_headers, rbody, reuse);
-          resp = with_std_headers(with_cors(resp, &req));
-          let _w = after_response(client, resp, rid, req.method, req.target, 403, rbody.len(), t0_ms, false);
-          conn_open = reuse;
-        } else if !ratelimit.limiter_allow(&mut limiter, time.monotonic_ms()) {
-          let now_ms = time.monotonic_ms();
-          let retry_ms = ratelimit.limiter_retry_after_ms(&limiter, now_ms);
-          var secs: Int = retry_ms / 1000;
-          if secs < 1 { secs = 1; }
-          var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-          hs.push(("Retry-After", secs.to_str()));
-          let rbody = envelope.error_body("rate_limited", "too many requests");
-          var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
-          resp = with_std_headers(with_cors(resp, &req));
-          let _w = after_response(client, resp, rid, req.method, req.target, 429, rbody.len(), t0_ms, false);
-          conn_open = reuse;
+        } else if gate.action == 1 {
+          let g_status = gate.status;
+          let g_bytes = gate.bytes;
+          let g_method = gate.method;
+          let g_target = gate.target;
+          let g_reuse = gate.reuse;
+          let _w = after_response(client, gate.resp, rid, g_method, g_target, g_status, g_bytes, t0_ms, false);
+          conn_open = g_reuse;
         } else {
           let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
           var eff_method: Str = req.method;
