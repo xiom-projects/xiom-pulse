@@ -767,7 +767,8 @@ the CI installer, and the build runs on **v0.64.6 + stdlib `8d95815`**
 with the latest registry deps (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2,
 `xiom.jwt` 0.2.1). Gates on BOTH platforms: suites x2 (`test_http` 77,
 `test_app` 237, `test_smoke` 4), smoke **134/134 x2** (jsonl + kv), crash
-x2 GREEN. Also fixed the ops-blocking **duplicate `Content-Length`** on
+x2 GREEN; CI dry run `39035806578` green on both platforms. Also fixed
+the ops-blocking **duplicate `Content-Length`** on
 site-mode file responses (`REL-20261017-1141-ops`; one CL on 200/304,
 locked by a new suite check) and stabilized the write-stall/crash
 harnesses. Score holds (~55.8%; adoption + correctness, no new

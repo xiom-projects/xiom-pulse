@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**WRAP 20 (2026-10-17):** session 20. **STATION-CONSUMES 2a GREEN** -- product modules renamed to `xiom.pulse.station.*` (18 imports / 10 files), the four byte-identical core modules deleted (SHA256 re-verified), `src/version.xi` is now the product version source (release scripts + tag guard + test_smoke repointed), `"xiom.pulse" = "0.1.0"` declared in both manifests + the CI installer; **local gates on BOTH platforms: suites x2 (77/237/4 rc=0), smoke 134/134 x2 (jsonl + kv), crash x2 GREEN**, evidence `probe-logs/station-consumes-2a/` (local). **TOOLCHAIN: v0.64.6 + stdlib tag `8d95815`** adopted locally AND in `STDLIB_VERSION` + all three workflow pin blocks (v0.64.6 SHA256 set); **latest registry deps** (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2, `xiom.jwt` 0.2.1) per owner directive 2026-10-17. **OPS BUG FIXED:** site-mode duplicate `Content-Length` (`REL-20261017-1141-ops`) -- static CL dropped, builder owns framing; live 200 + 304 each carry exactly one CL, suite locks it; ops to re-test the dogfood switch on the next cut. Harness hardening: write-stall smoke now reads the head before the stall clock (WSL drvfs flake gone), crash harness waits for the listener + tolerates the Windows taskkill race. Packages hook seam acked (`REL-20261017-1123-pulse-2`, impl dispatched) -- stage 2b stays gated. Open: compiler resolver answer (`REL-20261017-1123-pulse`), ops clobber flag (`-3`), 0.2.2 cut. NEXT = middleware chain (`docs/DESIGN-MIDDLEWARE-JOBS.md`, tests first), then 2b on the package publish. Main at wrap start `9141f21`; wrap commit follows.
+**WRAP 20 (2026-10-17):** session 20. **STATION-CONSUMES 2a GREEN** -- product modules renamed to `xiom.pulse.station.*` (18 imports / 10 files), the four byte-identical core modules deleted (SHA256 re-verified), `src/version.xi` is now the product version source (release scripts + tag guard + test_smoke repointed), `"xiom.pulse" = "0.1.0"` declared in both manifests + the CI installer; **local gates on BOTH platforms: suites x2 (77/237/4 rc=0), smoke 134/134 x2 (jsonl + kv), crash x2 GREEN**, evidence `probe-logs/station-consumes-2a/` (local). **TOOLCHAIN: v0.64.6 + stdlib tag `8d95815`** adopted locally AND in `STDLIB_VERSION` + all three workflow pin blocks (v0.64.6 SHA256 set); **latest registry deps** (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2, `xiom.jwt` 0.2.1) per owner directive 2026-10-17. **OPS BUG FIXED:** site-mode duplicate `Content-Length` (`REL-20261017-1141-ops`) -- static CL dropped, builder owns framing; live 200 + 304 each carry exactly one CL, suite locks it; ops to re-test the dogfood switch on the next cut. Harness hardening: write-stall smoke now reads the head before the stall clock (WSL drvfs flake gone), crash harness waits for the listener + tolerates the Windows taskkill race. Packages hook seam acked (`REL-20261017-1123-pulse-2`, impl dispatched) -- stage 2b stays gated. Open: compiler resolver answer (`REL-20261017-1123-pulse`), ops clobber flag (`-3`), 0.2.2 cut. NEXT = middleware chain (`docs/DESIGN-MIDDLEWARE-JOBS.md`, tests first), then 2b on the package publish. `main = 1b13922` (2a commit, pushed); **CI dry run `39035806578` GREEN on both platforms** (ubuntu 3m44s, windows 4m4s); this wrap commit follows.
 
 **WRAP 19 (2026-10-17):** session 19 closed at context limit. `main = b70d681` (clean + pushed; relays `95c4981`). **Beacon `xiom.pulse` 0.1.0 PUBLISHED** (eco-v0.1.192, sha256 `53fcc56e..`) + acceptance stage 1 GREEN; **durability Phase A GREEN** (sweeps + crash x2 both platforms; CI `38947560303`); **reference-study protocol BINDING** (`docs/REFERENCE-STUDY-PROTOCOL.md`). **NEXT UNIT = rename-first station-consumes 2a** (`docs/DESIGN-STATION-CONSUMES.md`: `app`/`config`/`router` -> `xiom.pulse.station.*`, 18 imports / 10 files, delete the 4 verbatim modules, deps + CI installer, suites x2 + smoke x2 both platforms) then the middleware chain. Open obligations: compiler resolver answer (`REL-20261017-1123-pulse`), packages 0.2 hook seam (`-2`), ops clobber flag (`-3`); v0.64.6 adoption + darwin/pin suites queued (item 7). Doorbell must be re-armed by the next session.
 
@@ -1226,9 +1226,10 @@ wrap on change). Use `python tools/relay.py` in the relays clone; NEVER
 `git pull` there; never edit another lane's item.
 
 STATE AT WRAP 20 (2026-10-17):
-- **`main = 9141f21` at wrap start**, clean + pushed; the wrap commit
-  follows. Relays: pull at boot (the site-mode ack + the 2a result are
-  filed there).
+- **`main = 1b13922`** (the 2a commit; pushed), CI dry run
+  `39035806578` GREEN on both platforms (ubuntu 3m44s, windows 4m4s);
+  this wrap commit follows. Relays: pull at boot (the site-mode fix ack +
+  the 2a result are filed there).
 - **STATION-CONSUMES 2a GREEN:** product modules are
   `xiom.pulse.station.{app,config,router,version}` (18 imports / 10
   files); the byte-identical `http`/`envelope`/`reqctx`/root modules are
@@ -1238,7 +1239,7 @@ STATE AT WRAP 20 (2026-10-17):
   manifests + the CI installer. Gates on BOTH platforms: suites x2
   (test_http 77, test_app 237, test_smoke 4, rc=0), smoke 134/134 x2
   (jsonl + kv), crash x2 GREEN (`probe-logs/station-consumes-2a/`,
-  local).
+  local); CI dry run `39035806578` green on both platforms.
 - **TOOLCHAIN: v0.64.6 + stdlib release tag `8d95815`** adopted locally
   AND in `STDLIB_VERSION` + ci/heavy/release pin blocks (v0.64.6 SHA256
   set). **Latest registry deps** per owner directive 2026-10-17:

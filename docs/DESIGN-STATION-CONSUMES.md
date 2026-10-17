@@ -84,7 +84,8 @@ the CI installer list (`setup-xiom` action) gains `xiom.pulse@0.1.0`.
   updated with the v0.64.6 SHA256 set).
 - Gates (both platforms): build green; suites x2 (`test_http` 77,
   `test_app` 237, `test_smoke` 4, all rc=0); HTTP smoke 134/134 x2
-  (jsonl + kv); crash harness x2 GREEN. Evidence:
+  (jsonl + kv); crash harness x2 GREEN; CI dry run `39035806578` GREEN
+  (ubuntu 3m44s, windows 4m4s). Evidence:
   `probe-logs/station-consumes-2a/` (local, gitignored).
 - Adjacent fix (ops `REL-20261017-1141-ops`): site-mode file responses
   emitted `Content-Length` twice (static engine + response builder);
