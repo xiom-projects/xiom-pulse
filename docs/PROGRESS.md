@@ -789,8 +789,8 @@ invalid_json); the ladder now rejects declared CL > MAX_BODY with 413
 correctness + test coverage, no new capability). Follow-up landed:
 the afterResponse bookkeeping is a single call site (send, metrics,
 access log, audit) for every response path -- eight duplicated tails
-removed, behavior unchanged, gates green both platforms. Next: the
-stage-table extraction for stages 0-6._
+removed, behavior unchanged, gates green both platforms; CI
+`39062233020` green. Next: the stage-table extraction for stages 0-6._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

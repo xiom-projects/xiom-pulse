@@ -136,8 +136,8 @@ declared body too.
 afterResponse call site -- send, metrics, access log, and the audit
 decision for every response path (408/parse/204/403/429/dispatch); the
 eight duplicated tails are gone. Behavior is unchanged (suites x2 + smoke
-135/135 x2 + crash x2 green both platforms; CI dry run `39051902537` was
-the pre-refactor run). Next: the stage-table extraction for 0-6.
+135/135 x2 + crash x2 green both platforms; CI dry run `39062233020`
+green on both platforms). Next: the stage-table extraction for 0-6.
 
 Smoke and both suites keep passing unchanged otherwise.
 
