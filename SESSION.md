@@ -7,6 +7,14 @@
 
 ## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
+- **STANDING RULE (owner directive 2026-10-17): REFERENCE-STUDY
+  PROTOCOL** -- never design from memory; study the cloned battle-tested
+  MIT repos under `E:\repos`, crawl the actual mechanics, convert to
+  XIOM, apply from the extracted matrix; blockers (stdlib/packages/BUG)
+  go to the lanes on the relay and are tested back on the next
+  release/publish. Full rule: `docs/REFERENCE-STUDY-PROTOCOL.md`.
+  Production bar -- no MVP shortcuts.
+
 - **Repo:** `E:\xiom-projects\xiom-pulse`, **PUBLIC** since 2026-10-09
   (owner flipped it); rulesets live -- `protect-main` requires DCO +
   `ubuntu-latest` + `windows-latest`, `protect-release-tags` covers
@@ -1245,21 +1253,41 @@ lane-ask refs REL-20261015-2202-pulse..-5; TLS is the ceiling):
    plan as they land; W10 bench baseline is the first proof artifact.
 1. ~~Keep-alive Phase A + B~~ DONE (2026-10-16): `7924222` + `56eb9f8`;
    freeze gate green (smoke 134/134 x2 both platforms).
-1b. **Beacon extraction -- IN FLIGHT (packages owns it as of
-    2026-10-16 ~14:29Z):** the porter is carving the frozen pair
-    `56eb9f8` verbatim into `packages/xiom-pulse` (fresh `minimal.xi` +
-    the hardening suite carried over; deps `xiom.std` only; 0.1.0) --
-    `REL-20261016-1429-packages`; stages relay as they land. PULSE: no
-    action until their porter/ops/publish relays; then co-verify the
-    carved surface against the frozen semantics and prepare the
-    Station-consumes refactor. One core, never a fork.
+1b. **Beacon extraction -- PUBLISHED** (`xiom.pulse` 0.1.0 LIVE,
+    eco-v0.1.192, sha256 `53fcc56e..`; acceptance stage 1 GREEN: carved
+    suite 125/125 x2 both platforms + `minimal.xi` live x2;
+    `docs/repro/beacon-acceptance/`). **Station-consumes = the closing
+    half, split per the reference-study protocol:**
+    **2a -- consume the core (rename-first; path proven 2026-10-17):**
+    declaring `xiom.pulse` makes the catalog resolve DUPLICATE module
+    names in favour of the PACKAGE (W001 warning only) -- so the
+    product's colliding modules must be renamed FIRST:
+    `app`/`config`/`router` -> `xiom.pulse.station.*` (18 imports across
+    10 files), then delete the byte-identical `http`/`envelope`/
+    `reqctx`/root `pulse` (PROVENANCE sha set), declare the dep in both
+    manifests + the CI installer -> suites x2 + smoke x2 both platforms
+    must stay 134/134. Full matrix + evidence:
+    `docs/DESIGN-STATION-CONSUMES.md`. Refs: PROVENANCE byte-set +
+    fastify/gin composition; resolver policy relayed to compiler.
+    **2b -- full loop/router/config adoption, GATED:** the product's
+    loop features (metrics/audit/CORS/access log) live inside the
+    monolith loop and the 0.1.0 seam has no pre/post hooks -> build the
+    middleware chain first (item 3; gin/fastify hook taxonomy in
+    `DESIGN-MIDDLEWARE-JOBS.md`) and close the packages wishlist for the
+    hook seam + module-precedence answer; re-test on the next package
+    publish. One core, never a fork.
 1c. ~~Consumer-verify `xiom.template 0.2.0`~~ **DONE (session 19,
     2026-10-16):** 15/15 x2 both platforms on the v0.64.5 pin
     (`docs/repro/template-verify/`; registry artifact, sha256 matched;
     reply filed to packages, ref `REL-20261016-1111-packages`).
-2. Durability Phase A/B per docs\DESIGN-STORE-DURABILITY.md.
-3. Middleware order tests FIRST, then the chain refactor, then the jobs
-   core (docs\DESIGN-MIDDLEWARE-JOBS.md).
+2. ~~Durability Phase A~~ DONE (2026-10-16; sync-before-ack + knobs +
+   claim table; sweeps + crash x2 both platforms; CI `38947560303`).
+   Phase B remains (compaction rename ordering + backup fence; the bbolt
+   matrix is already extracted in `docs/DESIGN-STORE-DURABILITY.md`).
+3. **Middleware -- the adoption path (start here next):** order tests
+   FIRST, then the chain refactor, then the jobs core
+   (`docs\DESIGN-MIDDLEWARE-JOBS.md`; extracted from gin/fastify/bullmq
+   -- nine stages, sent-guard, precomputed tables; do not re-invent).
 4. SQL class: migrations runner per docs\DESIGN-SQL-MIGRATIONS.md (wire
    xiom.sqlite into package.xi + the CI install list when the unit
    opens; the SQL driver artifact is co-verified green).
@@ -1284,7 +1312,10 @@ XIOM_COMPILER/XIOM_STDLIB explicitly -- Windows versioned v0.64.5 / WSL
 xiom-v0645 + the `stdlib-092dfa0c` caches); suite watchdog >= 300s on
 Linux (drvfs slowness); signed conventional commits; bus sweep before
 finishing any task; wrap at every stopping point (SESSION.md digest +
-docs\PROGRESS.md).
+docs\PROGRESS.md). **REFERENCE-STUDY PROTOCOL (owner 2026-10-17)
+binding:** every unit cites its reference matrix
+(`docs\REFERENCE-STUDY-PROTOCOL.md`); blockers relay first and are
+tested back on the next release/publish.
 ```
 
 ## 3d. Paste prompt (2026-10-15 wrap 16, superseded)
