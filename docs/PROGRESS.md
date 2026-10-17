@@ -745,6 +745,19 @@ exit; `docs/repro/beacon-acceptance/`). Stage 2 (the closing half) =
 PULSE Station consumes the published package + the full smoke/fleet.
 Score holds._
 
+_Delta 2026-10-17 (protocol + adoption path): the owner made the
+reference-study protocol a **STANDING RULE**
+(`docs/REFERENCE-STUDY-PROTOCOL.md`: crawl the battle-tested MIT
+references, extract the matrix, convert to XIOM; blockers relay and are
+tested back on release/publish; no memory-invented designs, no MVPs).
+The station-consumes path is proven **rename-first**
+(`docs/DESIGN-STATION-CONSUMES.md`): the catalog silently binds duplicate
+module names to the dependency (W001 only), so the product namespaces
+`app`/`config`/`router` to `xiom.pulse.station.*` before consuming the
+package core. Three blockers relayed: compiler resolver policy
+(`REL-20261017-1123-pulse`), packages 0.2 hook seam (`-2`), ops
+shared-home reset (`-3`). Score holds (~55.8%)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

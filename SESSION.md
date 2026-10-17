@@ -3,7 +3,9 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Written:** 2026-10-05; **last wrap:** 2026-10-16 wrap 18 (keep-alive **A+B landed** (`7924222`, `56eb9f8`) -- Beacon freeze gate GREEN, milestone `REL-20261016-1401-pulse` filed; packages delivered template 0.2.0 + ssl building + otel built + zstd real; NEXT = `xiom.pulse` (Beacon) extraction -> publish-ready item -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane. **Session 19 (live):** doorbell re-armed (2h); sweep acks pushed (`70e342f` bus); roadmap fold `8a1f22e`; **Beacon extraction IN FLIGHT packages-side** (porter carving `56eb9f8` -> `packages/xiom-pulse`, `REL-20261016-1429-packages`; no PULSE action until their relays); **`xiom.template 0.2.0` consumer-verify 15/15 x2 both platforms** (item 1c; unit `docs/repro/template-verify/`; bus reply filed); README refreshed -- tier map (Beacon tier 1 / Station tier 2; convention `REL-20261016-1446-packages`) + current toolchain/connection facts. **17:00Z sweep:** `xiom.ssl 0.1.0` + `xiom.brotli 0.1.0` LIVE (eco-v0.1.189; TLS headline closed on the packages path), **Beacon extraction GREEN + co-verified** (`053cab87`; all PROVENANCE hashes match @`56eb9f8` from our side; no surface changes; publish path next); **17:35Z:** consumer-verify `xiom.ssl` 0.1.0 (**14/14 live x2 win** + 4/4 SKIP x2 wsl) and `xiom.brotli` 0.1.0 (**11/11 x2 both platforms**) GREEN -- bus reply `REL-20261016-1735-pulse`; **durability Phase A landed** (post-17:35Z): `store_append`/`audit_event` sync-before-ack (`PULSE_STORE_SYNC`/`PULSE_AUDIT_SYNC`, default on; `io.append_line_sync` on the pin), `--check-config` prints + disable warnings, claim table flipped (DESIGN-STORE-DURABILITY P5), test_app +11 checks; win sweep FAILED=0 (binary `262909947A..`) + crash harness x2; linux rebuilt on the right pin (stale `dd352f6` hardcode in the local runner fixed to `092dfa0c`) -> sweep FAILED=0 (binary `3ee23a1f..`) + crash harness x2; CI dry run `38947560303` green (both platforms); **Beacon PUBLISHED** (`xiom.pulse 0.1.0` LIVE, eco-v0.1.192, sha256 `53fcc56e..`) + acceptance stage 1 GREEN (installed artifact: suite **125/125 x2 both platforms**, `minimal.xi` live x2; `docs/repro/beacon-acceptance/`); stage 2 = Station-consumes + full fleet next; **21:00Z sweep:** compiler **v0.64.6 RELEASED** (2026-10-16T20:33Z; darwin stream + stdlib pin `b81430ba`) -- asks PULSE: darwin/pin suites on the new archive; adoption + macOS pair re-test queued as the next unit after stage 2. **PAUSED 2026-10-16T23:18Z (owner away until tomorrow):** doorbell cancelled -- resume = re-arm the doorbell (first action), then station-consumes stage 2 -> v0.64.6 adoption + darwin/pin suites -> middleware/jobs -> SQL runner -> bench.
+**WRAP 19 (2026-10-17):** session 19 closed at context limit. `main = b70d681` (clean + pushed; relays `95c4981`). **Beacon `xiom.pulse` 0.1.0 PUBLISHED** (eco-v0.1.192, sha256 `53fcc56e..`) + acceptance stage 1 GREEN; **durability Phase A GREEN** (sweeps + crash x2 both platforms; CI `38947560303`); **reference-study protocol BINDING** (`docs/REFERENCE-STUDY-PROTOCOL.md`). **NEXT UNIT = rename-first station-consumes 2a** (`docs/DESIGN-STATION-CONSUMES.md`: `app`/`config`/`router` -> `xiom.pulse.station.*`, 18 imports / 10 files, delete the 4 verbatim modules, deps + CI installer, suites x2 + smoke x2 both platforms) then the middleware chain. Open obligations: compiler resolver answer (`REL-20261017-1123-pulse`), packages 0.2 hook seam (`-2`), ops clobber flag (`-3`); v0.64.6 adoption + darwin/pin suites queued (item 7). Doorbell must be re-armed by the next session.
+
+**Written:** 2026-10-05; **last wrap:** 2026-10-17 wrap 19 (session-19 log inline below) (keep-alive **A+B landed** (`7924222`, `56eb9f8`) -- Beacon freeze gate GREEN, milestone `REL-20261016-1401-pulse` filed; packages delivered template 0.2.0 + ssl building + otel built + zstd real; NEXT = `xiom.pulse` (Beacon) extraction -> publish-ready item -> durability -> middleware/jobs -> SQL runner -> bench), by the PULSE consumer lane. **Session 19 (live):** doorbell re-armed (2h); sweep acks pushed (`70e342f` bus); roadmap fold `8a1f22e`; **Beacon extraction IN FLIGHT packages-side** (porter carving `56eb9f8` -> `packages/xiom-pulse`, `REL-20261016-1429-packages`; no PULSE action until their relays); **`xiom.template 0.2.0` consumer-verify 15/15 x2 both platforms** (item 1c; unit `docs/repro/template-verify/`; bus reply filed); README refreshed -- tier map (Beacon tier 1 / Station tier 2; convention `REL-20261016-1446-packages`) + current toolchain/connection facts. **17:00Z sweep:** `xiom.ssl 0.1.0` + `xiom.brotli 0.1.0` LIVE (eco-v0.1.189; TLS headline closed on the packages path), **Beacon extraction GREEN + co-verified** (`053cab87`; all PROVENANCE hashes match @`56eb9f8` from our side; no surface changes; publish path next); **17:35Z:** consumer-verify `xiom.ssl` 0.1.0 (**14/14 live x2 win** + 4/4 SKIP x2 wsl) and `xiom.brotli` 0.1.0 (**11/11 x2 both platforms**) GREEN -- bus reply `REL-20261016-1735-pulse`; **durability Phase A landed** (post-17:35Z): `store_append`/`audit_event` sync-before-ack (`PULSE_STORE_SYNC`/`PULSE_AUDIT_SYNC`, default on; `io.append_line_sync` on the pin), `--check-config` prints + disable warnings, claim table flipped (DESIGN-STORE-DURABILITY P5), test_app +11 checks; win sweep FAILED=0 (binary `262909947A..`) + crash harness x2; linux rebuilt on the right pin (stale `dd352f6` hardcode in the local runner fixed to `092dfa0c`) -> sweep FAILED=0 (binary `3ee23a1f..`) + crash harness x2; CI dry run `38947560303` green (both platforms); **Beacon PUBLISHED** (`xiom.pulse 0.1.0` LIVE, eco-v0.1.192, sha256 `53fcc56e..`) + acceptance stage 1 GREEN (installed artifact: suite **125/125 x2 both platforms**, `minimal.xi` live x2; `docs/repro/beacon-acceptance/`); stage 2 = Station-consumes + full fleet next; **21:00Z sweep:** compiler **v0.64.6 RELEASED** (2026-10-16T20:33Z; darwin stream + stdlib pin `b81430ba`) -- asks PULSE: darwin/pin suites on the new archive; adoption + macOS pair re-test queued as the next unit after stage 2. **PAUSED 2026-10-16T23:18Z (owner away until tomorrow):** doorbell cancelled -- resume = re-arm the doorbell (first action), then station-consumes stage 2 -> v0.64.6 adoption + darwin/pin suites -> middleware/jobs -> SQL runner -> bench.
 
 ## 0. STATE (2026-10-11 wrap 15) -- CURRENT STATE digest (supersedes the log below)
 
@@ -20,11 +22,16 @@
   `ubuntu-latest` + `windows-latest`, `protect-release-tags` covers
   `pulse-v*` (org-admin pushes bypass; never move a tag -- if a tag's CI
   fails, fix and cut the next patch version). DCO `-s` commits; identity
-  Lefteris Notas <lefterisnotas@gmail.com>. Head: `496b568` (wrap-15
+  Lefteris Notas <lefterisnotas@gmail.com>. Head: `b70d681` (wrap 19 --
+  see the WRAP 19 block above; wrap-15
   key commits: `e31d396` release v0.2.0, `f15a6b0` packaging fix,
   `e626939` v0.64.3 CI pins, `41e4ace` site mode landed, `36f08c8`
   wishlist freeze, `4142c96`/`e7cbcbf` reference shelf).
-- **Toolchain:** **v0.64.3 pinned + VALIDATED in CI** (2026-10-10; dry run
+- **Toolchain:** **v0.64.5 pinned + VALIDATED** (wrap 18/19; local pins
+  Windows `%LOCALAPPDATA%\xiom.new-20261015-2240`, WSL
+  `~/.local/share/xiom-v0645`, stdlib `092dfa0c` both). **v0.64.6 RELEASED
+  2026-10-16T20:33Z** (darwin stream + stdlib `b81430ba`) -- adoption +
+  darwin/pin suites queued as §3 item 7. Historical v0.64.3 bullet: (2026-10-10 dry run
   `38075327683` green on linux-x64 + windows-x64 with the pinned stdlib
   `48850df`; dl synced; pins in `docs/OPS-REQUEST.md` D.1 and every
   workflow; macOS shas pinned for the gated legs). **Local Windows/WSL
@@ -1201,7 +1208,7 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-15 wrap 17)
+## 3. Paste prompt for the next PULSE session (2026-10-17 wrap 19)
 
 ```
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
@@ -1216,35 +1223,37 @@ standard sweep prompt (fetch+merge --ff-only relays; view --lane pulse;
 process items; wrap on change). Use `python tools/relay.py` in the
 relays clone; NEVER `git pull` there; never edit another lane's item.
 
-STATE AT WRAP 18 (2026-10-16, post keep-alive wave):
-- **0.2.1 SHIPPED** (tag `pulse-v0.2.1`, GH published 21:23Z): linux
-  `81cce634...`, windows `df96da7c...`; release body carries the
-  highlights; dl mirror at the next :17 sweep; ops pinged to redeploy
-  the demo 0.1.0 -> 0.2.1 (`REL-20261015-2125-pulse`, follows
-  `REL-20261010-1721-ops`).
-- Wave-2 complete on the released **v0.64.5 + stdlib pin 092dfa0c**:
-  fleet 12/12, suites x2, smoke 119/119 jsonl+kv on both platforms; CI
-  pins moved (`STDLIB_VERSION` + v0.64.5 shas in ci/release/heavy); the
-  batch-5 `&HandlerOut` helper re-landed as a permanent lock; SQL
-  artifact co-verify 24/24 on both platforms (bus: 1718/1901 closed,
-  bindings reply `REL-20261015-2029-pulse`, compiler INFO `-2`, stdlib
-  INFO `-3`).
-- Local toolchains (pinned): Windows
-  `%LOCALAPPDATA%\xiom.new-20261015-2240` (v0.64.5; `xiom.new` refreshed
-  byte-identical; v0.64.3 A/B kept at `xiom.new-20261010-212636`); WSL
-  `~/.local/share/xiom-v0645` (`~/.local/bin/xiom` points there; A/B
-  v0.64.3 at `~/.local/share/xiom-0643`). Pin caches `stdlib-092dfa0c`
-  on both; 11 deps incl. `xiom.sqlite@0.4.1` on both.
-- Evidence: `probe-logs\toolchain-v0645\` (post-bump WIN/LINUX
-  summaries + `-prebump` copies; `sql-coverify\artifact-0645-*.log`;
-  keep-alive runs overwrote the summaries -- both platforms FAILED=0
-  with smoke 134/134).
-- **Keep-alive A+B LANDED** (`7924222` + `56eb9f8`): freeze gate GREEN;
-  milestone `REL-20261016-1401-pulse` filed (packages, porter flow
-  open). Main is at `56eb9f8`; relays last push `2244ad6`.
-- **Packages deliveries awaiting consumer-verify:** `xiom.template 0.2.0`
-  (top-tier item 1; queue 1c), `xiom.ssl` building, `xiom.otel 0.1.0`
-  held on ops scope, `xiom.zstd` real, brotli in flight.
+STATE AT WRAP 19 (2026-10-17, session 19 closed at context limit):
+- **`main = b70d681`**, clean + pushed. Relays last push `95c4981`.
+- **Beacon PUBLISHED:** `xiom.pulse` 0.1.0 LIVE in eco-v0.1.192
+  (sha256 `53fcc56e...`; publish close `REL-20261016-1810-packages-3`,
+  acked with the acceptance result). Acceptance stage 1 GREEN on the
+  installed artifact: checksum + signature verified on both stores,
+  carved suite 125/125 x2 both platforms, `minimal.xi` live x2
+  (`docs/repro/beacon-acceptance/`). NOTE: the Windows package home was
+  reset overnight -- reinstalled (checksum re-verified); WSL unaffected.
+- **Durability Phase A GREEN** (sync-before-ack store + audit; knobs
+  default on): sweeps FAILED=0 + crash x2 both platforms; CI dry run
+  `38947560303` green; Storage 68 -> 72, total ~55.8%.
+- Top-tier packages path COMPLETE + consumer-verified: template 0.2.0
+  (15/15 x2), ssl 0.1.0 (14/14 live x2 win + 4/4 SKIP x2 wsl), brotli
+  0.1.0 (11/11 x2 both), otel 0.1.0 (consumer-verify still queued),
+  zstd 0.3.0 real.
+- **REFERENCE-STUDY PROTOCOL is BINDING** (`docs/REFERENCE-STUDY-PROTOCOL.md`;
+  §0 standing rule). Plan reordered + reference-annotated (NEXT below).
+- **Station-consumes path PROVEN rename-first** (`docs/DESIGN-STATION-CONSUMES.md`):
+  declaring the dep silently binds duplicate module names to the PACKAGE
+  (W001 warning only), so `app`/`config`/`router` must become
+  `xiom.pulse.station.*` (18 imports / 10 files) BEFORE the package core
+  is consumed; then delete the four byte-identical modules, declare the
+  dep (both manifests + CI installer) and run suites x2 + smoke x2 both.
+  The flip experiment was REVERTED -- main stayed green.
+- Open relay obligations: compiler resolver-policy answer
+  (`REL-20261017-1123-pulse`), packages `xiom.pulse` 0.2 hook-seam
+  wishlist (`-2`; the stage-2b gate), ops shared-home clobber flag
+  (`-3`).
+- v0.64.6 RELEASED (2026-10-16T20:33Z; darwin stream + stdlib pin
+  `b81430ba`); PULSE adoption + darwin/pin suites queued (item 7).
 
 NEXT -- the post-release queue (dependency order; the top-tier program
 in docs\ROADMAP-TOP-TIER.md frames the whole queue and holds the
@@ -1306,6 +1315,11 @@ lane-ask refs REL-20261015-2202-pulse..-5; TLS is the ceiling):
    (REL-20261013-1707); game CP follow-ups via REL-20261013-1701-pulse.
 9. Watch the ops redeploy (demo -> 0.2.1) + the website `latest.json`
    follow; note the dl mirror timing (:17).
+10. Open obligations/test-backs (filed 2026-10-17): compiler resolver
+    policy answer (`REL-20261017-1123-pulse`); packages `xiom.pulse` 0.2
+    hook-seam (`-2`; gate for 2b) -- test back on the next publish; ops
+    clobber flag (`-3`). **Doorbell re-arm = first action of the
+    session.**
 
 DISCIPLINE: pinned toolchain for ALL local builds (export
 XIOM_COMPILER/XIOM_STDLIB explicitly -- Windows versioned v0.64.5 / WSL
