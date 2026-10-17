@@ -121,7 +121,8 @@ first and verified with a 429); OPTIONS 204 bypasses both; a malformed
 head carrying `X-Pulse-Quit` gets 400 and the loop stays alive; the
 well-formed quit closes silently and exits 0; oversized CL bodies get
 413. Both smoke scripts invoke it (one smoke check; the score is now
-135/135).
+135/135). CI dry run `39051902537` is green on both platforms with the
+harness wired in.
 
 **Found while writing the pin:** a plain `Content-Length` body above the
 1 MiB cap was silently truncated by `read_request` and dispatched (the

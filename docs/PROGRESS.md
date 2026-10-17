@@ -784,9 +784,10 @@ bodies get 413. Writing the pin found a real gap -- a plain CL body over
 invalid_json); the ladder now rejects declared CL > MAX_BODY with 413
 `payload_too_large` before dispatch (package note
 `REL-20261017-1533-pulse`). Both smoke scripts run the harness (smoke
-135/135); suites x2 + crash x2 green both platforms. Score holds
-(~55.8%; correctness + test coverage, no new capability). Next: the
-nine-stage extraction._
+135/135); suites x2 + crash x2 green both platforms; CI dry run
+`39051902537` green on both platforms. Score holds (~55.8%;
+correctness + test coverage, no new capability). Next: the nine-stage
+extraction._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
