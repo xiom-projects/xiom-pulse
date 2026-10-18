@@ -151,9 +151,17 @@ CORS, returning `(response, status, payload bytes)`. **Phase A is
 complete:** the request ladder is now four named units -- read (main
 loop), `gate_request` (0-3), `build_dispatch_response` (4-6),
 `after_response` (7+audit) -- with the gate harness and the full gates
-green on v0.64.7 both platforms. Next is Phase B (the per-route chain
-and the package hook seam), gated on the packages 0.2.0 publish; the
-static policy table waits for the profiling note.
+green on v0.64.7 both platforms.
+
+**Phase B status (2026-10-18):** xiom.pulse 0.2.1 ships the pre/after
+hook seam and Station adopts it, but the hooks are stateless `fn`
+pointers. OPTIONS/CORS, CSRF and observability fit; the **global rate
+limiter does not** (it needs per-install mutable state). Filed to
+packages as `REL-20261018-1615-pulse` asking for a `HookSet` state slot /
+middleware context. Until then the product loop keeps the limiter and
+cannot be fully retired onto `serve_with`; we do not fork `xiom.rate`
+into globals. Loop-level 408/parse responses also sit outside the
+dispatch hook (noted in the same thread).
 
 Smoke and both suites keep passing unchanged otherwise.
 
