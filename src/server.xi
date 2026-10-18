@@ -29,6 +29,7 @@ use xiom.string;
 use xiom.convert;
 use xiom.serialize.json;
 use xiom.pulse.http;
+use xiom.pulse.app;
 use xiom.pulse.station.router;
 use xiom.pulse.envelope;
 use xiom.pulse.station.config;
@@ -993,6 +994,23 @@ fn with_cors(resp: Vec[UInt8], req: &PulseRequest) -> Vec[UInt8] {
   return out;
 }
 
+/// register_core_routes mirrors the product route table into the Beacon
+/// package table. Phase B prerequisite: `serve_with_ctx` matches through
+/// the package table before calling the Station handler, so both tables
+/// must hold the same (method, pattern) set. Returns the count registered.
+/// Complexity: O(routes).
+fn register_core_routes() -> Int {
+  let defs = router.route_defs();
+  var i: Int = 0;
+  var n: Int = 0;
+  while i < defs.len() {
+    let _ = app.register(defs[i].0, defs[i].1);
+    n = n + 1;
+    i = i + 1;
+  }
+  return n;
+}
+
 /// build_dispatch_response - stages 4-6: dispatch the route, build the
 /// response (raw bytes or text), trim a HEAD body at the header end, and
 /// apply the beforeSend std headers + CORS. Returns
@@ -1171,6 +1189,9 @@ pub fn main() -> Int {
     }
     io.flush_stdout();
   }
+  // Phase B prerequisite: keep the Beacon route table in sync with the
+  // product table for the future serve_with_ctx loop.
+  let _core_routes = register_core_routes();
   // Station identity on the wire: the Beacon builders default to the
   // version-free "xiom-pulse" token; advertise the Station release.
   // (xiom.pulse 0.2.1 Server-token seam.)
