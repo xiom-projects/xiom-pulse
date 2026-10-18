@@ -165,10 +165,12 @@ are outside the dispatch hook (packages has the note).
 **Phase B wiring plan (next unit, de-risked 2026-10-18):**
 1. **HandlerOut type seam first.** The product's `HandlerOut` is a local
    struct with the same fields as `xiom.pulse.app.HandlerOut` but a
-   distinct type. Prefer replacing the local definition with a type alias
-   to the package type (then delete the adapter conversion); otherwise
-   the handler adapter must copy every field. Validate all
-   `HandlerOut{...}` constructors in src/ and tests/.
+   distinct type. A cross-module alias (`pub type HandlerOut =
+   app.HandlerOut;`) **fails on v0.64.7**: field access/`len` collapse
+   into a 10-error `T001` cluster, so the alias experiment was reverted
+   and filed to compiler. Until fixed, the handler adapter **copies the
+   five fields** (status/content_type/headers/body/body_bytes). Validate
+   all `HandlerOut{...}` constructors in src/ and tests/.
 2. **Handler adapter:** `station_handler(req, route, body) -> app.HandlerOut`
    calls `dispatch_one(...)`; HEAD must still map to GET and the body
    must still be trimmed (verify whether the package loop trims HEAD --

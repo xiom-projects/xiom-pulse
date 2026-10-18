@@ -85,6 +85,8 @@ pub fn load_icon(path: Str) -> Bool {
 
 /// HandlerOut - one dispatched response. When `body_bytes` is non-empty the
 /// response is sent as raw bytes (icons/assets); otherwise `body` is text.
+/// (A cross-module alias to app.HandlerOut breaks field access on v0.64.7;
+/// the Phase B adapter copies fields instead.)
 pub type HandlerOut = {
   status: Int;
   content_type: Str;
