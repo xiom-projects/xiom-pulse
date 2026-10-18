@@ -33,13 +33,15 @@ GitHub release body.
   trim/beforeSend headers+CORS), and `after_response()` (send/metrics/
   access log/audit, one call site). No behavior change; the gate order is
   locked by `scripts/gate_order.py`.
-- **Station consumes the published `xiom.pulse` 0.1.0 core** (Beacon):
+- **Station consumes the published `xiom.pulse` 0.2.1 core** (Beacon):
   the byte-identical `http`/`envelope`/`reqctx`/root modules are gone;
   product modules are namespaced `xiom.pulse.station.*` and the product
-  version lives in `src/version.xi`. Built on XIOM v0.64.6 + stdlib
-  0.64.6 (`8d95815`) with latest registry deps (`xiom.http` 0.1.8,
-  `xiom.cookie` 0.1.2, `xiom.jwt` 0.2.1). One core, never a fork
-  (`docs/DESIGN-STATION-CONSUMES.md`).
+  version lives in `src/version.xi`. 0.2.1 brings the pre/after hook seam
+  (Phase B unblocked), the Server-token seam (Station now advertises
+  `xiom-pulse-station/0.2.1`), and the package-side 413 for oversized
+  declared bodies. Built on XIOM v0.64.7 + stdlib `f4482b14` with latest
+  registry deps (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2, `xiom.jwt`
+  0.2.1). One core, never a fork (`docs/DESIGN-STATION-CONSUMES.md`).
 
 ### Fixed
 

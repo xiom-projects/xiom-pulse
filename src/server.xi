@@ -866,19 +866,14 @@ pub type GateResult = {
 /// Complexity: O(n) header reads + O(1) decisions.
 fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, cookie_header: Str, reuse: Bool, limiter: &mut ratelimit.Limiter) -> GateResult {
   var res: GateResult = GateResult{ action: 0; resp: Vec[UInt8].new(); status: 0; bytes: 0; method: req.method; target: req.target; reuse: reuse; };
-  // Plain Content-Length bodies above the cap must be rejected, not
-  // silently truncated: read_request stops at MAX_BODY, so parse can
-  // otherwise dispatch a partial body (found by scripts/gate_order.py).
-  let he = find_header_end(raw);
-  var declared_cl: Int = 0;
-  if he >= 0 { declared_cl = http.content_length_of(raw, he); }
-  let te_header = http.header_get(req, "transfer-encoding");
-  let too_large = declared_cl > MAX_BODY && te_header.len() == 0;
-  if !req.ok || too_large {
+  // xiom.pulse 0.2.1 rejects a declared Content-Length above the cap as a
+  // parse error ("body too large") before dispatch, so the local guard is
+  // only the frozen error -> 413 mapping.
+  if !req.ok {
     var status: Int = 400;
     var code: Str = "bad_request";
     var msg: Str = "bad request";
-    if too_large || string.str_contains(req.error, "too large") {
+    if string.str_contains(req.error, "too large") {
       status = 413;
       code = "payload_too_large";
       msg = "payload too large";
@@ -1174,6 +1169,13 @@ pub fn main() -> Int {
       io.println("pulse: warning: " + cfg_warns[wj]);
       wj = wj + 1;
     }
+    io.flush_stdout();
+  }
+  // Station identity on the wire: the Beacon builders default to the
+  // version-free "xiom-pulse" token; advertise the Station release.
+  // (xiom.pulse 0.2.1 Server-token seam.)
+  if !http.set_server_token("xiom-pulse-station/" + APP_VERSION) {
+    io.println("pulse: warning: invalid Server token");
     io.flush_stdout();
   }
   let port = config.cfg_port();

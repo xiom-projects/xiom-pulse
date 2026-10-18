@@ -91,15 +91,18 @@ the CI installer list (`setup-xiom` action) gains `xiom.pulse@0.1.0`.
   emitted `Content-Length` twice (static engine + response builder);
   the static copy is dropped and the suite locks a single CL. Live check:
   200 and 304 site responses each carry exactly one CL.
-- Finding C (to packages): the carved package hardcodes product-version
-  literals -- `pulse_version()` returns `0.2.1` and `http.xi` emits
-  `Server: xiom-pulse/0.2.1` twice. Station no longer consumes the root
-  version, but the `Server` header is package-owned and cannot be bumped by
-  a Station cut. Ask: parameterize the header (or make it neutral) in the
-  0.2.0 hook-seam publish.
-- Stage 2b stays GATED on the hook seam (packages acked
-  `REL-20261017-1123-pulse-2`, implementation dispatched) + the middleware
-  chain.
+- Finding C **RESOLVED in xiom.pulse 0.2.1**: the package builders are now
+  version-free (`Server: xiom-pulse` default) and expose
+  `app_set_server_token` / `http.set_server_token`; Station sets
+  `xiom-pulse-station/0.2.1` once before serving (verified live). The
+  package also adopted the 413-for-oversized-declared-body guard, so the
+  Station-side duplicate guard is removed.
+- **Phase B is UNBLOCKED:** xiom.pulse 0.2.1 ships the pre/after hook seam
+  (`hooks_new`/`hooks_install_pre`/`hooks_install_after`/`serve_with`).
+  Station 0.2.1 adoption is green both platforms; the next unit is the
+  full loop adoption (pre hook: OPTIONS/CSRF/rate; after hook:
+  metrics/log/audit) with the caveat that loop-level parse/408 responses
+  are outside the dispatch hook and need a decision.
 
 ## Finding B -- shared-home clobber (2026-10-17)
 
