@@ -160,8 +160,35 @@ Station adopts 0.3.0 (build + smoke 135/135 + suites green). The loop
 switch maps: stateful pre hook = OPTIONS/CSRF/global token bucket
 (tokens/refill in the bag), stateful after hook = metrics/log/audit;
 stateless hooks stay unused. Residual: loop-level 408/parse responses
-are outside the dispatch hook (packages has the note). Next: implement
-the token-bucket adapter and flip `serve_with_ctx`.
+are outside the dispatch hook (packages has the note).
+
+**Phase B wiring plan (next unit, de-risked 2026-10-18):**
+1. **HandlerOut type seam first.** The product's `HandlerOut` is a local
+   struct with the same fields as `xiom.pulse.app.HandlerOut` but a
+   distinct type. Prefer replacing the local definition with a type alias
+   to the package type (then delete the adapter conversion); otherwise
+   the handler adapter must copy every field. Validate all
+   `HandlerOut{...}` constructors in src/ and tests/.
+2. **Handler adapter:** `station_handler(req, route, body) -> app.HandlerOut`
+   calls `dispatch_one(...)`; HEAD must still map to GET and the body
+   must still be trimmed (verify whether the package loop trims HEAD --
+   the product currently trims in `build_dispatch_response`).
+3. **Stateful pre hook** (`hooks_install_pre_ctx`): OPTIONS/CORS (add
+   the CORS headers to the pre_stop HandlerOut, since the package builder
+   does not know product CORS), CSRF 403, then the token bucket over
+   `hookctx` ints via `ratelimit.bucket_step` (slots: tokens, last_ms;
+   per_sec/burst from config). The package loop owns quit.
+4. **Stateful after hook** (`hooks_install_after_ctx`): metrics, access
+   log, audit from `ResponseInfo` + req; note `info.duration_ms` excludes
+   send, unlike the current total duration -- decide and document the
+   metric semantics.
+5. **Switch** `main` to `serve_with_ctx(handler, &hooks, &mut ctx)` after
+   `register_core_routes()`; keep the old loop behind a temporary
+   `PULSE_LEGACY_LOOP=1` fallback until the full gates (HEAD/CORS/404/
+   405/site/static + 135 smoke) are green on both platforms.
+6. **Accepted gap:** loop-level 408/parse responses are not observed by
+   the dispatch hooks; either accept the split or ask packages for a
+   loop-level observation callback.
 
 Smoke and both suites keep passing unchanged otherwise.
 
