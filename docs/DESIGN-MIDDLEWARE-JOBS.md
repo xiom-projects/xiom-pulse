@@ -143,9 +143,17 @@ green on both platforms).
 -> quit -> OPTIONS -> CSRF -> rate and returns a `GateResult`
 (action 0 dispatch / 1 send / 2 quit), preserving the frozen order.
 `gate_order.py` (11 checks) plus suites x2 + smoke 135/135 x2 + crash x2
-are green on both platforms. Next: stages 4-6 (`build_dispatch_response`
-extraction: dispatch -> build -> HEAD trim -> std headers/CORS), then the
-static stage table if the profiling note still wants it.
+are green on both platforms.
+
+**Stages 4-6 landed (2026-10-18):** `build_dispatch_response()` owns
+dispatch -> build (bytes/text) -> HEAD trim -> beforeSend std headers +
+CORS, returning `(response, status, payload bytes)`. **Phase A is
+complete:** the request ladder is now four named units -- read (main
+loop), `gate_request` (0-3), `build_dispatch_response` (4-6),
+`after_response` (7+audit) -- with the gate harness and the full gates
+green on v0.64.7 both platforms. Next is Phase B (the per-route chain
+and the package hook seam), gated on the packages 0.2.0 publish; the
+static policy table waits for the profiling note.
 
 Smoke and both suites keep passing unchanged otherwise.
 

@@ -998,6 +998,40 @@ fn with_cors(resp: Vec[UInt8], req: &PulseRequest) -> Vec[UInt8] {
   return out;
 }
 
+/// build_dispatch_response - stages 4-6: dispatch the route, build the
+/// response (raw bytes or text), trim a HEAD body at the header end, and
+/// apply the beforeSend std headers + CORS. Returns
+/// (response, status, payload bytes). Complexity: O(n) build.
+fn build_dispatch_response(req: &PulseRequest, reuse: Bool) -> (Vec[UInt8], Int, Int) {
+  let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
+  var eff_method: Str = req.method;
+  if req.method == "HEAD" { eff_method = "GET"; }
+  let out = dispatch_one(eff_method, req, body_str);
+  let status = out.status;
+  var resp: Vec[UInt8] = Vec[UInt8].new();
+  var payload_len: Int = out.body.len();
+  if out.body_bytes.len() > 0 {
+    resp = http.build_response_bytes(status, out.content_type, &out.headers, &out.body_bytes, reuse);
+    payload_len = out.body_bytes.len();
+  } else {
+    resp = http.build_response_full(status, out.content_type, &out.headers, out.body, reuse);
+  }
+  if req.method == "HEAD" {
+    let he = find_header_end(&resp);
+    if he >= 0 {
+      var trimmed: Vec[UInt8] = Vec[UInt8].new();
+      var ti: Int = 0;
+      while ti < he + 4 {
+        trimmed.push(resp[ti]);
+        ti = ti + 1;
+      }
+      resp = trimmed;
+    }
+  }
+  let resp_final = with_std_headers(with_cors(resp, req));
+  return (resp_final, status, payload_len);
+}
+
 pub fn main() -> Int {
   // CLI: --version / --help. Build provenance is surfaced from the deploy
   // environment (PULSE_BUILD_COMMIT / PULSE_BUILD_DATE); compile-time
@@ -1264,32 +1298,10 @@ pub fn main() -> Int {
           let _w = after_response(client, gate.resp, rid, g_method, g_target, g_status, g_bytes, t0_ms, false);
           conn_open = g_reuse;
         } else {
-          let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
-          var eff_method: Str = req.method;
-          if req.method == "HEAD" { eff_method = "GET"; }
-          let out = dispatch_one(eff_method, &req, body_str);
-          var resp: Vec[UInt8] = Vec[UInt8].new();
-          var payload_len: Int = out.body.len();
-          if out.body_bytes.len() > 0 {
-            resp = http.build_response_bytes(out.status, out.content_type, &out.headers, &out.body_bytes, reuse);
-            payload_len = out.body_bytes.len();
-          } else {
-            resp = http.build_response_full(out.status, out.content_type, &out.headers, out.body, reuse);
-          }
-          if req.method == "HEAD" {
-            let he = find_header_end(&resp);
-            if he >= 0 {
-              var trimmed: Vec[UInt8] = Vec[UInt8].new();
-              var ti: Int = 0;
-              while ti < he + 4 {
-                trimmed.push(resp[ti]);
-                ti = ti + 1;
-              }
-              resp = trimmed;
-            }
-          }
-          let resp_final = with_std_headers(with_cors(resp, &req));
-          let _w = after_response(client, resp_final, rid, req.method, req.target, out.status, payload_len, t0_ms, req.method != "GET");
+          let outcome = build_dispatch_response(&req, reuse);
+          let o_status = outcome.1;
+          let o_bytes = outcome.2;
+          let _w = after_response(client, outcome.0, rid, req.method, req.target, o_status, o_bytes, t0_ms, req.method != "GET");
           conn_open = reuse;
           served = served + 1;
         }

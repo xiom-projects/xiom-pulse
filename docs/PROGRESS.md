@@ -803,8 +803,14 @@ tag re-cut from `1271dd5` was flagged to stdlib. Adoption gates on
 v0.64.7, both platforms: build, suites x2 (77/237/4), smoke 135/135 x2
 (jsonl+kv), crash x2, gate 11/11. Linux-arm64 (new target) and macOS
 legs remain queued. Score holds (~55.8%; refactor + toolchain adoption,
-no new capability). Next: stages 4-6 (dispatch/build/HEAD-trim/headers
-extraction)._
+no new capability).
+
+_Delta 2026-10-18 (middleware Phase A complete): `build_dispatch_response()`
+extracts stages 4-6 (dispatch -> build -> HEAD trim -> beforeSend
+std headers + CORS); the ladder is now four named units plus the read
+stage, with the gate harness and the full gates green on v0.64.7 both
+platforms. Next is Phase B (per-route chain + the package hook seam,
+gated on the packages 0.2.0 publish)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
