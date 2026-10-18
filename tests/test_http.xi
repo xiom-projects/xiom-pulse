@@ -9,6 +9,7 @@ module pulse_http_tests
 use xiom.io;
 use xiom.string;
 use xiom.pulse.http;
+use xiom.pulse.ratelimit;
 use xiom.pulse.station.router;
 use xiom.pulse.station.app;
 
@@ -208,6 +209,18 @@ pub fn main() -> Int {
   f = f + check("te gzip not chunked", !http.te_is_chunked(http.transfer_encoding_of(&ck6, che6)));
   let creq6 = http.parse_request(&ck6);
   f = f + check("te gzip parse empty body", creq6.ok && creq6.body.len() == 0);
+
+  // --- Phase B HookCtx token bucket ---------------------------------------
+  let b0 = ratelimit.bucket_step(0, 0, 2, 2, 1000);
+  f = f + check("bucket fresh allows", b0.0 && b0.1 == 1 && b0.2 == 1000);
+  let b1 = ratelimit.bucket_step(1, 1000, 2, 2, 1100);
+  f = f + check("bucket consumes last token", b1.0 && b1.1 == 0);
+  let b2 = ratelimit.bucket_step(0, 1000, 2, 2, 1200);
+  f = f + check("bucket denies empty", !b2.0 && b2.1 == 0);
+  let b3 = ratelimit.bucket_step(0, 1000, 2, 2, 2000);
+  f = f + check("bucket refills and caps", b3.0 && b3.1 == 1 && b3.2 == 2000);
+  let b4 = ratelimit.bucket_step(0, 0, 0, 0, 5000);
+  f = f + check("bucket disabled allows", b4.0);
 
   if f == 0 {
     io.println("pulse-http: GREEN");

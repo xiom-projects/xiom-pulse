@@ -38,6 +38,34 @@ pub fn limiter_allow(l: &mut Limiter, now_ms: Int) -> Bool {
   return rate.rate_keyed_allow(&mut l.bucket, "global", now_ms);
 }
 
+/// bucket_step is the Phase B HookCtx adapter: a stateless token-bucket
+/// step over four int handles (tokens, last_ms) so the rate limiter can
+/// live in the hook seam's int bag. Returns (allowed, new_tokens,
+/// new_last_ms); per_sec <= 0 always allows. Same refill/cap semantics as
+/// limiter_allow, without a captured aggregate. Complexity: O(1).
+pub fn bucket_step(tokens: Int, last_ms: Int, per_sec: Int, burst: Int, now_ms: Int) -> (Bool, Int, Int) {
+  if per_sec <= 0 { return (true, tokens, last_ms); }
+  var cap: Int = burst;
+  if cap < 1 { cap = per_sec; }
+  var t: Int = tokens;
+  var last: Int = last_ms;
+  if last <= 0 {
+    last = now_ms;
+    t = cap;
+  }
+  let elapsed = now_ms - last;
+  if elapsed > 0 {
+    let refill = (elapsed * per_sec) / 1000;
+    if refill > 0 {
+      t = t + refill;
+      if t > cap { t = cap; }
+      last = now_ms;
+    }
+  }
+  if t <= 0 { return (false, t, last); }
+  return (true, t - 1, last);
+}
+
 /// limiter_retry_after_ms returns ms until the next token (0 when disabled).
 /// Complexity: O(1).
 pub fn limiter_retry_after_ms(l: &Limiter, now_ms: Int) -> Int {
