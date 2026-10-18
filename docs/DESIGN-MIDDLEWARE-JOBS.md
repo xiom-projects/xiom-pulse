@@ -153,15 +153,15 @@ loop), `gate_request` (0-3), `build_dispatch_response` (4-6),
 `after_response` (7+audit) -- with the gate harness and the full gates
 green on v0.64.7 both platforms.
 
-**Phase B status (2026-10-18):** xiom.pulse 0.2.1 ships the pre/after
-hook seam and Station adopts it, but the hooks are stateless `fn`
-pointers. OPTIONS/CORS, CSRF and observability fit; the **global rate
-limiter does not** (it needs per-install mutable state). Filed to
-packages as `REL-20261018-1615-pulse` asking for a `HookSet` state slot /
-middleware context. Until then the product loop keeps the limiter and
-cannot be fully retired onto `serve_with`; we do not fork `xiom.rate`
-into globals. Loop-level 408/parse responses also sit outside the
-dispatch hook (noted in the same thread).
+**Phase B unblocked (2026-10-18):** the blocker (`REL-20261018-1615-pulse`)
+is **RESOLVED in xiom.pulse 0.3.0** -- stateful hooks via `HookCtx`
+(`serve_with_ctx`, an int handle bag shared by the pre/after hooks).
+Station adopts 0.3.0 (build + smoke 135/135 + suites green). The loop
+switch maps: stateful pre hook = OPTIONS/CSRF/global token bucket
+(tokens/refill in the bag), stateful after hook = metrics/log/audit;
+stateless hooks stay unused. Residual: loop-level 408/parse responses
+are outside the dispatch hook (packages has the note). Next: implement
+the token-bucket adapter and flip `serve_with_ctx`.
 
 Smoke and both suites keep passing unchanged otherwise.
 
