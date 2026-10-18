@@ -792,6 +792,20 @@ access log, audit) for every response path -- eight duplicated tails
 removed, behavior unchanged, gates green both platforms; CI
 `39062233020` green. Next: the stage-table extraction for stages 0-6._
 
+_Delta 2026-10-18 (gate stages 0-3 + v0.64.7 adoption): the request
+gate is now one named function -- `gate_request()` owns parse/too-large
+-> quit -> OPTIONS -> CSRF -> rate and returns a `GateResult`
+(dispatch/send/quit), with the frozen order pinned by the 11-check
+`gate_order.py` harness. Overnight CI `39070435788` was green on both
+platforms. **Toolchain moved to v0.64.7 + stdlib tag `f4482b14`**
+(Windows + WSL installs; `STDLIB_VERSION` + all workflow pins), and the
+tag re-cut from `1271dd5` was flagged to stdlib. Adoption gates on
+v0.64.7, both platforms: build, suites x2 (77/237/4), smoke 135/135 x2
+(jsonl+kv), crash x2, gate 11/11. Linux-arm64 (new target) and macOS
+legs remain queued. Score holds (~55.8%; refactor + toolchain adoption,
+no new capability). Next: stages 4-6 (dispatch/build/HEAD-trim/headers
+extraction)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

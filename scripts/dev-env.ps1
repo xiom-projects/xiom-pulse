@@ -8,12 +8,13 @@
 # fleet, file the finding, note the last known-good version in SESSION.md
 # as a ROLLBACK OPTION (owner-visible), and keep moving on other slices.
 #
-# As of 2026-10-17:
-#   compiler  v0.64.6  %LOCALAPPDATA%\xiom.new\bin\xiom.exe
+# As of 2026-10-18:
+#   compiler  v0.64.7  %LOCALAPPDATA%\xiom.new-v0.64.7\bin\xiom.exe
+#             (fallback: the unversioned %LOCALAPPDATA%\xiom.new)
 #   stdlib    latest RELEASE tag, extracted to
-#             %LOCALAPPDATA%\xiom-pins\stdlib-tag-v0.64.6 (refresh the dir
+#             %LOCALAPPDATA%\xiom-pins\stdlib-tag-v0.64.7 (refresh the dir
 #             name when a new stdlib release is cut; falls back to the
-#             stdlib-lane checkout at E:\xiom-lang\stdlib)
+#             v0.64.6 tag dir, then the lane checkout)
 #   packages  %LOCALAPPDATA%\xiom\packages (latest registry versions; the
 #             owner directive is to consume the newest fixes)
 #
@@ -30,12 +31,20 @@ $ErrorActionPreference = "Stop"
 # An explicit XIOM_COMPILER wins (compiler A/B sweeps, e.g. a lane release
 # build); the installed toolchain is only the default. Mirrors dev-env.sh.
 if (-not $env:XIOM_COMPILER) {
-    $env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
+    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.7\bin\xiom.exe"
+    if (Test-Path -LiteralPath $latest) {
+        $env:XIOM_COMPILER = $latest
+    } else {
+        $env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
+    }
 }
 if (-not $env:XIOM_STDLIB) {
-    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.6"
+    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.7"
+    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.6"
     if (Test-Path -LiteralPath $tagStdlib) {
         $env:XIOM_STDLIB = $tagStdlib
+    } elseif (Test-Path -LiteralPath $prevStdlib) {
+        $env:XIOM_STDLIB = $prevStdlib
     } else {
         $env:XIOM_STDLIB = "E:\xiom-lang\stdlib"
     }
