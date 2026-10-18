@@ -812,6 +812,15 @@ stage, with the gate harness and the full gates green on v0.64.7 both
 platforms. Next is Phase B (per-route chain + the package hook seam,
 gated on the packages 0.2.0 publish)._
 
+_Delta 2026-10-18 (Beacon 0.2.1 + Phase B unblocked): xiom.pulse 0.2.1
+adopted (hook seam, Server-token seam, package-side 413). Station sets
+`Server: xiom-pulse-station/0.2.1` (verified live) and the local
+declared-CL guard is gone. Gates both platforms on v0.64.7 + stdlib
+`f4482b14`: gate 11/11, suites x2, smoke 135/135 x2, crash x2; CI
+`39143531101` green. Phase B (full loop adoption onto `serve_with` +
+pre/after hooks) is now unblocked; residual design note: loop-level
+parse/408 responses sit outside the dispatch hook._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
