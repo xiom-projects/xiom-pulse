@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-19 (SQL store/repository layer landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-19 (SQL store/repository layer + per-route rate policy landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -869,6 +869,19 @@ build both, suites x2 (82/237/4), smoke 135/135 x2 (jsonl+kv), crash x2,
 migrations 21/21, SQL 53/53; CI `39328272067` green both platforms. Score
 holds (~55.8%; the runtime data capability opened, no serving-path change
 yet)._
+
+_Delta 2026-10-19 (per-route rate policy, W6): `PULSE_RATE_ROUTES` adds
+token buckets keyed by `METHOD PATH=RATE[/BURST]` (method `*`; PATH is a
+route template) on top of the global bucket. `gate_request` resolves the
+matched route after the global bucket, maps HEAD to GET, normalizes
+`/v1`, and answers 429 + `Retry-After` through the shared helper; the gate
+order (CSRF/OPTIONS before rate) is unchanged. Invalid entries are named
+by `cfg_validate`, `--check-config` and startup. `test_http` 95/95
+(13 policy checks), `test_app` 239/239 (+2 config checks), and
+`scripts/rate_smoke.*` proves the 200/429/refill path on Windows + WSL.
+Local gates: suites x2, smoke 135/135 x2 (jsonl+kv), crash x2,
+migrations 21/21, SQL 53/53; CI `39332690326` green both platforms. Score
+holds (~55.8%; per-key policy still waits on the peer-address primitive)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
