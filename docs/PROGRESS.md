@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-19 (SQL store/repository layer + per-route rate policy landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-19 (SQL store/repository layer + per-route rate policy + bttger bench baseline landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -882,6 +882,21 @@ by `cfg_validate`, `--check-config` and startup. `test_http` 95/95
 Local gates: suites x2, smoke 135/135 x2 (jsonl+kv), crash x2,
 migrations 21/21, SQL 53/53; CI `39332690326` green both platforms. Score
 holds (~55.8%; per-key policy still waits on the peer-address primitive)._
+
+_Delta 2026-10-19 (bench baseline, bttger six endpoints):
+`benchmarks/bttger/` implements the MIT bttger contract on the Beacon
+core and adapts the autocannon driver (5,000 requests/endpoint, 50 for
+`/calculate`, 5 s warmup, 1 and 10 connections). Real Windows baseline:
+single connection clean -- `serialize` 454.6, `serialize/big` 78.1,
+`plain/text` 384.6, `query` 142.9, `insert` 172.4, `calculate` 50.0
+req/s, p99 3/18/3/8/7/7 ms, zero errors; ten connections add no
+throughput and the waiting connections time out, confirming the
+sequential-accept loop as the W1 scale-out ceiling (workers/reuseport
+remain the fix). Report + raw autocannon JSON committed; the standard
+1M-request amount and the Linux leg are follow-ups, and this is not a
+cross-framework ranking. CI `39335266242` green both platforms; score
+holds (~55.8%; the baseline records the concurrency gap rather than
+closing it)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

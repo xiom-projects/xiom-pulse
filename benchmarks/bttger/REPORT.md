@@ -2,9 +2,10 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # PULSE benchmark baseline -- bttger six-endpoint contract
 
-**Date:** 2026-10-19 (session 22). **Status:** baseline only, not a
-cross-framework ranking. Raw autocannon output is committed under
-`benchmarks/bttger/results/`.
+**Date:** 2026-10-19 (session 22). **Commit:** `9b97eb7`. **CI:**
+`39335266242` (both platforms green, including the benchmark-app build
+gate). **Status:** baseline only, not a cross-framework ranking. Raw
+autocannon output is committed under `benchmarks/bttger/results/`.
 
 ## 1. What was measured
 
