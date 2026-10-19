@@ -608,7 +608,7 @@ pub fn main() -> Int {
   let s7 = route_req("GET", "/health", "");
   f = f + check("site api wins", s7.status == 200 && string.str_contains(s7.body, "\"status\":\"ok\""));
   let s7b = route_req("GET", "/api/version", "");
-  f = f + check("site api version wins", s7b.status == 200 && string.str_contains(s7b.body, "\"version\":\"0.2.1\""));
+  f = f + check("site api version wins", s7b.status == 200 && string.str_contains(s7b.body, "\"version\":\"0.2.2\""));
   let s8 = route_req("GET", "/../pulse-site-secret.txt", "");
   f = f + check("site traversal blocked", s8.status != 200 && !string.str_contains(http.bytes_to_str(&s8.body_bytes, 0, s8.body_bytes.len()), "SECRET"));
   env.remove_var("PULSE_SITE_DIR");
@@ -642,7 +642,7 @@ pub fn main() -> Int {
   f = f + check("batch5 witness helper", out_text(&oa).len() > 0);
   f = f + check("openapi marker", string.str_contains(oa.body, "\"3.1.0\""));
   f = f + check("openapi title", string.str_contains(oa.body, "XIOM PULSE"));
-  f = f + check("openapi version", string.str_contains(oa.body, "\"version\": \"0.2.1\""));
+  f = f + check("openapi version", string.str_contains(oa.body, "\"version\": \"0.2.2\""));
   f = f + check("route openapi matched", router.route_match("GET", "/openapi.json").route_id == 17);
   let rl = router.routes_list();
   var has_openapi: Bool = false;

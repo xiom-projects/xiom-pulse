@@ -6,6 +6,8 @@ GitHub release body.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-19
+
 ### Added
 
 - Connection deadlines (keep-alive Phase A): `PULSE_READ_TIMEOUT` /
@@ -33,16 +35,16 @@ GitHub release body.
   trim/beforeSend headers+CORS), and `after_response()` (send/metrics/
   access log/audit, one call site). No behavior change; the gate order is
   locked by `scripts/gate_order.py`.
-- **Station consumes the published `xiom.pulse` 0.3.0 core** (Beacon):
+- **Station consumes the published `xiom.pulse` 0.3.1 core** (Beacon):
   the byte-identical `http`/`envelope`/`reqctx`/root modules are gone;
-  product modules are namespaced `xiom.pulse.station.*` and the product
-  version lives in `src/version.xi`. 0.3.0 adds the stateful `HookCtx` seam
-  (Phase B unblocked), the Server-token seam (Station now advertises
-  `xiom-pulse-station/0.2.1`), and the package-side 413 for oversized
-  declared bodies. Built on XIOM v0.64.7 + stdlib `f4482b14` with latest
-  registry deps (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2, `xiom.jwt`
-  0.2.1). One core, never a fork (`docs/DESIGN-STATION-CONSUMES.md`).
-
+  the product loop lives in `xiom.pulse.station.core` and the version in
+  `src/version.xi`. 0.3.1 adds the stateful `HookCtx` hook seam, the
+  unmatched-route fallback hook (site/static), HEAD-as-GET header-only
+  responses, the Server-token seam (the wire now advertises the Station
+  release), and the package-side 413 for oversized declared bodies.
+  Built on XIOM v0.64.8 + stdlib `112c5b6` with latest registry deps
+  (`xiom.http` 0.1.8, `xiom.cookie` 0.1.2, `xiom.jwt` 0.2.1). One core,
+  never a fork (`docs/DESIGN-STATION-CONSUMES.md`).
 ### Fixed
 
 - Site-mode file responses no longer emit `Content-Length` twice: the

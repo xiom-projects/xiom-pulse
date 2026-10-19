@@ -8,7 +8,7 @@
 // and so project deps are explicit.
 package xiom_pulse {
   name: "xiom.pulse";
-  version: "0.2.1";
+  version: "0.2.2";
   description: "XIOM PULSE -- full web backend (external project lane)";
   categories: ["web", "network"];
   keywords: ["http", "server", "backend", "web"];
