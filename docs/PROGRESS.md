@@ -830,7 +830,11 @@ assets + SHA256SUMS): the ops-blocking site-mode duplicate Content-Length
 fix, Beacon 0.3.1, middleware Phase A, 413 hardening. Ops asked to
 re-run the xiom-lang.org dogfood. Phase B remains parked on compiler
 m371 (imported-struct layout), explicitly deferred to the next cycle.
-Score holds (~55.8%; release/correctness hardening, no new capability)._
+Score holds (~55.8%; release/correctness hardening, no new capability).
+Ops CLOSED the site-mode CL bug after retesting 0.2.2. The SQL class
+opened: xiom.sqlite 0.4.1 wired (manifests + CI installer + opt-in
+vendored C source) and the linkage probe is green; the migrations runner
+is next._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

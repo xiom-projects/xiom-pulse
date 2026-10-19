@@ -2,11 +2,12 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Design: SQL class migrations discipline (knex)
 
-Status: DESIGN (2026-10-11, PULSE session). Backlog order 4 of
-`docs/PRODUCTION-REFERENCES.md`. Reference: `E:\repos\knex` (knex.js
-3.3.0, MIT, light clone). Applies to the **future SQL store class** --
-PULSE has no SQL backend today; the SQL driver arrives with the packages
-lane (vendored sqlite, `REL-20261010-1548-bindings-11` build-hook item).
+Status: **DRIVER WIRED (2026-10-19)** -- xiom.sqlite 0.4.1 is a declared
+dependency, the build scripts pass the vendored amalgamation only for
+sqlite-importing entries, and `tests/probes/probe_sqlite.xi` is a CI
+linkage gate. The runner implementation starts next. Reference:
+`E:\repos\knex` (knex.js 3.3.0, MIT, light clone); backlog order 4 of
+`docs/PRODUCTION-REFERENCES.md`.
 
 ## 1. What knex fixes (the model to adopt)
 

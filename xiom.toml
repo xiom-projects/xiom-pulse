@@ -29,6 +29,7 @@ root = "src"
 "xiom.session" = "0.1.0"
 "xiom.static" = "0.1.0"
 "xiom.kv" = "0.1.0"
+"xiom.sqlite" = "0.4.1"
 
 [compiler]
 target = "native"

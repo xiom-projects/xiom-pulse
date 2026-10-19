@@ -53,6 +53,14 @@ jobs:
         shell: pwsh
         run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
 
+      - name: SQLite linkage probe (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build.sh tests/probes/probe_sqlite.xi --name probe_sqlite --timeout-sec 600
+          ./out/probe_sqlite
+
       - name: Suites x2 + smoke (Linux)
         if: runner.os == 'Linux'
         shell: bash

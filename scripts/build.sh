@@ -58,11 +58,22 @@ FILE_ABS=$(realpath "$FILE")
 pulse_log "build: $FILE -> $OUT_BIN"
 TMP=$(pulse_tmp)
 TIMEOUT_BIN=$(pulse_timeout_bin)
+# xiom.sqlite is vendored: only builds that import it pass the
+# amalgamation (keeps every other build fast) until the build-hook lands.
+EXTRA_ARGS=()
+if grep -qE '^[[:space:]]*use xiom\.sqlite' "$FILE_ABS"; then
+  XIOM_HOME_RES="${XIOM_HOME:-$HOME/xiom}"
+  for cand in "$XIOM_HOME_RES/packages/xiom-sqlite-0.4.1/xiom-sqlite/vendor/sqlite3.c" \
+              "$HOME/xiom/packages/xiom-sqlite-0.4.1/xiom-sqlite/vendor/sqlite3.c" \
+              "$HOME/.local/share/xiom/packages/xiom-sqlite-0.4.1/xiom-sqlite/vendor/sqlite3.c"; do
+    if [ -f "$cand" ]; then EXTRA_ARGS=(--c-source "$cand"); break; fi
+  done
+fi
 if [ -n "$TIMEOUT_BIN" ]; then
-  ( cd "$PULSE_REPO_ROOT" && exec "$TIMEOUT_BIN" "$TIMEOUT_SEC" "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ) >"$TMP" 2>&1
+  ( cd "$PULSE_REPO_ROOT" && exec "$TIMEOUT_BIN" "$TIMEOUT_SEC" "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" "${EXTRA_ARGS[@]}" ) >"$TMP" 2>&1
 else
   pulse_log "build: no timeout/gtimeout available; building without a watchdog (job timeout applies)"
-  ( cd "$PULSE_REPO_ROOT" && exec "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ) >"$TMP" 2>&1
+  ( cd "$PULSE_REPO_ROOT" && exec "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" "${EXTRA_ARGS[@]}" ) >"$TMP" 2>&1
 fi
 RC=$?
 sed -n '1,400p' "$TMP"
