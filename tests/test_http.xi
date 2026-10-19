@@ -11,7 +11,7 @@ use xiom.string;
 use xiom.pulse.http;
 use xiom.pulse.ratelimit;
 use xiom.pulse.station.router;
-use xiom.pulse.station.app;
+use xiom.pulse.station.core;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -33,7 +33,7 @@ fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   let raw = http.str_to_bytes(raw_str);
   let req = http.parse_request(&raw);
   let m = router.route_match(method, target);
-  return app.handle_route(m, &req, body);
+  return core.handle_route(m, &req, body);
 }
 
 pub fn main() -> Int {
@@ -221,18 +221,6 @@ pub fn main() -> Int {
   f = f + check("bucket refills and caps", b3.0 && b3.1 == 1 && b3.2 == 2000);
   let b4 = ratelimit.bucket_step(0, 0, 0, 0, 5000);
   f = f + check("bucket disabled allows", b4.0);
-
-  // --- Phase B HandlerOut adapter -----------------------------------------
-  var ah: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-  let ho = HandlerOut{ status: 201; content_type: "text/plain"; headers: ah; body: "ok"; body_bytes: Vec[UInt8].new() };
-  let co = app.to_core_out(ho);
-  f = f + check("adapter status", co.status == 201);
-  f = f + check("adapter content-type", co.content_type == "text/plain");
-  f = f + check("adapter body", co.body == "ok");
-  let sr = router.route_match("GET", "/health");
-  let sh = app.station_handler(&req1, &sr, "");
-  f = f + check("station_handler status", sh.status == 200);
-  f = f + check("station_handler body", sh.body.len() > 0);
 
   if f == 0 {
     io.println("pulse-http: GREEN");

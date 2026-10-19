@@ -46,6 +46,26 @@ pub fn cors_allow_origin(req_origin: Str) -> Str {
   return "";
 }
 
+/// cors_header_pairs returns the CORS headers as (name, value) pairs for
+/// the Beacon preflight HandlerOut (the block form cannot be a single
+/// header value). Empty when the origin is not allowed. O(1). Pure.
+pub fn cors_header_pairs(req_origin: Str) -> Vec[(Str, Str)] {
+  var out: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  let oc = cors_allow_origin(req_origin);
+  if oc.len() == 0 { return out; }
+  let lines = middleware_cors_headers(oc, "GET, POST, PUT, DELETE, OPTIONS", "Content-Type, X-CSRF-Token", 600);
+  var i: Int = 0;
+  while i < lines.len() {
+    let ln = lines[i];
+    let c = string.str_index_of(ln, ":");
+    if c.is_some {
+      out.push((string.str_slice(ln, 0, c.value), string.str_trim(string.str_slice(ln, c.value + 1, ln.len()))));
+    }
+    i = i + 1;
+  }
+  return out;
+}
+
 /// cors_header_block returns the CORS headers to inject (no trailing blank
 /// line), or "" when the origin is not allowed.
 /// Complexity: O(1). Pure.

@@ -162,13 +162,19 @@ switch maps: stateful pre hook = OPTIONS/CSRF/global token bucket
 stateless hooks stay unused. Residual: loop-level 408/parse responses
 are outside the dispatch hook (packages has the note).
 
-**Phase B core-loop gates (2026-10-19, filed as
-`REL-20261019-1150-pulse`):** 0.3.0 `handle_route` returns the JSON 404
-on kind 0 **before** the handler, so Station's site/static fallback
-(custom 404, clean URLs) cannot run under `serve_with_ctx`; and the
-package has no HEAD body-trim (Station currently trims bytes while
-keeping the GET Content-Length). Both need a package seam before the
-product loop can be retired. PULSE keeps the legacy loop until then.
+**Phase B package gates CLOSED in xiom.pulse 0.3.1 (2026-10-19):**
+`Handle_route` now consults `HookSet.fallback` for kind 0 (site/static
+tree) and HEAD is dispatched as GET with the full Content-Length but
+headers-only on the wire. PULSE pins 0.3.1 and its product app module is
+renamed `xiom.pulse.station.core` so the package alias `app` is no
+longer shadowed.
+
+**Remaining Phase B blocker is compiler-side:** cross-module public
+struct identity/field access is broken on v0.64.7 -- `let co =
+app.out_json(...); co.status` is `<error>`, and `app.pre_stop(co)` says
+`expected HandlerOut, found app.HandlerOut`. The pre/after hooks
+therefore cannot be installed (filed high: `REL-20261019-1309-pulse`).
+The legacy product loop stays until the compiler fix; no fork.
 
 **Phase B wiring plan (next unit, de-risked 2026-10-18):**
 1. **HandlerOut type seam first.** The product's `HandlerOut` is a local

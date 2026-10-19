@@ -112,6 +112,14 @@ pub fn cfg_idle_timeout() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_IDLE_TIMEOUT", "5000"), 5000);
 }
 
+/// cfg_legacy_loop: PULSE_LEGACY_LOOP (default "0") -- "1" keeps the
+/// product accept loop for the Phase B rollback window; the default uses
+/// the Beacon serve_with_ctx loop + stateful hooks.
+/// Complexity: O(1). Pure.
+pub fn cfg_legacy_loop() -> Bool {
+  return env.var_or("PULSE_LEGACY_LOOP", "0") == "1";
+}
+
 /// cfg_keepalive is false when PULSE_KEEPALIVE=0 (connection reuse is on
 /// by default once Phase B landed; 0 restores close-per-request).
 /// Complexity: O(1). Pure.

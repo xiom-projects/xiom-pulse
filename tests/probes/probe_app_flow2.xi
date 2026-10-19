@@ -8,14 +8,14 @@ use xiom.env;
 use xiom.pulse.http;
 use xiom.pulse.station.router;
 use xiom.pulse.store;
-use xiom.pulse.station.app;
+use xiom.pulse.station.core;
 
 fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   let raw_str = method + " " + target + " HTTP/1.1\r\nHost: t\r\nContent-Length: " + body.len().to_str() + "\r\n\r\n" + body;
   let raw = http.str_to_bytes(raw_str);
   let req = http.parse_request(&raw);
   let m = router.route_match(method, target);
-  return app.handle_route(m, &req, body);
+  return core.handle_route(m, &req, body);
 }
 
 fn main() -> Int {

@@ -17,9 +17,9 @@
 // Module name note: renamed from xiom.pulse.server to xiom.pulse.app
 // (2026-10-08) because a module whose last segment is `server` shadows the
 // stdlib alias `server` (xiom.net.server), and renamed again to
-// xiom.pulse.station.app (2026-10-17) so the product module no longer
-// collides with the published xiom.pulse package's `xiom.pulse.app`.
-module xiom.pulse.station.app
+// xiom.pulse.station.core (2026-10-19) so the product module's last
+// segment no longer shadows the package alias `app` (xiom.pulse.app).
+module xiom.pulse.station.core
 
 use xiom.net.socket;
 use xiom.net;
@@ -226,19 +226,16 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
     return out_json(404, envelope.error_body("not_found", "page not found"));
   }
 
-  /// dispatch_one routes one request: `/assets/<path>` is served from
-/// PULSE_ASSETS_DIR (showcase sites), everything else goes through the
-/// router + handle_route. GET and HEAD only; other methods fall through.
-/// The `/v1` alias prefix is stripped first (router.v1_path), so every
-/// route resolves under both the canonical path and `/v1/...`.
-/// Complexity: O(request).
 /// to_core_out copies a Station HandlerOut into the Beacon type for the
 /// Phase B handler adapter (v0.64.7 cannot alias cross-module structs).
 /// Complexity: O(1) field moves.
+pub fn to_core_out(out: HandlerOut) -> app.HandlerOut {
+  return app.HandlerOut{ status: out.status; content_type: out.content_type; headers: out.headers; body: out.body; body_bytes: out.body_bytes; };
+}
+
 /// station_handler is the Beacon handler adapter for the Phase B loop:
-/// HEAD maps to GET for dispatch (the package loop must trim the HEAD body;
-/// filed as REL-20261019-1150-pulse), then the Station dispatcher runs and
-/// the result is copied into the package HandlerOut type.
+/// HEAD maps to GET for dispatch (0.3.1 sends headers only), then the
+/// Station dispatcher runs and the result is copied into the package type.
 /// Complexity: O(dispatch).
 pub fn station_handler(req: &PulseRequest, _route: &PulseRoute, body: Str) -> app.HandlerOut {
   var m: Str = req.method;
@@ -246,10 +243,12 @@ pub fn station_handler(req: &PulseRequest, _route: &PulseRoute, body: Str) -> ap
   return to_core_out(dispatch_one(m, req, body));
 }
 
-pub fn to_core_out(out: HandlerOut) -> app.HandlerOut {
-  return app.HandlerOut{ status: out.status; content_type: out.content_type; headers: out.headers; body: out.body; body_bytes: out.body_bytes; };
-}
-
+/// dispatch_one routes one request: `/assets/<path>` is served from
+/// PULSE_ASSETS_DIR (showcase sites), everything else goes through the
+/// router + handle_route. GET and HEAD only; other methods fall through.
+/// The `/v1` alias prefix is stripped first (router.v1_path), so every
+/// route resolves under both the canonical path and `/v1/...`.
+/// Complexity: O(request).
 fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOut {
   let tgt = router.v1_path(req.target);
   if eff_method == "GET" && string.str_starts_with(tgt, "/assets/") {
@@ -1189,13 +1188,6 @@ pub fn main() -> Int {
     ai = ai + 1;
   }
 
-  let sr = socket.socket_tcp();
-  if sr.is_err {
-    io.println("pulse: socket create failed");
-    io.flush_stdout();
-    return 1;
-  }
-  let fd = sr.value;
   if !config.cfg_load_file() {
     io.println("pulse: config load failed: " + config.cfg_config_path());
     io.flush_stdout();
@@ -1209,16 +1201,22 @@ pub fn main() -> Int {
     }
     io.flush_stdout();
   }
-  // Phase B prerequisite: keep the Beacon route table in sync with the
-  // product table for the future serve_with_ctx loop.
+  // Phase B: keep the Beacon route table in sync with the product table.
   let _core_routes = register_core_routes();
   // Station identity on the wire: the Beacon builders default to the
   // version-free "xiom-pulse" token; advertise the Station release.
-  // (xiom.pulse 0.2.1 Server-token seam.)
   if !http.set_server_token("xiom-pulse-station/" + APP_VERSION) {
     io.println("pulse: warning: invalid Server token");
     io.flush_stdout();
   }
+
+  let sr = socket.socket_tcp();
+  if sr.is_err {
+    io.println("pulse: socket create failed");
+    io.flush_stdout();
+    return 1;
+  }
+  let fd = sr.value;
   let port = config.cfg_port();
   let bind_addr = config.cfg_bind();
 

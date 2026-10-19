@@ -3,7 +3,7 @@
 // Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Run: .\scripts\run.ps1 tests\test_app.xi
+// Run: .\scripts\run.ps1 tests\test_core.xi
 // Exit code = number of failures (0 = green).
 module pulse_app_tests
 
@@ -26,7 +26,7 @@ use xiom.pulse.validate;
 use xiom.pulse.reqctx;
 use xiom.pulse.outbound;
 use xiom.pulse.openapi;
-use xiom.pulse.station.app;
+use xiom.pulse.station.core;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -46,7 +46,7 @@ fn make_req(method: Str, target: Str, body: Str) -> PulseRequest {
 fn route_req(method: Str, target: Str, body: Str) -> HandlerOut {
   let req = make_req(method, target, body);
   let m = router.route_match(method, target);
-  return app.handle_route(m, &req, body);
+  return core.handle_route(m, &req, body);
 }
 
 fn route_req_hdr(method: Str, target: Str, headers: Str, body: Str) -> HandlerOut {
@@ -57,7 +57,7 @@ fn route_req_hdr(method: Str, target: Str, headers: Str, body: Str) -> HandlerOu
   // pass the PARSED body so chunked decoding is exercised (decoded == body
   // for plain Content-Length requests).
   let decoded = http.bytes_to_str(&req.body, 0, req.body.len());
-  return app.handle_route(m, &req, decoded);
+  return core.handle_route(m, &req, decoded);
 }
 
 fn route_req_hdr_cl(method: Str, target: Str, headers: Str, body: Str) -> HandlerOut {
@@ -66,7 +66,7 @@ fn route_req_hdr_cl(method: Str, target: Str, headers: Str, body: Str) -> Handle
   let raw = http.str_to_bytes(raw_str);
   let req = http.parse_request(&raw);
   let m = router.route_match(method, target);
-  return app.handle_route(m, &req, body);
+  return core.handle_route(m, &req, body);
 }
 
 fn route_req_v1(method: Str, target: Str, body: Str) -> HandlerOut {
@@ -75,7 +75,7 @@ fn route_req_v1(method: Str, target: Str, body: Str) -> HandlerOut {
   let t = router.v1_path(target);
   let req = make_req(method, target, body);
   let m = router.route_match(method, t);
-  return app.handle_route(m, &req, body);
+  return core.handle_route(m, &req, body);
 }
 
 fn out_text(o: &HandlerOut) -> Str {
@@ -578,7 +578,7 @@ pub fn main() -> Int {
   let _sw2 = io.write_file(sdir + "/about.html", "SITE_ABOUT");
   let _sw3 = io.write_file(sdir + "/sub/index.html", "SITE_SUB");
   let _sw4 = io.write_file(sdir + "/404.html", "SITE_404");
-  let _sw5 = io.write_file(sdir + "/assets/app.js", "SITE_JS");
+  let _sw5 = io.write_file(sdir + "/assets/core.js", "SITE_JS");
   let _sw6 = io.write_file(sdir + "/assets/bundle.wasm", "SITE_WASM");
   let _sw7 = io.write_file("pulse-site-secret.txt", "SECRET");
   env.set_var("PULSE_SITE_DIR", sdir);
@@ -599,7 +599,7 @@ pub fn main() -> Int {
   f = f + check("site dir 301 query", s3c.status == 301 && s3c.headers.len() == 1 && s3c.headers[0].1 == "/sub/?x=1");
   let s3d = route_req("GET", "/sub/index.html", "");
   f = f + check("site index file direct", s3d.status == 200 && string.str_contains(http.bytes_to_str(&s3d.body_bytes, 0, s3d.body_bytes.len()), "SITE_SUB"));
-  let s4 = route_req("GET", "/assets/app.js", "");
+  let s4 = route_req("GET", "/assets/core.js", "");
   f = f + check("site assets", s4.status == 200 && string.str_contains(http.bytes_to_str(&s4.body_bytes, 0, s4.body_bytes.len()), "SITE_JS"));
   let s5 = route_req("GET", "/assets/bundle.wasm", "");
   f = f + check("site wasm mime", s5.status == 200 && s5.content_type == "application/wasm" && string.str_contains(http.bytes_to_str(&s5.body_bytes, 0, s5.body_bytes.len()), "SITE_WASM"));
@@ -616,7 +616,7 @@ pub fn main() -> Int {
   let _sc2 = io.remove_file(sdir + "/about.html");
   let _sc3 = io.remove_file(sdir + "/sub/index.html");
   let _sc4 = io.remove_file(sdir + "/404.html");
-  let _sc5 = io.remove_file(sdir + "/assets/app.js");
+  let _sc5 = io.remove_file(sdir + "/assets/core.js");
   let _sc6 = io.remove_file(sdir + "/assets/bundle.wasm");
   let _sc7 = io.remove_file("pulse-site-secret.txt");
   env.remove_var("PULSE_STORE_PATH");
@@ -628,7 +628,7 @@ pub fn main() -> Int {
   f = f + check("route favicon matched", m14.kind == 1 && m14.route_id == 14);
   let m15 = router.route_match("GET", "/");
   f = f + check("route landing matched", m15.kind == 1 && m15.route_id == 15);
-  f = f + check("icon load", app.load_icon("resources/img/pulse-ico.ico"));
+  f = f + check("icon load", core.load_icon("resources/img/pulse-ico.ico"));
   let fav = route_req("GET", "/favicon.ico", "");
   f = f + check("favicon 200 binary", fav.status == 200 && fav.body_bytes.len() > 1000);
   f = f + check("favicon content type", string.str_contains(fav.content_type, "image/x-icon"));
