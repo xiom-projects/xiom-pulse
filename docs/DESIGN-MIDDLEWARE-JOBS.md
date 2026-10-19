@@ -162,6 +162,14 @@ switch maps: stateful pre hook = OPTIONS/CSRF/global token bucket
 stateless hooks stay unused. Residual: loop-level 408/parse responses
 are outside the dispatch hook (packages has the note).
 
+**Phase B core-loop gates (2026-10-19, filed as
+`REL-20261019-1150-pulse`):** 0.3.0 `handle_route` returns the JSON 404
+on kind 0 **before** the handler, so Station's site/static fallback
+(custom 404, clean URLs) cannot run under `serve_with_ctx`; and the
+package has no HEAD body-trim (Station currently trims bytes while
+keeping the GET Content-Length). Both need a package seam before the
+product loop can be retired. PULSE keeps the legacy loop until then.
+
 **Phase B wiring plan (next unit, de-risked 2026-10-18):**
 1. **HandlerOut type seam first.** The product's `HandlerOut` is a local
    struct with the same fields as `xiom.pulse.app.HandlerOut` but a
