@@ -68,6 +68,36 @@ fn is_applied(rows: &Vec[(Str, Int)], name: Str) -> Bool {
   return false;
 }
 
+fn has_name(files: &Vec[Str], name: Str) -> Bool {
+  var i: Int = 0;
+  while i < files.len() {
+    if files[i] == name { return true; }
+    i = i + 1;
+  }
+  return false;
+}
+
+fn missing_applied(rows: &Vec[(Str, Int)], files: &Vec[Str]) -> Vec[Str] {
+  var out: Vec[Str] = Vec[Str].new();
+  var i: Int = 0;
+  while i < rows.len() {
+    if !has_name(files, rows[i].0) { out.push(rows[i].0); }
+    i = i + 1;
+  }
+  return out;
+}
+
+fn joined(names: &Vec[Str]) -> Str {
+  var out: Str = "";
+  var i: Int = 0;
+  while i < names.len() {
+    if out.len() > 0 { out = out + ","; }
+    out = out + names[i];
+    i = i + 1;
+  }
+  return out;
+}
+
 fn applied_rows(drv: &driver.SqlDriver) -> Vec[(Str, Int)] {
   var out: Vec[(Str, Int)] = Vec[(Str, Int)].new();
   let q = driver.SqlDriver.query(drv, "SELECT name, batch FROM _pulse_migrations ORDER BY id ASC;");
@@ -189,6 +219,7 @@ pub fn status_text(drv: &driver.SqlDriver, dir: Str) -> Str {
     if !is_applied(&rows, files[i]) { pending.push(files[i]); }
     i = i + 1;
   }
+  let missing = missing_applied(&rows, &files);
   var current: Str = "";
   var maxb: Int = 0;
   var ri: Int = 0;
@@ -199,7 +230,7 @@ pub fn status_text(drv: &driver.SqlDriver, dir: Str) -> Str {
   }
   var cur: Str = current;
   if cur.len() == 0 { cur = "-"; }
-  var out: Str = "migrations: applied=" + rows.len().to_str() + " pending=" + pending.len().to_str() + " current=" + cur + " batch=" + maxb.to_str();
+  var out: Str = "migrations: applied=" + rows.len().to_str() + " pending=" + pending.len().to_str() + " missing=" + missing.len().to_str() + " current=" + cur + " batch=" + maxb.to_str();
   let st = lock_state(drv);
   if st.owner.len() > 0 && st.heartbeat > 0 {
     out = out + " lock=" + st.owner + "@" + st.heartbeat.to_str();
@@ -216,13 +247,24 @@ pub fn status_text(drv: &driver.SqlDriver, dir: Str) -> Str {
     out = out + "\n  pending " + pending[i];
     i = i + 1;
   }
+  i = 0;
+  while i < missing.len() {
+    out = out + "\n  missing " + missing[i];
+    i = i + 1;
+  }
   return out;
 }
 
 /// up applies every pending file as one new batch. Returns
 /// (ok, message); message is the applied list or the error/marker text.
-pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: Bool) -> Str {
+pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: Bool, allow_missing: Bool) -> Str {
   if !ensure_tables(drv) { return "ERR: cannot create tracking tables"; }
+  let rows0 = applied_rows(drv);
+  let files0 = discover(dir);
+  let missing0 = missing_applied(&rows0, &files0);
+  if missing0.len() > 0 && !allow_missing {
+    return "ERR: applied migration file(s) missing: " + joined(&missing0) + " (rerun with --allow-missing-applied)";
+  }
   let lk = lock_acquire(drv, owner, stale_secs, force);
   if !lk.ok { return "ERR: " + lk.reason; }
   var note: Str = "";
@@ -234,6 +276,9 @@ pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: 
   while i < files.len() {
     if !is_applied(&rows, files[i]) { pending.push(files[i]); }
     i = i + 1;
+  }
+  if allow_missing && missing0.len() > 0 {
+    note = note + "skipped missing applied: " + joined(&missing0) + "; ";
   }
   if pending.len() == 0 {
     let _ = lock_release(drv, owner);
@@ -289,6 +334,7 @@ pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: 
     }
     if applied.len() > 0 { applied = applied + ","; }
     applied = applied + name;
+    let _ = exec_ok(drv, "UPDATE _pulse_migrations_lock SET heartbeat_at = " + ctime.timestamp_now().to_str() + " WHERE id = 1 AND owner = " + quote_sql(owner) + ";");
     i = i + 1;
   }
   let _ = lock_release(drv, owner);
@@ -418,7 +464,7 @@ pub fn cli_status(dsn: Str, dir: Str) -> Int {
 }
 
 /// cli_up is the `migrate up` entry: prints the outcome, returns 0/1.
-pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool) -> Int {
+pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool, allow_missing: Bool) -> Int {
   if dsn.len() == 0 {
     io.println("migrations: PULSE_SQL_DSN is not set");
     return 1;
@@ -429,7 +475,7 @@ pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool) -> Int {
     return 1;
   }
   let drv = o.value;
-  let r = up(&drv, dir, cli_owner(), stale_secs, force);
+  let r = up(&drv, dir, cli_owner(), stale_secs, force, allow_missing);
   io.println("migrations: " + r);
   let _ = driver.SqlDriver.close(&drv);
   if string.str_starts_with(r, "OK:") { return 0; }
@@ -465,13 +511,13 @@ pub fn cli_create(dir: Str, name: Str) -> Int {
 
 /// cli dispatches `migrate status|up|down|create`; unknown subcommands
 /// print usage.
-pub fn cli(sub: Str, force: Bool, name: Str) -> Int {
+pub fn cli(sub: Str, force: Bool, allow_missing: Bool, name: Str) -> Int {
   let dsn = config.cfg_sql_dsn();
   let dir = config.cfg_migrations_dir();
   if sub == "status" { return cli_status(dsn, dir); }
-  if sub == "up" { return cli_up(dsn, dir, config.cfg_migration_stale_secs(), force); }
+  if sub == "up" { return cli_up(dsn, dir, config.cfg_migration_stale_secs(), force, allow_missing); }
   if sub == "down" { return cli_down(dsn, dir, config.cfg_migration_stale_secs(), force); }
   if sub == "create" { return cli_create(dir, name); }
-  io.println("usage: pulse_migrate status|up|down [--force] | create <name>");
+  io.println("usage: pulse_migrate status|up|down [--force] [--allow-missing-applied] | create <name>");
   return 1;
 }

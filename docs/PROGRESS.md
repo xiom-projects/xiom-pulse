@@ -836,8 +836,9 @@ opened: xiom.sqlite 0.4.1 wired (manifests + CI installer + opt-in
 vendored C source) and the linkage probe is green; the migrations MVP
 landed (tracking/lock tables, status, batched up, down with the
 `-- pulse:up`/`-- pulse:down` convention, create, stale-lock takeover,
-standalone `pulse_migrate`, CI test green); the backup fence,
-long-batch heartbeat and applied-but-missing policy are next._
+standalone `pulse_migrate`, CI test green); the applied-but-missing
+policy (strict + `--allow-missing-applied`) and per-migration heartbeat
+landed; the backup fence and background heartbeat are next._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

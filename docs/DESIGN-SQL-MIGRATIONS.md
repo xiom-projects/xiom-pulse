@@ -12,8 +12,12 @@ gate. **`down` and `create` landed (2026-10-19):** SQL files may carry
 `-- pulse:up` / `-- pulse:down` markers (whole-file forward migrations
 still work, with no rollback); `down` reverses the latest batch in reverse
 applied order, and `create` writes a UTC-stamped `YYYYMMDDHHMMSS_name.sql`
-stub with both markers. Next: the backup fence, a long-batch lock
-heartbeat, and the applied-but-missing-file policy. Reference:
+stub with both markers. **Applied-but-missing policy landed:** strict by
+default (status exits 1, `up` refuses and names the files);
+`--allow-missing-applied` prints the skipped set and proceeds. The lock
+heartbeat is refreshed after each applied migration (a single very long
+migration still needs a background heartbeat). Next: the backup fence.
+Reference:
 `E:\repos\knex` (knex.js 3.3.0, MIT, light clone); backlog order 4 of
 `docs/PRODUCTION-REFERENCES.md`.
 

@@ -45,9 +45,9 @@ pub fn main() -> Int {
 
   var f: Int = 0;
   f = f + check("pending status exits 1", migrations.cli_status(dsn, dir) == 1);
-  f = f + check("up applies batch", migrations.cli_up(dsn, dir, 900, false) == 0);
+  f = f + check("up applies batch", migrations.cli_up(dsn, dir, 900, false, false) == 0);
   f = f + check("current status exits 0", migrations.cli_status(dsn, dir) == 0);
-  f = f + check("re-up is a no-op", migrations.cli_up(dsn, dir, 900, false) == 0);
+  f = f + check("re-up is a no-op", migrations.cli_up(dsn, dir, 900, false, false) == 0);
   f = f + check("rows applied once", note_count(dsn) == 1);
 
   // Stale lock: mark a dead owner far in the past, add a third file, and
@@ -59,7 +59,7 @@ pub fn main() -> Int {
     let _ = driver.SqlDriver.execute(&drv, "UPDATE _pulse_migrations_lock SET owner='dead', locked_at=1, heartbeat_at=1 WHERE id=1;");
     let _ = driver.SqlDriver.close(&drv);
   }
-  f = f + check("stale lock auto-broken", migrations.cli_up(dsn, dir, 900, false) == 0);
+  f = f + check("stale lock auto-broken", migrations.cli_up(dsn, dir, 900, false, false) == 0);
   f = f + check("third migration applied", note_count(dsn) == 2);
 
   // down: roll back the latest batch only (the third file).
@@ -76,6 +76,12 @@ pub fn main() -> Int {
   f = f + check("stub name", string.str_ends_with(stub, "_add_index.sql"));
   let body = io.read_file(gen + "/" + stub);
   f = f + check("stub markers", body.is_ok && string.str_contains(body.value, "-- pulse:up") && string.str_contains(body.value, "-- pulse:down"));
+
+  // Applied-but-missing: strict refuses, --allow-missing-applied proceeds.
+  let _ = io.remove_file(dir + "/20260101000001_create.sql");
+  f = f + check("missing applied -> status 1", migrations.cli_status(dsn, dir) == 1);
+  f = f + check("missing applied -> up refuses", migrations.cli_up(dsn, dir, 900, false, false) == 1);
+  f = f + check("missing applied -> allow proceeds", migrations.cli_up(dsn, dir, 900, false, true) == 0);
 
   if f == 0 {
     io.println("pulse-migrations: GREEN");
