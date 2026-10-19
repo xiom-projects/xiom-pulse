@@ -67,6 +67,9 @@ a.out
 .xiom_ai_cache/
 .xiom-cache/
 
+# benchmark dependencies (package-lock.json + results stay committed)
+/benchmarks/bttger/node_modules/
+
 # Secrets / env
 .env
 .env.*
