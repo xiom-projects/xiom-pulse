@@ -43,7 +43,7 @@ Write-Host "build: $filePath -> $outExe"
 $compilerArgs = @("-o", $outExe, $filePath)
 # xiom.sqlite is vendored: only builds that import it pass the
 # amalgamation (keeps every other build fast) until the build-hook lands.
-if (Select-String -Path $filePath -Pattern '^\s*use xiom\.sqlite' -Quiet) {
+if (Select-String -Path $filePath -Pattern '^\s*use (xiom\.sqlite|xiom\.pulse\.station\.migrations)' -Quiet) {
     $xiomHome = $env:XIOM_HOME
     if (-not $xiomHome) { $xiomHome = Join-Path $env:LOCALAPPDATA "xiom" }
     $sqliteC = Join-Path $xiomHome "packages\xiom-sqlite-0.4.1\xiom-sqlite\vendor\sqlite3.c"

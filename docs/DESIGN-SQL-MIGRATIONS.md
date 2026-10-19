@@ -2,10 +2,14 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Design: SQL class migrations discipline (knex)
 
-Status: **DRIVER WIRED (2026-10-19)** -- xiom.sqlite 0.4.1 is a declared
-dependency, the build scripts pass the vendored amalgamation only for
-sqlite-importing entries, and `tests/probes/probe_sqlite.xi` is a CI
-linkage gate. The runner implementation starts next. Reference:
+Status: **MVP RUNNER LANDED (2026-10-19)** -- xiom.sqlite 0.4.1 is a
+declared dependency; `src/migrations.xi` implements tracking/lock
+tables, lexicographic discovery, `status` and batched `up`, per-migration
+transactions (or `-- pulse: no-transaction`), and stale-lock takeover;
+`src/migrate.xi` is the standalone `pulse_migrate` binary (SQL stays out
+of the serving/test dependency graph); `tests/test_migrations.xi` is a CI
+gate. Next: `down`/`create`, the backup fence, and the lock heartbeat.
+Reference:
 `E:\repos\knex` (knex.js 3.3.0, MIT, light clone); backlog order 4 of
 `docs/PRODUCTION-REFERENCES.md`.
 

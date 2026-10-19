@@ -61,7 +61,7 @@ TIMEOUT_BIN=$(pulse_timeout_bin)
 # xiom.sqlite is vendored: only builds that import it pass the
 # amalgamation (keeps every other build fast) until the build-hook lands.
 EXTRA_ARGS=()
-if grep -qE '^[[:space:]]*use xiom\.sqlite' "$FILE_ABS"; then
+if grep -qE '^[[:space:]]*use (xiom\.sqlite|xiom\.pulse\.station\.migrations)' "$FILE_ABS"; then
   XIOM_HOME_RES="${XIOM_HOME:-$HOME/xiom}"
   for cand in "$XIOM_HOME_RES/packages/xiom-sqlite-0.4.1/xiom-sqlite/vendor/sqlite3.c" \
               "$HOME/xiom/packages/xiom-sqlite-0.4.1/xiom-sqlite/vendor/sqlite3.c" \

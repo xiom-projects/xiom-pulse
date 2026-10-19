@@ -112,6 +112,25 @@ pub fn cfg_idle_timeout() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_IDLE_TIMEOUT", "5000"), 5000);
 }
 
+/// cfg_sql_dsn: PULSE_SQL_DSN (no default; SQL commands require it).
+/// Complexity: O(1). Pure.
+pub fn cfg_sql_dsn() -> Str {
+  return env.var_or("PULSE_SQL_DSN", "");
+}
+
+/// cfg_migrations_dir: PULSE_MIGRATIONS_DIR (default "migrations").
+/// Complexity: O(1). Pure.
+pub fn cfg_migrations_dir() -> Str {
+  return env.var_or("PULSE_MIGRATIONS_DIR", "migrations");
+}
+
+/// cfg_migration_stale_secs: PULSE_MIGRATION_STALE_SECS (default 900) --
+/// heartbeat age after which `migrate up` auto-breaks a crashed lock.
+/// Complexity: O(1). Pure.
+pub fn cfg_migration_stale_secs() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_MIGRATION_STALE_SECS", "900"), 900);
+}
+
 /// cfg_legacy_loop: PULSE_LEGACY_LOOP (default "0") -- "1" keeps the
 /// product accept loop for the Phase B rollback window; the default uses
 /// the Beacon serve_with_ctx loop + stateful hooks.

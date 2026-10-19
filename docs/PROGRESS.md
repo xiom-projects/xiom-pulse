@@ -833,8 +833,10 @@ m371 (imported-struct layout), explicitly deferred to the next cycle.
 Score holds (~55.8%; release/correctness hardening, no new capability).
 Ops CLOSED the site-mode CL bug after retesting 0.2.2. The SQL class
 opened: xiom.sqlite 0.4.1 wired (manifests + CI installer + opt-in
-vendored C source) and the linkage probe is green; the migrations runner
-is next._
+vendored C source) and the linkage probe is green; the migrations MVP
+landed (tracking/lock tables, status, batched up, stale-lock takeover,
+standalone `pulse_migrate`, CI test green); `down`/`create` and the
+backup fence are next._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
