@@ -229,6 +229,10 @@ pub fn main() -> Int {
   f = f + check("adapter status", co.status == 201);
   f = f + check("adapter content-type", co.content_type == "text/plain");
   f = f + check("adapter body", co.body == "ok");
+  let sr = router.route_match("GET", "/health");
+  let sh = app.station_handler(&req1, &sr, "");
+  f = f + check("station_handler status", sh.status == 200);
+  f = f + check("station_handler body", sh.body.len() > 0);
 
   if f == 0 {
     io.println("pulse-http: GREEN");

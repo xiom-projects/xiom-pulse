@@ -235,6 +235,17 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
 /// to_core_out copies a Station HandlerOut into the Beacon type for the
 /// Phase B handler adapter (v0.64.7 cannot alias cross-module structs).
 /// Complexity: O(1) field moves.
+/// station_handler is the Beacon handler adapter for the Phase B loop:
+/// HEAD maps to GET for dispatch (the package loop must trim the HEAD body;
+/// filed as REL-20261019-1150-pulse), then the Station dispatcher runs and
+/// the result is copied into the package HandlerOut type.
+/// Complexity: O(dispatch).
+pub fn station_handler(req: &PulseRequest, _route: &PulseRoute, body: Str) -> app.HandlerOut {
+  var m: Str = req.method;
+  if m == "HEAD" { m = "GET"; }
+  return to_core_out(dispatch_one(m, req, body));
+}
+
 pub fn to_core_out(out: HandlerOut) -> app.HandlerOut {
   return app.HandlerOut{ status: out.status; content_type: out.content_type; headers: out.headers; body: out.body; body_bytes: out.body_bytes; };
 }
