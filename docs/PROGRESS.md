@@ -843,6 +843,16 @@ VACUUM INTO + manifest; `up` requires a covering manifest or
 `--no-backup-check`). Remaining: a background heartbeat for a single very
 long migration._
 
+_Delta 2026-10-19 wrap 21 (session close): PULSE 0.2.2 released (tag
+`pulse-v0.2.2`, run `39304832557`) and **ops-accepted** (ops closed the
+site-mode CL bug); XIOM v0.64.8 + stdlib `112c5b6` adopted; Beacon 0.3.1
+consumed; middleware Phase A complete; Phase B parked on compiler m371
+(next cycle); SQL class MVP complete -- migrations tooling with
+status/up/down/backup/create, missing policy, backup fence and heartbeat
+(21/21 tests, CI gates). Next: SQL store-interface integration, then
+per-route rate / bench / realtime. Score holds (~55.8%; correctness +
+tooling, no new runtime capability yet)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
