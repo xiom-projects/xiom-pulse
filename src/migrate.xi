@@ -13,14 +13,16 @@ pub fn main() -> Int {
   var sub: Str = "status";
   if av.len() > 1 { sub = av[1]; }
   var force: Bool = false;
+  var name: Str = "";
   var i: Int = 2;
   while i < av.len() {
     if av[i] == "--force" { force = true; }
+    else { name = av[i]; }
     i = i + 1;
   }
-  if sub != "status" && sub != "up" {
-    io.println("usage: pulse_migrate status|up [--force]");
+  if sub != "status" && sub != "up" && sub != "down" && sub != "create" {
+    io.println("usage: pulse_migrate status|up|down [--force] | create <name>");
     return 1;
   }
-  return migrations.cli(sub, force);
+  return migrations.cli(sub, force, name);
 }

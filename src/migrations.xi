@@ -23,8 +23,29 @@ const TABLE_MIGRATIONS: Str = "CREATE TABLE IF NOT EXISTS _pulse_migrations (id 
 const TABLE_LOCK: Str = "CREATE TABLE IF NOT EXISTS _pulse_migrations_lock (id INTEGER PRIMARY KEY CHECK (id = 1), owner TEXT NOT NULL DEFAULT '', locked_at INTEGER NOT NULL DEFAULT 0, heartbeat_at INTEGER NOT NULL DEFAULT 0);";
 const SEED_LOCK: Str = "INSERT INTO _pulse_migrations_lock(id, owner, locked_at, heartbeat_at) VALUES (1, '', 0, 0) ON CONFLICT(id) DO NOTHING;";
 
+const MARK_UP: Str = "-- pulse:up";
+const MARK_DOWN: Str = "-- pulse:down";
+
 fn quote_sql(s: Str) -> Str {
   return "'" + string.str_replace_all(s, "'", "''") + "'";
+}
+
+/// section extracts the `-- pulse:up` / `-- pulse:down` body. Files with
+/// neither marker are whole-file forward migrations with no rollback;
+/// files with only one marker are malformed (""). Complexity: O(n).
+fn section(sql: Str, which: Str) -> Str {
+  let up_m = string.str_index_of(sql, MARK_UP);
+  let down_m = string.str_index_of(sql, MARK_DOWN);
+  if up_m.is_none && down_m.is_none {
+    if which == "up" { return sql; }
+    return "";
+  }
+  if up_m.is_none || down_m.is_none { return ""; }
+  if down_m.value <= up_m.value { return ""; }
+  if which == "up" {
+    return string.str_slice(sql, up_m.value + MARK_UP.len(), down_m.value);
+  }
+  return string.str_slice(sql, down_m.value + MARK_DOWN.len(), sql.len());
 }
 
 fn exec_ok(drv: &driver.SqlDriver, sql: Str) -> Bool {
@@ -130,7 +151,7 @@ fn lock_state(drv: &driver.SqlDriver) -> LockState {
 /// notice. Returns (ok, stale_broken, reason).
 fn lock_acquire(drv: &driver.SqlDriver, owner: Str, stale_secs: Int, force: Bool) -> LockOutcome {
   let state = lock_state(drv);
-  let now = ctime.time_now();
+  let now = ctime.timestamp_now();
   if state.owner.len() == 0 || state.heartbeat <= 0 {
     let r = driver.SqlDriver.execute(drv, "UPDATE _pulse_migrations_lock SET owner = " + quote_sql(owner) + ", locked_at = " + now.to_str() + ", heartbeat_at = " + now.to_str() + " WHERE id = 1 AND (owner = '' OR heartbeat_at = 0);");
     if r.is_ok && r.value.rows_affected == 1 { return LockOutcome{ ok: true; stale: false; reason: "" }; }
@@ -235,20 +256,24 @@ pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: 
       let _ = lock_release(drv, owner);
       return "ERR: " + note + "cannot read " + name;
     }
-    let sql = f.value;
+    let sql = section(f.value, "up");
+    if sql.len() == 0 {
+      let _ = lock_release(drv, owner);
+      return "ERR: malformed or empty up section in " + name;
+    }
     let no_tx = string.str_contains(sql, "-- pulse: no-transaction");
     var ok: Bool = false;
     if no_tx {
       ok = exec_ok(drv, sql);
       if ok {
-        ok = exec_ok(drv, "INSERT INTO _pulse_migrations(name, batch, applied_at) VALUES (" + quote_sql(name) + ", " + batch.to_str() + ", " + quote_sql(ctime.time_now().to_str()) + ");");
+        ok = exec_ok(drv, "INSERT INTO _pulse_migrations(name, batch, applied_at) VALUES (" + quote_sql(name) + ", " + batch.to_str() + ", " + quote_sql(ctime.timestamp_now().to_str()) + ");");
       }
     } else {
       let b = driver.SqlDriver.transaction_begin(drv);
       if b.is_ok {
         ok = exec_ok(drv, sql);
         if ok {
-          ok = exec_ok(drv, "INSERT INTO _pulse_migrations(name, batch, applied_at) VALUES (" + quote_sql(name) + ", " + batch.to_str() + ", " + quote_sql(ctime.time_now().to_str()) + ");");
+          ok = exec_ok(drv, "INSERT INTO _pulse_migrations(name, batch, applied_at) VALUES (" + quote_sql(name) + ", " + batch.to_str() + ", " + quote_sql(ctime.timestamp_now().to_str()) + ");");
         }
         if ok {
           let cm = driver.SqlDriver.transaction_commit(drv);
@@ -270,8 +295,104 @@ pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: 
   return "OK: " + note + "applied batch=" + batch.to_str() + " " + applied;
 }
 
+/// down rolls back the latest batch in reverse applied order. Each file
+/// must carry a `-- pulse:down` section. Returns "OK:"/"ERR:".
+pub fn down(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: Bool) -> Str {
+  if !ensure_tables(drv) { return "ERR: cannot create tracking tables"; }
+  let lk = lock_acquire(drv, owner, stale_secs, force);
+  if !lk.ok { return "ERR: " + lk.reason; }
+  var note: Str = "";
+  if lk.stale { note = "stale lock broken; "; }
+  let rows = applied_rows(drv);
+  var maxb: Int = 0;
+  var i: Int = 0;
+  while i < rows.len() {
+    if rows[i].1 > maxb { maxb = rows[i].1; }
+    i = i + 1;
+  }
+  if maxb == 0 {
+    let _ = lock_release(drv, owner);
+    return "OK: " + note + "no batches to roll back";
+  }
+  var names: Vec[Str] = Vec[Str].new();
+  i = 0;
+  while i < rows.len() {
+    if rows[i].1 == maxb { names.push(rows[i].0); }
+    i = i + 1;
+  }
+  var back: Vec[Str] = Vec[Str].new();
+  var j: Int = names.len() - 1;
+  while j >= 0 {
+    back.push(names[j]);
+    j = j - 1;
+  }
+  var done: Str = "";
+  i = 0;
+  while i < back.len() {
+    let name = back[i];
+    let f = io.read_file(dir + "/" + name);
+    if !f.is_ok {
+      let _ = lock_release(drv, owner);
+      return "ERR: " + note + "cannot read " + name;
+    }
+    let sql = section(f.value, "down");
+    if sql.len() == 0 {
+      let _ = lock_release(drv, owner);
+      return "ERR: " + note + "no down section in " + name;
+    }
+    var ok: Bool = false;
+    let b = driver.SqlDriver.transaction_begin(drv);
+    if b.is_ok {
+      ok = exec_ok(drv, sql);
+      if ok {
+        ok = exec_ok(drv, "DELETE FROM _pulse_migrations WHERE name = " + quote_sql(name) + " AND batch = " + maxb.to_str() + ";");
+      }
+      if ok {
+        let cm = driver.SqlDriver.transaction_commit(drv);
+        ok = cm.is_ok;
+      } else {
+        let _ = driver.SqlDriver.transaction_rollback(drv);
+      }
+    }
+    if !ok {
+      let _ = lock_release(drv, owner);
+      return "ERR: " + note + "rollback failed: " + name;
+    }
+    if done.len() > 0 { done = done + ","; }
+    done = done + name;
+    i = i + 1;
+  }
+  let _ = lock_release(drv, owner);
+  return "OK: " + note + "rolled back batch=" + maxb.to_str() + " " + done;
+}
+
+/// create renders a UTC-stamped stub with both direction markers.
+/// Returns "OK: <path>" or "ERR: ...".
+pub fn create(dir: Str, name: Str) -> Str {
+  let clean = string.str_replace_all(name, " ", "_");
+  if clean.len() == 0 || string.str_contains(clean, "/") || string.str_contains(clean, "..") {
+    return "ERR: invalid migration name";
+  }
+  if !io.is_dir(dir) {
+    let d = io.create_dir_all(dir);
+    if !d.is_ok { return "ERR: cannot create " + dir; }
+  }
+  let ts = ctime.timestamp_now();
+  let date = ctime.timestamp_to_date(ts);
+  let sod = ts - (ts / 86400) * 86400;
+  let hh = string.str_pad_left((sod / 3600).to_str(), 2, '0');
+  let mi = string.str_pad_left(((sod % 3600) / 60).to_str(), 2, '0');
+  let ss = string.str_pad_left((sod % 60).to_str(), 2, '0');
+  let stamp = date.year.to_str() + string.str_pad_left(date.month.to_str(), 2, '0') + string.str_pad_left(date.day.to_str(), 2, '0') + hh + mi + ss;
+  let path = dir + "/" + stamp + "_" + clean + ".sql";
+  var body: Str = "-- " + clean + "\n" + MARK_UP + "\n-- forward migration\n\n" + MARK_DOWN + "\n-- rollback\n";
+  let w = io.write_file(path, body);
+  if !w.is_ok { return "ERR: cannot write " + path; }
+  return "OK: created " + path;
+}
+
 fn cli_owner() -> Str {
-  return "pulse:" + ctime.time_now().to_str();
+  return "pulse:" + ctime.timestamp_now().to_str();
 }
 
 /// cli_status is the `migrate status` entry: prints the report, returns 0
@@ -315,12 +436,42 @@ pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool) -> Int {
   return 1;
 }
 
-/// cli dispatches `migrate status|up`; unknown subcommands print usage.
-pub fn cli(sub: Str, force: Bool) -> Int {
+/// cli_down is the `migrate down` entry: rolls back the latest batch.
+pub fn cli_down(dsn: Str, dir: Str, stale_secs: Int, force: Bool) -> Int {
+  if dsn.len() == 0 {
+    io.println("migrations: PULSE_SQL_DSN is not set");
+    return 1;
+  }
+  let o = driver.SqlDriver.open_from_dsn(dsn);
+  if !o.is_ok {
+    io.println("migrations: cannot open " + dsn);
+    return 1;
+  }
+  let drv = o.value;
+  let r = down(&drv, dir, cli_owner(), stale_secs, force);
+  io.println("migrations: " + r);
+  let _ = driver.SqlDriver.close(&drv);
+  if string.str_starts_with(r, "OK:") { return 0; }
+  return 1;
+}
+
+/// cli_create makes a stamped up/down stub in the migrations directory.
+pub fn cli_create(dir: Str, name: Str) -> Int {
+  let r = create(dir, name);
+  io.println("migrations: " + r);
+  if string.str_starts_with(r, "OK:") { return 0; }
+  return 1;
+}
+
+/// cli dispatches `migrate status|up|down|create`; unknown subcommands
+/// print usage.
+pub fn cli(sub: Str, force: Bool, name: Str) -> Int {
   let dsn = config.cfg_sql_dsn();
   let dir = config.cfg_migrations_dir();
   if sub == "status" { return cli_status(dsn, dir); }
   if sub == "up" { return cli_up(dsn, dir, config.cfg_migration_stale_secs(), force); }
-  io.println("usage: pulse_app migrate status|up [--force]");
+  if sub == "down" { return cli_down(dsn, dir, config.cfg_migration_stale_secs(), force); }
+  if sub == "create" { return cli_create(dir, name); }
+  io.println("usage: pulse_migrate status|up|down [--force] | create <name>");
   return 1;
 }
