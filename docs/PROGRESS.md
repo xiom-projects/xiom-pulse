@@ -821,6 +821,17 @@ declared-CL guard is gone. Gates both platforms on v0.64.7 + stdlib
 pre/after hooks) is now unblocked; residual design note: loop-level
 parse/408 responses sit outside the dispatch hook._
 
+_Delta 2026-10-19 (Beacon 0.3.1 + v0.64.8 + PULSE 0.2.2): xiom.pulse
+0.3.1 adopted (stateful HookCtx, unmatched-route fallback, HEAD-as-GET);
+XIOM v0.64.8 + stdlib `112c5b6` adopted with the full pin set, and the
+Windows package home was rebuilt after the crash reset. **PULSE 0.2.2
+released** (tag `pulse-v0.2.2`, run `39304832557` SUCCESS; linux/windows
+assets + SHA256SUMS): the ops-blocking site-mode duplicate Content-Length
+fix, Beacon 0.3.1, middleware Phase A, 413 hardening. Ops asked to
+re-run the xiom-lang.org dogfood. Phase B remains parked on compiler
+m371 (imported-struct layout), explicitly deferred to the next cycle.
+Score holds (~55.8%; release/correctness hardening, no new capability)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
