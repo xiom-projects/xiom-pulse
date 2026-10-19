@@ -232,6 +232,13 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
 /// The `/v1` alias prefix is stripped first (router.v1_path), so every
 /// route resolves under both the canonical path and `/v1/...`.
 /// Complexity: O(request).
+/// to_core_out copies a Station HandlerOut into the Beacon type for the
+/// Phase B handler adapter (v0.64.7 cannot alias cross-module structs).
+/// Complexity: O(1) field moves.
+pub fn to_core_out(out: HandlerOut) -> app.HandlerOut {
+  return app.HandlerOut{ status: out.status; content_type: out.content_type; headers: out.headers; body: out.body; body_bytes: out.body_bytes; };
+}
+
 fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOut {
   let tgt = router.v1_path(req.target);
   if eff_method == "GET" && string.str_starts_with(tgt, "/assets/") {

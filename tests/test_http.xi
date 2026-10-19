@@ -222,6 +222,14 @@ pub fn main() -> Int {
   let b4 = ratelimit.bucket_step(0, 0, 0, 0, 5000);
   f = f + check("bucket disabled allows", b4.0);
 
+  // --- Phase B HandlerOut adapter -----------------------------------------
+  var ah: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  let ho = HandlerOut{ status: 201; content_type: "text/plain"; headers: ah; body: "ok"; body_bytes: Vec[UInt8].new() };
+  let co = app.to_core_out(ho);
+  f = f + check("adapter status", co.status == 201);
+  f = f + check("adapter content-type", co.content_type == "text/plain");
+  f = f + check("adapter body", co.body == "ok");
+
   if f == 0 {
     io.println("pulse-http: GREEN");
   } else {
