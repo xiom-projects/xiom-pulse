@@ -83,15 +83,57 @@ if (-not $srv.WaitForExit(15000)) {
 $srvExit = $srv.ExitCode
 $srvOut = Get-Content -LiteralPath $srvLog -Raw
 
+# --- per-route policy leg ---------------------------------------------------
+# Global off; only GET /health has a 1 req/s bucket. /api/version must stay
+# untouched, and /health must refill after a second.
+$srvLog2 = Join-Path $logDir "rate-smoke-route-server.out"
+$env:PULSE_RATE_LIMIT = "0"
+$env:PULSE_RATE_ROUTES = "GET /health=1/1"
+$psi2 = New-Object System.Diagnostics.ProcessStartInfo
+$psi2.FileName = "cmd.exe"
+$psi2.Arguments = "/c `"`"$ServerExe`" > `"$srvLog2`" 2>&1`""
+$psi2.WorkingDirectory = $repoRoot
+$psi2.UseShellExecute = $false
+$psi2.CreateNoWindow = $true
+$srv2 = New-Object System.Diagnostics.Process
+$srv2.StartInfo = $psi2
+$null = $srv2.Start()
+Start-Sleep -Milliseconds 900
+
+$p1 = Send-Req -Path "/health"
+$p2 = Send-Req -Path "/health"
+$v1 = Send-Req -Path "/api/version"
+$v2 = Send-Req -Path "/api/version"
+Start-Sleep -Milliseconds 1200
+$p3 = Send-Req -Path "/health"
+
+$c2 = New-Object System.Net.Sockets.TcpClient
+$c2.Connect("127.0.0.1", $Port)
+$s2 = $c2.GetStream()
+$q2 = [Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`nX-Pulse-Quit: 1`r`n`r`n")
+$s2.Write($q2, 0, $q2.Length)
+$c2.Close()
+if (-not $srv2.WaitForExit(15000)) {
+    & taskkill /T /F /PID $srv2.Id 2>$null | Out-Null
+    $srv2.WaitForExit(5000) | Out-Null
+}
+$srv2Exit = $srv2.ExitCode
+$routeOk = ($p1 -like "*HTTP/1.1 200*") -and ($p2 -like "*HTTP/1.1 429*") -and ($v1 -like "*HTTP/1.1 200*") -and ($v2 -like "*HTTP/1.1 200*") -and ($p3 -like "*HTTP/1.1 200*")
+$routeRetry = $p2 -like "*Retry-After:*"
+
 Write-Host ("rate-smoke: burst 200={0} 429={1} other={2}; after-refill_200={3}; server_exit={4}" -f $ok, $limited, $other, $afterOk, $srvExit)
+Write-Host ("rate-smoke: route policy 200/429/200/200/200={0}; retry={1}; server_exit={2}" -f $routeOk, $routeRetry, $srv2Exit)
 $retryHeader = $r429 -like "*Retry-After:*"
 
-if ($ok -ge 2 -and $limited -ge 1 -and $other -eq 0 -and $afterOk -and $srvExit -eq 0 -and $retryHeader) {
+if ($ok -ge 2 -and $limited -ge 1 -and $other -eq 0 -and $afterOk -and $srvExit -eq 0 -and $retryHeader -and $routeOk -and $routeRetry -and $srv2Exit -eq 0) {
     Write-Host "rate-smoke: GREEN"
     exit 0
 }
-Write-Host "rate-smoke: RED (retry_header=$retryHeader)"
+Write-Host "rate-smoke: RED (retry_header=$retryHeader route_ok=$routeOk route_retry=$routeRetry)"
 Write-Host "---- 429 sample ----"
 Write-Host $r429
-Write-Host "--------------------"
+Write-Host "---- route samples ----"
+Write-Host $p1
+Write-Host $p2
+Write-Host "-----------------------"
 exit 1

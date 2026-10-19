@@ -141,8 +141,9 @@ old clients [O, documented].
 designed]; PITR-style backups + restore drill [Q/O]; store seam stays
 the single external touch.
 
-**W6 Security.** per-route/per-key rate policy [Q]; OIDC/OAuth surface
-[P]; native TLS [S, see W2]; secrets + rotation guidance [Q doc];
+**W6 Security.** per-route rate policy [Q, **done 2026-10-19**];
+per-key policy [Q, after the peer-address primitive (S)]; OIDC/OAuth
+surface [P]; native TLS [S, see W2]; secrets + rotation guidance [Q doc];
 existing headers/audit/smuggling hardening stay locked.
 
 **W7 Static / CDN-grade.** conditional GET (ETag/Last-Modified) + Range

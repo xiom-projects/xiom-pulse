@@ -222,6 +222,26 @@ pub fn main() -> Int {
   let b4 = ratelimit.bucket_step(0, 0, 0, 0, 5000);
   f = f + check("bucket disabled allows", b4.0);
 
+  // --- per-route rate policy -----------------------------------------------
+  var rr = ratelimit.route_rates_new("POST /api/events=2/2, GET /health=100/100, * /metrics=1");
+  f = f + check("route rates enabled", ratelimit.route_rates_enabled(&rr));
+  f = f + check("route rates summary", string.str_contains(ratelimit.route_rates_summary(&rr), "3 policies"));
+  f = f + check("route rates clean", ratelimit.route_rates_errors(&rr).len() == 0);
+  f = f + check("route rate first", ratelimit.route_rates_allow(&mut rr, "POST", "/api/events", 1000));
+  f = f + check("route rate second", ratelimit.route_rates_allow(&mut rr, "POST", "/api/events", 1000));
+  f = f + check("route rate third denied", !ratelimit.route_rates_allow(&mut rr, "POST", "/api/events", 1000));
+  f = f + check("route rate retry hint", ratelimit.route_rates_retry_after_ms(&rr, "POST", "/api/events") == 500);
+  f = f + check("route rate refills", ratelimit.route_rates_allow(&mut rr, "POST", "/api/events", 2000));
+  let w1 = ratelimit.route_rates_allow(&mut rr, "DELETE", "/metrics", 1000);
+  let w2 = ratelimit.route_rates_allow(&mut rr, "DELETE", "/metrics", 1000);
+  f = f + check("route rate wildcard method", w1 && !w2);
+  f = f + check("route rate unmatched", ratelimit.route_rates_allow(&mut rr, "GET", "/api/version", 1000));
+  let bad_rr = ratelimit.route_rates_new("BOGUS /x=1,GET nope=2,GET /y=0,GET /ok=3/2");
+  f = f + check("route rates name bad entries", ratelimit.route_rates_errors(&bad_rr).len() > 0);
+  f = f + check("route rates keep valid entry", ratelimit.route_rates_enabled(&bad_rr));
+  var off_rr = ratelimit.route_rates_new("");
+  f = f + check("route rates off", !ratelimit.route_rates_enabled(&off_rr) && ratelimit.route_rates_allow(&mut off_rr, "GET", "/health", 1));
+
   if f == 0 {
     io.println("pulse-http: GREEN");
   } else {

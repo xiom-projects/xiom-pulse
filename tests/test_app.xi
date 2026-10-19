@@ -144,7 +144,7 @@ pub fn main() -> Int {
   // --- config file -----------------------------------------------------------
   let cf = "pulse-test-config.json";
   let _rmc = io.remove_file(cf);
-  let cw = io.write_file(cf, "{\"port\":12346,\"cors_origin\":\"http://cfg.test\",\"csrf\":false,\"rate_limit\":7,\"upload_dir\":\"cfg-uploads\",\"http_max_bytes\":1234}");
+  let cw = io.write_file(cf, "{\"port\":12346,\"cors_origin\":\"http://cfg.test\",\"csrf\":false,\"rate_limit\":7,\"rate_routes\":\"POST /api/events=5/5\",\"upload_dir\":\"cfg-uploads\",\"http_max_bytes\":1234}");
   f = f + check("config file write", cw.is_ok);
   env.set_var("PULSE_CONFIG", cf);
   env.remove_var("PULSE_PORT");
@@ -153,6 +153,7 @@ pub fn main() -> Int {
   f = f + check("config file cors", config.cfg_cors_origin() == "http://cfg.test");
   f = f + check("config file csrf off", !config.cfg_csrf_enabled());
   f = f + check("config file rate", config.cfg_rate_limit() == 7);
+  f = f + check("config file rate routes", config.cfg_rate_routes() == "POST /api/events=5/5");
   f = f + check("config file upload dir", config.cfg_upload_dir() == "cfg-uploads");
   f = f + check("config file http cap", outbound.outbound_max_bytes() == 1234);
   env.set_var("PULSE_PORT", "9999");
@@ -162,6 +163,7 @@ pub fn main() -> Int {
   env.remove_var("PULSE_CORS_ORIGIN");
   env.remove_var("PULSE_CSRF");
   env.remove_var("PULSE_RATE_LIMIT");
+  env.remove_var("PULSE_RATE_ROUTES");
   env.remove_var("PULSE_UPLOAD_DIR");
   env.remove_var("PULSE_HTTP_MAX_BYTES");
   let _rmc2 = io.remove_file(cf);
@@ -208,6 +210,10 @@ pub fn main() -> Int {
   let w8 = config.cfg_validate();
   f = f + check("cfg warn bad rate", w8.len() == 1 && string.str_contains(w8[0], "PULSE_RATE_LIMIT"));
   env.remove_var("PULSE_RATE_LIMIT");
+  env.set_var("PULSE_RATE_ROUTES", "BOGUS /x=1");
+  let w8r = config.cfg_validate();
+  f = f + check("cfg warn bad rate routes", w8r.len() == 1 && string.str_contains(w8r[0], "PULSE_RATE_ROUTES"));
+  env.remove_var("PULSE_RATE_ROUTES");
   env.set_var("PULSE_READ_TIMEOUT", "abc");
   let w8b = config.cfg_validate();
   f = f + check("cfg warn bad read timeout", w8b.len() == 1 && string.str_contains(w8b[0], "PULSE_READ_TIMEOUT"));

@@ -10,6 +10,7 @@ use xiom.env;
 use xiom.io;
 use xiom.convert;
 use xiom.serialize.json;
+use xiom.pulse.ratelimit;
 
 /// cfg_parse_port parses a decimal port, falling back to 8080.
 /// Complexity: O(n). Pure.
@@ -54,6 +55,13 @@ pub fn cfg_rate_limit() -> Int {
 /// Complexity: O(1). Pure.
 pub fn cfg_rate_burst() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_RATE_BURST", "0"), 0);
+}
+
+/// cfg_rate_routes returns the per-route policy spec
+/// (PULSE_RATE_ROUTES: `METHOD PATH=RATE[/BURST],...`; "" = off).
+/// Complexity: O(1). Pure.
+pub fn cfg_rate_routes() -> Str {
+  return env.var_or("PULSE_RATE_ROUTES", "");
 }
 
 /// cfg_upload_dir returns the multipart upload directory
@@ -237,6 +245,7 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "landing_path", "PULSE_LANDING_PATH");
   cfg_apply_str(obj, "rate_limit", "PULSE_RATE_LIMIT");
   cfg_apply_str(obj, "rate_burst", "PULSE_RATE_BURST");
+  cfg_apply_str(obj, "rate_routes", "PULSE_RATE_ROUTES");
   cfg_apply_str(obj, "cors_origin", "PULSE_CORS_ORIGIN");
   cfg_apply_str(obj, "csrf", "PULSE_CSRF");
   cfg_apply_str(obj, "store_backend", "PULSE_STORE_BACKEND");
@@ -489,6 +498,11 @@ pub fn cfg_validate() -> Vec[Str] {
   let rb = env.var_or("PULSE_RATE_BURST", "");
   if rb.len() > 0 && cfg_digit_value(rb) < 0 {
     w.push("PULSE_RATE_BURST=\"" + rb + "\" is not a non-negative integer; using 0");
+  }
+  let rr = env.var_or("PULSE_RATE_ROUTES", "");
+  if rr.len() > 0 {
+    let rre = ratelimit.route_rates_spec_error(rr);
+    if rre.len() > 0 { w.push("PULSE_RATE_ROUTES: " + rre); }
   }
   let amb = env.var_or("PULSE_AUDIT_MAX_BYTES", "");
   if amb.len() > 0 && cfg_digit_value(amb) < 0 {

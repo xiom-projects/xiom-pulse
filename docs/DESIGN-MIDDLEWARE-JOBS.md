@@ -68,7 +68,7 @@ precomputation; empty-stage fast paths.
 | 0 | `request` | before body work | rid mint (`server.xi:889-890`), parse (`891-893`), parse-error envelope (400/413), quit header |
 | 1 | `parse` | body availability | body->Str, TE/CL policy today inside `handle_route` (`234-242`) stays route-level for 0.4; kept as a stage for future streaming |
 | 2 | `validate` | pre-handler | CSRF (`924-935`); route schema validation stays in the handler |
-| 3 | `beforeHandler` | pre-handler | CORS preflight short-circuit (OPTIONS -> 204, `913-923`), rate limit (`936-952`), future auth |
+| 3 | `beforeHandler` | pre-handler | CORS preflight short-circuit (OPTIONS -> 204, `913-923`), rate limit (`936-952`; global bucket then per-route policy, `PULSE_RATE_ROUTES`), future auth |
 | 4 | `handler` | the route | `dispatch_one` -> `route_match` -> `handle_route` (`210-224`) |
 | 5 | `beforeSerialize` | handler result | error `status` decoration / envelope normalization |
 | 6 | `beforeSend` | pre-write | HEAD trimming (`966-977`), `with_std_headers`, `with_cors`, security block |
@@ -144,6 +144,16 @@ green on both platforms).
 (action 0 dispatch / 1 send / 2 quit), preserving the frozen order.
 `gate_order.py` (11 checks) plus suites x2 + smoke 135/135 x2 + crash x2
 are green on both platforms.
+
+**Per-route rate policy (2026-10-19, W6):** after the global bucket,
+`gate_request()` resolves the matched route template
+(`router.route_match` -> `route_defs`) and consumes a token from the
+policy table when `PULSE_RATE_ROUTES` names it. The global bucket always
+runs first, so a route policy can only tighten. HEAD matches as GET
+(Beacon sends headers only) and `/v1` targets resolve to the canonical
+template. Gate order is unchanged; `tests/test_http` covers parsing,
+matching, refill and refusals, and `scripts/rate_smoke.*` proves the
+end-to-end 200/429/200 path.
 
 **Stages 4-6 landed (2026-10-18):** `build_dispatch_response()` owns
 dispatch -> build (bytes/text) -> HEAD trim -> beforeSend std headers +

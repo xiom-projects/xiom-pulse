@@ -19,6 +19,13 @@ GitHub release body.
   source. Dedicated gate: 53/53 on Windows + WSL
   (`tests/test_sql.xi`); design + knex matrix in
   `docs/DESIGN-SQL-STORE.md`.
+- **Per-route rate policy (W6):** `PULSE_RATE_ROUTES` adds token buckets
+  keyed by `METHOD PATH=RATE[/BURST]` (method `*` allowed; PATH is a route
+  template) on top of the global bucket, which still runs first. Invalid
+  entries are named at startup and in `--check-config`; `--help` and
+  `DEPLOYMENT.md` document the syntax. Unit coverage in `test_http`;
+  `scripts/rate_smoke.*` now proves the 200/429/refill path end to end on
+  both platforms.
 
 ## [0.2.2] - 2026-10-19
 

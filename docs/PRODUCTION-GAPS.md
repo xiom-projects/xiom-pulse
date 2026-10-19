@@ -52,7 +52,7 @@ Owner: S=stdlib, C=compiler, P=packages, Q=PULSE, O=ops.
 | 13 | JWT auth (fastify-jwt) | ✅ | -- |
 | 14 | CSRF (csrf-csrf etc.) | ✅ | -- |
 | 15 | CORS (fastify-cors) | ✅ | -- |
-| 16 | Rate limiting (fastify-rate-limit) | 🟡 global bucket | Q: per-route/per-key policy unit |
+| 16 | Rate limiting (fastify-rate-limit) | 🟡 global + per-route buckets | Q: per-key after the peer-address primitive |
 | 17 | Security headers (helmet) | ✅ | -- |
 | 18 | OpenAPI: serve + drift guard (fastify-swagger) | 🟡 served + guarded | Q: generate `paths` from the route table; retire hand-written block |
 | 19 | Schema validation (fastify schema, pydantic) | ✅ | -- |

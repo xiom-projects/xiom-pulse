@@ -38,6 +38,7 @@ flowchart LR
 | `PULSE_SESSION_TTL` | `3600` | session seconds |
 | `PULSE_RATE_LIMIT` | `0` | global req/s cap; `0` = off |
 | `PULSE_RATE_BURST` | = limit | token-bucket capacity |
+| `PULSE_RATE_ROUTES` | (unset) | per-route policy: `METHOD PATH=RATE[/BURST],...` (e.g. `POST /api/events=5/10,GET /metrics=1`); `*` matches any method; PATH is a route template |
 | `PULSE_CSRF` | `1` | `0` disables CSRF checks |
 | `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS allowlist (comma-separated; `*` = any) |
 
@@ -157,7 +158,9 @@ Through-proxy verification checklist:
 2. `/health` 200 via HTTPS; direct loopback probe 200.
 3. `/metrics` blocked from the public path, allowed from the monitoring net.
 4. Rate limit behaves: `PULSE_RATE_LIMIT=2` -> burst shows `429` +
-   `Retry-After` (see `scripts\rate_smoke.ps1` for the pattern).
+   `Retry-After`; `PULSE_RATE_ROUTES="POST /api/events=1/2"` limits only
+   that route (the global bucket still applies first). See
+   `scripts\rate_smoke.ps1` for both patterns.
 5. Kill the app; proxy health check flips unhealthy; supervisor restarts it
    (process supervision is external until PULSE grows signal handling).
 

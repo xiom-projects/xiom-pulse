@@ -879,12 +879,27 @@ pub type GateResult = {
   reuse: Bool;
 }
 
+/// rate_limited_response builds the 429 gate response shared by the global
+/// bucket and the per-route policies (same body/headers/cleanup shape).
+/// Complexity: O(1).
+fn rate_limited_response(req: &PulseRequest, reuse: Bool, retry_ms: Int) -> GateResult {
+  var secs: Int = retry_ms / 1000;
+  if secs < 1 { secs = 1; }
+  var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  hs.push(("Retry-After", secs.to_str()));
+  let rbody = envelope.error_body("rate_limited", "too many requests");
+  var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
+  resp = with_std_headers(with_cors(resp, req));
+  return GateResult{ action: 1; resp: resp; status: 429; bytes: rbody.len(); method: req.method; target: req.target; reuse: reuse; };
+}
+
 /// gate_request runs the request-side stages in their frozen order (the
 /// gate_order.py pins): parse/too-large -> quit -> OPTIONS preflight ->
-/// CSRF -> global rate limit. A committed gate response skips the rest
-/// (fastify's sent-guard); the dispatch path returns action 0.
-/// Complexity: O(n) header reads + O(1) decisions.
-fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, cookie_header: Str, reuse: Bool, limiter: &mut ratelimit.Limiter) -> GateResult {
+/// CSRF -> global rate limit -> per-route policy. A committed gate
+/// response skips the rest (fastify's sent-guard); the dispatch path
+/// returns action 0.
+/// Complexity: O(n) header reads + O(routes) policy lookup.
+fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, cookie_header: Str, reuse: Bool, limiter: &mut ratelimit.Limiter, route_rates: &mut ratelimit.RouteRates) -> GateResult {
   var res: GateResult = GateResult{ action: 0; resp: Vec[UInt8].new(); status: 0; bytes: 0; method: req.method; target: req.target; reuse: reuse; };
   // xiom.pulse 0.2.1 rejects a declared Content-Length above the cap as a
   // parse error ("body too large") before dispatch, so the local guard is
@@ -941,20 +956,22 @@ fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, c
   }
   let now_ms = time.monotonic_ms();
   if !ratelimit.limiter_allow(limiter, now_ms) {
-    let retry_ms = ratelimit.limiter_retry_after_ms(limiter, now_ms);
-    var secs: Int = retry_ms / 1000;
-    if secs < 1 { secs = 1; }
-    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
-    hs.push(("Retry-After", secs.to_str()));
-    let rbody = envelope.error_body("rate_limited", "too many requests");
-    var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
-    resp = with_std_headers(with_cors(resp, req));
-    res.action = 1;
-    res.resp = resp;
-    res.status = 429;
-    res.bytes = rbody.len();
-    res.reuse = reuse;
-    return res;
+    return rate_limited_response(req, reuse, ratelimit.limiter_retry_after_ms(limiter, now_ms));
+  }
+  // Per-route policy runs after the global bucket. HEAD dispatches as GET
+  // (Beacon sends headers only), so policy matching uses the GET method;
+  // `/v1` targets resolve to the canonical route template first.
+  var eff_method: Str = req.method;
+  if eff_method == "HEAD" { eff_method = "GET"; }
+  let rm = router.route_match(eff_method, router.v1_path(req.target));
+  if rm.kind == 1 && rm.route_id > 0 {
+    let defs = router.route_defs();
+    if rm.route_id <= defs.len() {
+      let pattern = defs[rm.route_id - 1].1;
+      if !ratelimit.route_rates_allow(route_rates, eff_method, pattern, now_ms) {
+        return rate_limited_response(req, reuse, ratelimit.route_rates_retry_after_ms(route_rates, eff_method, pattern));
+      }
+    }
   }
   return res;
 }
@@ -1129,7 +1146,7 @@ pub fn main() -> Int {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
       io.println("usage: pulse_app [--version|--help|--check-config] | routes | openapi [--check] | version | check-config");
       io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
-      io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_CORS_ORIGIN");
+      io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_RATE_ROUTES PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       io.println("     PULSE_READ_TIMEOUT PULSE_WRITE_TIMEOUT PULSE_IDLE_TIMEOUT PULSE_SITE_DIR");
       io.println("     PULSE_STORE_SYNC PULSE_AUDIT_SYNC PULSE_KEEPALIVE");
@@ -1156,6 +1173,8 @@ pub fn main() -> Int {
       io.println("audit=" + config.cfg_audit_path());
       io.println("audit_max_bytes=" + config.cfg_audit_max_bytes().to_str());
       io.println("rate_limit=" + config.cfg_rate_limit().to_str() + " burst=" + config.cfg_rate_burst().to_str());
+      let rr = ratelimit.route_rates_new(config.cfg_rate_routes());
+      io.println("rate_routes=" + ratelimit.route_rates_summary(&rr));
       io.println("cors=" + config.cfg_cors_origin());
       io.println("session_ttl=" + config.cfg_session_ttl_secs().to_str());
       io.println("static_dir=" + config.cfg_static_dir());
@@ -1255,6 +1274,11 @@ pub fn main() -> Int {
     io.println("pulse: rate limit " + limiter.per_sec.to_str() + " req/s (global)");
     io.flush_stdout();
   }
+  var route_rates = ratelimit.route_rates_new(config.cfg_rate_routes());
+  if route_rates.enabled {
+    io.println("pulse: rate policy " + ratelimit.route_rates_summary(&route_rates));
+    io.flush_stdout();
+  }
   let csrf_on = config.cfg_csrf_enabled();
   if csrf_on {
     io.println("pulse: csrf protection on (session requests)");
@@ -1326,7 +1350,7 @@ pub fn main() -> Int {
         reuse = keep;
         // Stages 0-3 (parse/quit/OPTIONS/CSRF/rate) in one named gate;
         // action 0 continues to dispatch, 1 sends its response, 2 quits.
-        let gate = gate_request(&raw, &req, rid, csrf_on, cookie_header, reuse, &mut limiter);
+        let gate = gate_request(&raw, &req, rid, csrf_on, cookie_header, reuse, &mut limiter, &mut route_rates);
         if gate.action == 2 {
           running = false;
           conn_open = false;
