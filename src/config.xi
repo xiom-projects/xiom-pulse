@@ -118,6 +118,14 @@ pub fn cfg_sql_dsn() -> Str {
   return env.var_or("PULSE_SQL_DSN", "");
 }
 
+/// cfg_sql_backup_manifest: PULSE_SQL_BACKUP_MANIFEST (no default) --
+/// the last SQL backup manifest; `migrate up` refuses without a covering
+/// one unless --no-backup-check.
+/// Complexity: O(1). Pure.
+pub fn cfg_sql_backup_manifest() -> Str {
+  return env.var_or("PULSE_SQL_BACKUP_MANIFEST", "");
+}
+
 /// cfg_migrations_dir: PULSE_MIGRATIONS_DIR (default "migrations").
 /// Complexity: O(1). Pure.
 pub fn cfg_migrations_dir() -> Str {

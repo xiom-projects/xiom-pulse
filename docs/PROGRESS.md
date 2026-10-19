@@ -838,7 +838,10 @@ landed (tracking/lock tables, status, batched up, down with the
 `-- pulse:up`/`-- pulse:down` convention, create, stale-lock takeover,
 standalone `pulse_migrate`, CI test green); the applied-but-missing
 policy (strict + `--allow-missing-applied`) and per-migration heartbeat
-landed; the backup fence and background heartbeat are next._
+landed; the SQL backup fence landed too (`pulse_migrate backup` =
+VACUUM INTO + manifest; `up` requires a covering manifest or
+`--no-backup-check`). Remaining: a background heartbeat for a single very
+long migration._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

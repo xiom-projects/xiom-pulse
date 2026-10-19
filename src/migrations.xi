@@ -13,9 +13,12 @@
 module xiom.pulse.station.migrations
 
 use xiom.io;
+use xiom.io.fs;
 use xiom.string;
 use xiom.sqlite.driver;
 use xiom.sqlite.types;
+use xiom.convert;
+use xiom.convert.parse;
 use xiom.convert.time as ctime;
 use xiom.pulse.station.config;
 
@@ -257,7 +260,7 @@ pub fn status_text(drv: &driver.SqlDriver, dir: Str) -> Str {
 
 /// up applies every pending file as one new batch. Returns
 /// (ok, message); message is the applied list or the error/marker text.
-pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: Bool, allow_missing: Bool) -> Str {
+pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: Bool, allow_missing: Bool, backup_manifest: Str, no_backup_check: Bool) -> Str {
   if !ensure_tables(drv) { return "ERR: cannot create tracking tables"; }
   let rows0 = applied_rows(drv);
   let files0 = discover(dir);
@@ -279,6 +282,13 @@ pub fn up(drv: &driver.SqlDriver, dir: Str, owner: Str, stale_secs: Int, force: 
   }
   if allow_missing && missing0.len() > 0 {
     note = note + "skipped missing applied: " + joined(&missing0) + "; ";
+  }
+  if pending.len() > 0 && !no_backup_check {
+    if !backup_ok(driver.SqlDriver.dsn(drv), backup_manifest) {
+      let _ = lock_release(drv, owner);
+      return "ERR: no covering SQL backup for pending migrations (run pulse_migrate backup; set PULSE_SQL_BACKUP_MANIFEST or --no-backup-check)";
+    }
+    note = note + "backup fence ok; ";
   }
   if pending.len() == 0 {
     let _ = lock_release(drv, owner);
@@ -437,6 +447,83 @@ pub fn create(dir: Str, name: Str) -> Str {
   return "OK: created " + path;
 }
 
+fn dsn_path(dsn: Str) -> Str {
+  var p = dsn;
+  let q = string.str_index_of(p, "?");
+  if q.is_some { p = string.str_slice(p, 0, q.value); }
+  if string.str_starts_with(p, "sqlite://") { return string.str_slice(p, 9, p.len()); }
+  if string.str_starts_with(p, "sqlite3://") { return string.str_slice(p, 10, p.len()); }
+  if string.str_starts_with(p, "sqlite:") { return string.str_slice(p, 7, p.len()); }
+  if string.str_starts_with(p, "sqlite3:") { return string.str_slice(p, 8, p.len()); }
+  return p;
+}
+
+fn manifest_value(text: Str, key: Str) -> Str {
+  let lines = string.str_split(text, "\n");
+  var i: Int = 0;
+  while i < lines.len() {
+    let prefix = key + "=";
+    if string.str_starts_with(lines[i], prefix) {
+      return string.str_slice(lines[i], prefix.len(), lines[i].len());
+    }
+    i = i + 1;
+  }
+  return "";
+}
+
+/// backup writes a consistent SQLite snapshot (VACUUM INTO) plus a
+/// manifest that the migration fence can check. Returns "OK:"/"ERR:".
+pub fn backup(dsn: Str, out_path: Str) -> Str {
+  if dsn.len() == 0 { return "ERR: PULSE_SQL_DSN is not set"; }
+  let o = driver.SqlDriver.open_from_dsn(dsn);
+  if !o.is_ok { return "ERR: cannot open " + dsn; }
+  let drv = o.value;
+  let path = dsn_path(dsn);
+  if !io.file_exists(path) {
+    let _ = driver.SqlDriver.close(&drv);
+    return "ERR: database file not found: " + path;
+  }
+  let mt = fs.fs_mtime(path);
+  if !mt.is_ok {
+    let _ = driver.SqlDriver.close(&drv);
+    return "ERR: cannot stat " + path;
+  }
+  let out = out_path;
+  if out.len() == 0 { out = path + "." + ctime.timestamp_now().to_str() + ".bak"; }
+  let v = exec_ok(&drv, "VACUUM INTO " + quote_sql(out) + ";");
+  let _ = driver.SqlDriver.close(&drv);
+  if !v { return "ERR: backup failed: " + out; }
+  var size: Int = 0;
+  let sz = io.file_size(out);
+  if sz.is_some { size = sz.value; }
+  var manifest: Str = "db=" + path + "\nbackup=" + out + "\ncreated_at=" + ctime.timestamp_now().to_str() + "\nsize=" + size.to_str() + "\n";
+  let w = io.write_file(out + ".manifest", manifest);
+  if !w.is_ok { return "ERR: backup written but manifest failed: " + out; }
+  return "OK: " + out + " manifest=" + out + ".manifest";
+}
+
+/// backup_ok is the fence predicate: the manifest names this DB and was
+/// created at/after the DB's last write. Complexity: O(1).
+pub fn backup_ok(dsn: Str, manifest_path: Str) -> Bool {
+  if manifest_path.len() == 0 { return false; }
+  let r = io.read_file(manifest_path);
+  if !r.is_ok { return false; }
+  let db = manifest_value(r.value, "db");
+  if db != dsn_path(dsn) { return false; }
+  let created = manifest_value(r.value, "created_at");
+  if created.len() == 0 { return false; }
+  if !io.file_exists(dsn_path(dsn)) { return false; }
+  let mt = fs.fs_mtime(dsn_path(dsn));
+  if !mt.is_ok { return false; }
+  return convert_str_int(created) >= mt.value;
+}
+
+fn convert_str_int(s: Str) -> Int {
+  let p = parse.parse_int(s);
+  if p.is_ok { return p.value; }
+  return 0;
+}
+
 fn cli_owner() -> Str {
   return "pulse:" + ctime.timestamp_now().to_str();
 }
@@ -464,7 +551,7 @@ pub fn cli_status(dsn: Str, dir: Str) -> Int {
 }
 
 /// cli_up is the `migrate up` entry: prints the outcome, returns 0/1.
-pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool, allow_missing: Bool) -> Int {
+pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool, allow_missing: Bool, no_backup_check: Bool) -> Int {
   if dsn.len() == 0 {
     io.println("migrations: PULSE_SQL_DSN is not set");
     return 1;
@@ -475,7 +562,7 @@ pub fn cli_up(dsn: Str, dir: Str, stale_secs: Int, force: Bool, allow_missing: B
     return 1;
   }
   let drv = o.value;
-  let r = up(&drv, dir, cli_owner(), stale_secs, force, allow_missing);
+  let r = up(&drv, dir, cli_owner(), stale_secs, force, allow_missing, config.cfg_sql_backup_manifest(), no_backup_check);
   io.println("migrations: " + r);
   let _ = driver.SqlDriver.close(&drv);
   if string.str_starts_with(r, "OK:") { return 0; }
@@ -509,15 +596,25 @@ pub fn cli_create(dir: Str, name: Str) -> Int {
   return 1;
 }
 
-/// cli dispatches `migrate status|up|down|create`; unknown subcommands
-/// print usage.
-pub fn cli(sub: Str, force: Bool, allow_missing: Bool, name: Str) -> Int {
+/// cli_backup writes a snapshot + manifest; prints the manifest path so
+/// the operator can export PULSE_SQL_BACKUP_MANIFEST.
+pub fn cli_backup(dsn: Str, out_path: Str) -> Int {
+  let r = backup(dsn, out_path);
+  io.println("migrations: " + r);
+  if string.str_starts_with(r, "OK:") { return 0; }
+  return 1;
+}
+
+/// cli dispatches `migrate status|up|down|backup|create`; unknown
+/// subcommands print usage.
+pub fn cli(sub: Str, force: Bool, allow_missing: Bool, no_backup_check: Bool, name: Str) -> Int {
   let dsn = config.cfg_sql_dsn();
   let dir = config.cfg_migrations_dir();
   if sub == "status" { return cli_status(dsn, dir); }
-  if sub == "up" { return cli_up(dsn, dir, config.cfg_migration_stale_secs(), force, allow_missing); }
+  if sub == "up" { return cli_up(dsn, dir, config.cfg_migration_stale_secs(), force, allow_missing, no_backup_check); }
   if sub == "down" { return cli_down(dsn, dir, config.cfg_migration_stale_secs(), force); }
+  if sub == "backup" { return cli_backup(dsn, name); }
   if sub == "create" { return cli_create(dir, name); }
-  io.println("usage: pulse_migrate status|up|down [--force] [--allow-missing-applied] | create <name>");
+  io.println("usage: pulse_migrate status|up|down [--force] [--allow-missing-applied] [--no-backup-check] | backup [path] | create <name>");
   return 1;
 }

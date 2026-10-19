@@ -5,6 +5,7 @@ module test_migrations
 
 use xiom.io;
 use xiom.string;
+use xiom.env;
 use xiom.convert.time as ctime;
 use xiom.sqlite.driver;
 use xiom.sqlite.types;
@@ -45,9 +46,9 @@ pub fn main() -> Int {
 
   var f: Int = 0;
   f = f + check("pending status exits 1", migrations.cli_status(dsn, dir) == 1);
-  f = f + check("up applies batch", migrations.cli_up(dsn, dir, 900, false, false) == 0);
+  f = f + check("up applies batch", migrations.cli_up(dsn, dir, 900, false, false, true) == 0);
   f = f + check("current status exits 0", migrations.cli_status(dsn, dir) == 0);
-  f = f + check("re-up is a no-op", migrations.cli_up(dsn, dir, 900, false, false) == 0);
+  f = f + check("re-up is a no-op", migrations.cli_up(dsn, dir, 900, false, false, true) == 0);
   f = f + check("rows applied once", note_count(dsn) == 1);
 
   // Stale lock: mark a dead owner far in the past, add a third file, and
@@ -59,7 +60,7 @@ pub fn main() -> Int {
     let _ = driver.SqlDriver.execute(&drv, "UPDATE _pulse_migrations_lock SET owner='dead', locked_at=1, heartbeat_at=1 WHERE id=1;");
     let _ = driver.SqlDriver.close(&drv);
   }
-  f = f + check("stale lock auto-broken", migrations.cli_up(dsn, dir, 900, false, false) == 0);
+  f = f + check("stale lock auto-broken", migrations.cli_up(dsn, dir, 900, false, false, true) == 0);
   f = f + check("third migration applied", note_count(dsn) == 2);
 
   // down: roll back the latest batch only (the third file).
@@ -80,8 +81,21 @@ pub fn main() -> Int {
   // Applied-but-missing: strict refuses, --allow-missing-applied proceeds.
   let _ = io.remove_file(dir + "/20260101000001_create.sql");
   f = f + check("missing applied -> status 1", migrations.cli_status(dsn, dir) == 1);
-  f = f + check("missing applied -> up refuses", migrations.cli_up(dsn, dir, 900, false, false) == 1);
-  f = f + check("missing applied -> allow proceeds", migrations.cli_up(dsn, dir, 900, false, true) == 0);
+  f = f + check("missing applied -> up refuses", migrations.cli_up(dsn, dir, 900, false, false, true) == 1);
+  f = f + check("missing applied -> allow proceeds", migrations.cli_up(dsn, dir, 900, false, true, true) == 0);
+
+  // Backup fence: pending without a covering backup refuses; a fresh
+  // snapshot + manifest unblocks.
+  let dir2 = dir + "/fence";
+  let dsn2 = dir2 + "/pulse2.db";
+  let _ = io.create_dir_all(dir2);
+  let _ = io.write_file(dir2 + "/20260101000001_f.sql", "CREATE TABLE f(id INTEGER);");
+  f = f + check("fence refuses without backup", migrations.cli_up(dsn2, dir2, 900, false, false, false) == 1);
+  let bk = migrations.backup(dsn2, dir2 + "/snap.db");
+  f = f + check("backup writes snapshot", string.str_starts_with(bk, "OK:"));
+  env.set_var("PULSE_SQL_BACKUP_MANIFEST", dir2 + "/snap.db.manifest");
+  f = f + check("fence passes with covering backup", migrations.cli_up(dsn2, dir2, 900, false, false, false) == 0);
+  env.remove_var("PULSE_SQL_BACKUP_MANIFEST");
 
   if f == 0 {
     io.println("pulse-migrations: GREEN");

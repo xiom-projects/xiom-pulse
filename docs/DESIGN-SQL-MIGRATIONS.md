@@ -16,8 +16,14 @@ stub with both markers. **Applied-but-missing policy landed:** strict by
 default (status exits 1, `up` refuses and names the files);
 `--allow-missing-applied` prints the skipped set and proceeds. The lock
 heartbeat is refreshed after each applied migration (a single very long
-migration still needs a background heartbeat). Next: the backup fence.
-Reference:
+migration still needs a background heartbeat). **Backup fence landed:**
+`pulse_migrate backup [path]` writes a consistent snapshot
+(`VACUUM INTO`) plus a `<path>.manifest` (db/created_at/size);
+`migrate up` with pending work requires a manifest covering the DB
+(`created_at >= mtime`) and names the env var, unless
+`--no-backup-check`. After each migration the DB is newer, so a fresh
+backup is required before the next batch (by design). Remaining: the
+background heartbeat for a single very long migration. Reference:
 `E:\repos\knex` (knex.js 3.3.0, MIT, light clone); backlog order 4 of
 `docs/PRODUCTION-REFERENCES.md`.
 
