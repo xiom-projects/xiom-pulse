@@ -11,12 +11,12 @@
 # There is no fixed pin; record the exact versions and lane hashes in
 # SESSION.md at every wrap.
 #
-# As of 2026-10-18 (mirrors scripts/dev-env.ps1 on Windows):
-#   compiler  v0.64.7 (versioned install ~/.local/share/xiom-v0647; falls
-#             back to the canonical ~/.local/share/xiom / PATH install)
+# As of 2026-10-19 (mirrors scripts/dev-env.ps1 on Windows):
+#   compiler  v0.64.8 (versioned install ~/.local/share/xiom-v0648; falls
+#             back to v0647 / the canonical ~/.local/share/xiom / PATH)
 #   stdlib    $XIOM_STDLIB if set; else the latest RELEASE tag extracted to
-#             ~/.cache/xiom-pin/stdlib-tag-v0.64.7 (refresh on a new stdlib
-#             release); else the v0.64.6 tag dir; else the WSL-mounted lane
+#             ~/.cache/xiom-pin/stdlib-tag-v0.64.8 (refresh on a new stdlib
+#             release); else the v0.64.7 / v0.64.6 tag dirs; else the WSL-mounted lane
 #             checkout /mnt/e/xiom-lang/stdlib; else the compiler's
 #             bundled lib/xiom
 #   packages  <xiom_home>/packages (latest registry versions; owner
@@ -31,7 +31,9 @@
 
 # --- compiler resolution ----------------------------------------------------
 if [ -z "${XIOM_COMPILER:-}" ]; then
-  if [ -x "$HOME/.local/share/xiom-v0647/bin/xiom" ]; then
+  if [ -x "$HOME/.local/share/xiom-v0648/bin/xiom" ]; then
+    XIOM_COMPILER="$HOME/.local/share/xiom-v0648/bin/xiom"
+  elif [ -x "$HOME/.local/share/xiom-v0647/bin/xiom" ]; then
     XIOM_COMPILER="$HOME/.local/share/xiom-v0647/bin/xiom"
   elif command -v xiom >/dev/null 2>&1; then
     XIOM_COMPILER="$(command -v xiom)"
@@ -48,7 +50,9 @@ unset XIOM_RUNTIME_DIR
 
 # --- stdlib -----------------------------------------------------------------
 if [ -z "${XIOM_STDLIB:-}" ]; then
-  if [ -d "$HOME/.cache/xiom-pin/stdlib-tag-v0.64.7" ]; then
+  if [ -d "$HOME/.cache/xiom-pin/stdlib-tag-v0.64.8" ]; then
+    XIOM_STDLIB="$HOME/.cache/xiom-pin/stdlib-tag-v0.64.8"
+  elif [ -d "$HOME/.cache/xiom-pin/stdlib-tag-v0.64.7" ]; then
     XIOM_STDLIB="$HOME/.cache/xiom-pin/stdlib-tag-v0.64.7"
   elif [ -d "$HOME/.cache/xiom-pin/stdlib-tag-v0.64.6" ]; then
     XIOM_STDLIB="$HOME/.cache/xiom-pin/stdlib-tag-v0.64.6"

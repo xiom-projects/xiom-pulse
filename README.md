@@ -54,8 +54,8 @@ lane hashes are recorded in `SESSION.md` at every wrap.
 
 | Component | Current |
 |---|---|
-| Compiler | **v0.64.7** (versioned install; `dev-env` prefers it over the unversioned fallback) |
-| Stdlib | pin **`f4482b14`** (tag `stdlib-v0.64.7`; extracted release tag) |
+| Compiler | **v0.64.8** (versioned install; `dev-env` prefers it over the v0.64.7/unversioned fallbacks) |
+| Stdlib | pin **`112c5b6`** (tag `stdlib-v0.64.8`; extracted release tag) |
 | Packages | registry (`%LOCALAPPDATA%\xiom\packages`): the 11 deps -- xiom.pulse 0.2.1, xiom.http 0.1.8, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.kv 0.1.0 |
 
 `XIOM_RUNTIME_DIR` is **retired** on v0.64.0 (release R65 links the
