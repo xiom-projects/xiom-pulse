@@ -5,6 +5,8 @@
 
 **WRAP 21 (2026-10-19 evening, session 21):** context-limit wrap. `main = db91d2c` at wrap start (clean + pushed; this wrap commit follows). **PULSE 0.2.2 RELEASED** (tag `pulse-v0.2.2`, `3b515c6`, 18:48Z; release run `39304832557` SUCCESS; linux/windows artifacts + SHA256SUMS) -- ops re-tested the dogfood switch and **CLOSED `REL-20261017-1141-ops` (0.2.2 accepted)**. **Toolchain: XIOM v0.64.8 + stdlib `112c5b6`** (Windows/WSL installs, STDLIB_VERSION + all workflow pins; CI `39302388330` green both). **Beacon `xiom.pulse` 0.3.1** adopted (HookCtx/fallback/HEAD/Server-token; CI `39257841267` green). **Middleware Phase A COMPLETE** (four named units: read / `gate_request` / `build_dispatch_response` / `after_response`; gate harness 11/11; CI `39139728140` green). **Phase B PARKED on compiler m371** (imported-struct identity/field access; explicitly deferred to the cycle after v0.64.8) -- the legacy loop stays; package seams are complete. **SQL class MVP COMPLETE:** xiom.sqlite 0.4.1 wired (vendored C source opt-in), `src/migrations.xi` + `pulse_migrate` with `status|up|down|backup|create`, tracking + single-row lock, stale takeover, per-migration transactions, up/down markers, UTC stubs, applied-but-missing policy (`--allow-missing-applied`), backup fence (VACUUM INTO + manifest, `PULSE_SQL_BACKUP_MANIFEST`, `--no-backup-check`), per-migration heartbeat; **21/21 migrations tests + CI gates green** (`39309185528`, `39312989971`, `39315752929`, `39317250142`, `39321436014`). Current gates: suites x2 (82/237/4), smoke 135/135 x2, crash x2, all CI green. **NEXT UNIT (pick one, in order): (1) SQL store-interface integration** (repository/query layer over the driver; the migrations tooling is ready), **(2) per-route rate policy** on the legacy loop, **(3) bench baseline** (bttger six endpoints; harness), **(4) SSE + WebSocket units**, **(5) Phase B when m371 lands**. Also queued: linux-arm64 CI leg + macOS release legs; a background heartbeat for a single very long migration; release 0.3.0 once the runtime SQL surface lands. Open relay obligations: compiler m371 (next cycle), registry 3.0 pilot gate ping when production-serving; no open PULSE ops items.
 
+**2026-10-19 (session 22 -- SQL store layer):** **SQL STORE/REPOSITORY LAYER LANDED.** `src/sql.xi` (`xiom.pulse.station.sql`) is the opt-in runtime SQL surface over xiom.sqlite 0.4.1: integer connection handles, mandatory value binding (`p_text/p_int/p_real/p_null` through `prepare`/`bind_*`), validated identifiers, JSON row mapping (exact 64-bit ints, typed real/text/null; blobs documented out of v1), repository CRUD (`find/list/count/insert/update/delete`), `limit+1` `has_more` paging, and explicit transactions. `tests/test_sql.xi` **53/53 on Windows + WSL** (bindings, value/identifier injection rejection, CRUD, paging, rollback/commit, error codes); CI gains a Linux SQL gate; the build scripts pass the vendored amalgamation for the SQL module; the serving binary still does not import it (build green without the C source). Design + knex matrix: `docs/DESIGN-SQL-STORE.md`. Local gates on v0.64.8: build both platforms, suites x2 (82/237/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53.
+
 **2026-10-19 (PULSE 0.2.2 RELEASED):** tag `pulse-v0.2.2` (commit `3b515c6`) published at 18:48Z -- release run `39304832557` SUCCESS. Assets: `pulse-0.2.2-linux-x64.zip` (sha `5a54e4f2...`), `pulse-0.2.2-windows-x64.zip` (sha `8bf06605...`), SHA256SUMS. Contents: the **ops site-mode duplicate-Content-Length fix**, Beacon `xiom.pulse` 0.3.1, XIOM v0.64.8 + stdlib `112c5b6`, middleware Phase A, 413 hardening. Ops asked to re-run the xiom-lang.org dogfood switch and verify/close `REL-20261017-1141-ops` (`REL-20261019-1849-pulse`) -- **ops CLOSED `-1141` after the retest: 0.2.2 accepted**. Phase B still parked on m371. **SQL class opened:** xiom.sqlite 0.4.1 wired into both manifests + the CI installer; the build scripts pass the vendored amalgamation only for sqlite-importing entries; `tests/probes/probe_sqlite.xi` is GREEN locally and a new CI Linux linkage gate; **CI `39309185528` GREEN both platforms with the sqlite probe passing**. **SQL migrations MVP landed:** `src/migrations.xi` (tracking + single-row lock, lexicographic discovery, `status`, batched `up`, per-migration transaction or `-- pulse: no-transaction`, stale-lock auto-break) and the standalone `pulse_migrate` binary (`src/migrate.xi`); `tests/test_migrations.xi` is GREEN locally (status/up/no-op/order/stale-lock) and a new CI Linux gate; **CI `39312989971` GREEN both platforms with the migrations gate passing**. **`down` + `create` landed:** files may use `-- pulse:up`/`-- pulse:down` markers; `down` reverses the latest batch in reverse order and `create` writes a UTC-stamped stub (12/12 migration tests GREEN; wall clock fixed to `timestamp_now`); **CI `39315752929` GREEN both platforms with the migrations gate passing**. **Applied-but-missing policy + heartbeat landed:** strict status/up refusal with the missing file list, `--allow-missing-applied` prints the skipped set and proceeds; the lock heartbeat refreshes after each applied migration (18/18 migration tests GREEN; **CI `39317250142` GREEN both platforms with the migrations gate**). **Backup fence landed:** `pulse_migrate backup [path]` (VACUUM INTO + manifest with db/created_at/size); `up` with pending work requires a covering manifest via `PULSE_SQL_BACKUP_MANIFEST` (or `--no-backup-check`), and a fresh backup is needed before each new batch (21/21 migration tests GREEN; **CI `39321436014` GREEN both platforms with the migrations gate**). Remaining: a background heartbeat for a single very long migration (`docs/DESIGN-SQL-MIGRATIONS.md`).
 
 **2026-10-19 (v0.64.8 adoption):** **XIOM v0.64.8 + stdlib tag `112c5b6` ADOPTED** (latest directive): Windows `%LOCALAPPDATA%\xiom.new-v0.64.8`, WSL `~/.local/share/xiom-v0648`, stdlib tag extracted both sides; `STDLIB_VERSION` + ci/heavy/release pins updated with the v0.64.8 SHA set; `dev-env` prefers the new dirs (v0.64.7 fallbacks). The PC crash reset the Windows package home (`%LOCALAPPDATA%\xiom\packages` was empty); all 11 deps were reinstalled (xiom.pulse 0.3.1 + latest set). Gates on v0.64.8, BOTH platforms: build, gate-order 11/11, suites x2 (82/237/4), smoke **135/135 x2** (jsonl+kv), crash x2 GREEN; **CI `39302388330` GREEN both platforms** (windows 4m2s, ubuntu 4m33s). **m371 (imported-struct layout) is still deferred to the next compiler cycle, so Phase B stays parked on the legacy loop.** Doorbell armed.
@@ -1218,7 +1220,7 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-19 wrap 21)
+## 3. Paste prompt for the next PULSE session (2026-10-19 session 22)
 
 ```
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
@@ -1256,29 +1258,31 @@ STATE AT WRAP 21 (2026-10-19, session 21):
   markers, UTC stubs, applied-but-missing policy, backup fence
   (VACUUM INTO + manifest, PULSE_SQL_BACKUP_MANIFEST, --no-backup-check),
   per-migration heartbeat. tests/test_migrations.xi 21/21, CI gates green.
+- **SQL STORE/REPOSITORY LAYER LANDED (session 22):** `src/sql.xi`
+  (`xiom.pulse.station.sql`) -- integer handles, mandatory value binding,
+  identifier validation, JSON rows, repository CRUD + `limit+1` paging,
+  transactions; `tests/test_sql.xi` **53/53 Windows + WSL**; CI Linux
+  gate; **not imported by the serving binary** (builds green without the
+  C source). Design: `docs/DESIGN-SQL-STORE.md`.
 - Current gates: suites x2 (82/237/4), smoke 135/135 x2 (jsonl+kv),
-  crash x2, migrations 21/21, sqlite probe.
+  crash x2, migrations 21/21, SQL store 53/53, sqlite probe.
 
 NEXT -- queue (dependency order):
-1. **SQL store-interface integration** (repository/query layer over
-   xiom.sqlite; the migrations tooling is ready). Keep SQL out of the
-   serving binary until the surface is decided; `pulse_migrate` is the
-   tool binary.
-2. **Per-route rate policy** on the legacy loop (W6; the global bucket is
+1. **Per-route rate policy** on the legacy loop (W6; the global bucket is
    in gate_request).
-3. **Bench baseline** (bttger six endpoints; E:\repos\
+2. **Bench baseline** (bttger six endpoints; E:\repos\
    web-framework-benchmarks + -xlcaptain) -- publish a report, no
    fabricated numbers.
-4. **SSE + WebSocket units** (stdlib primitives exist; designs note the
+3. **SSE + WebSocket units** (stdlib primitives exist; designs note the
    gaps).
-5. **Phase B when compiler m371 lands**: re-apply the stateful pre/after
+4. **Phase B when compiler m371 lands**: re-apply the stateful pre/after
    hooks + serve_with_ctx behind the legacy fallback; the earlier
    implementation is in git history and DESIGN-MIDDLEWARE-JOBS.
-6. **Release 0.3.0** once the runtime SQL surface lands: bump
+5. **Release 0.3.0** once the runtime SQL surface lands: bump
    src/version.xi + APP_VERSION + package.xi, CHANGELOG, tag `pulse-v*`
    (guard: tag == version, ancestor of main), watch the release fleet,
    ping ops for dogfood.
-7. Platform: add the **linux-arm64** CI leg and the macOS release legs;
+6. Platform: add the **linux-arm64** CI leg and the macOS release legs;
    a background heartbeat for a single very long migration.
 
 OPEN OBLIGATIONS / RELAYS: compiler m371 (`REL-20261019-1309-pulse`,
@@ -1294,9 +1298,10 @@ on a new release). Reference-Study Protocol binding (docs\
 REFERENCE-STUDY-PROTOCOL.md): cite the matrix, no design from memory,
 blockers relay first and test back on the next release. Gates before any
 done claim: suites x2 + smoke 135/135 x2 + crash x2 (both platforms);
-SQL builds pass the vendored sqlite C source ONLY for entries importing
-xiom.sqlite or the migrations module. Signed conventional commits;
-commit/push per unit; update SESSION + docs/PROGRESS at every wrap.
+SQL store 53/53 + migrations 21/21; SQL builds pass the vendored sqlite C
+source ONLY for entries importing xiom.sqlite, the migrations module or
+the SQL store module. Signed conventional commits; commit/push per unit;
+update SESSION + docs/PROGRESS at every wrap.
 ```
 
 ## 3 (superseded, wrap 20). Paste prompt for the next PULSE session (2026-10-17 wrap 20)

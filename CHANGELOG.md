@@ -6,6 +6,20 @@ GitHub release body.
 
 ## [Unreleased]
 
+### Added
+
+- **SQL store/repository layer (opt-in):** `src/sql.xi`
+  (`xiom.pulse.station.sql`) over `xiom.sqlite` 0.4.1 -- integer
+  connection handles, mandatory value binding (`p_text`/`p_int`/
+  `p_real`/`p_null` through `prepare`/`bind_*`; identifiers are the only
+  validated interpolated tokens), JSON row mapping with exact 64-bit
+  integers, repository `find`/`list`/`count`/`insert`/`update`/`delete`,
+  `limit+1` `has_more` paging, and explicit transactions. The serving
+  binary does not import it; builds that do pass the vendored SQLite C
+  source. Dedicated gate: 53/53 on Windows + WSL
+  (`tests/test_sql.xi`); design + knex matrix in
+  `docs/DESIGN-SQL-STORE.md`.
+
 ## [0.2.2] - 2026-10-19
 
 ### Added

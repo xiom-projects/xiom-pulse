@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-17 (Station consumes the published `xiom.pulse` 0.1.0 core; v0.64.6 + stdlib `8d95815`; latest registry deps; ops site-mode CL fix)
+**Last updated:** 2026-10-19 (SQL store/repository layer landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -852,6 +852,22 @@ status/up/down/backup/create, missing policy, backup fence and heartbeat
 (21/21 tests, CI gates). Next: SQL store-interface integration, then
 per-route rate / bench / realtime. Score holds (~55.8%; correctness +
 tooling, no new runtime capability yet)._
+
+_Delta 2026-10-19 (SQL store/repository layer): `src/sql.xi`
+(`xiom.pulse.station.sql`) landed as the opt-in runtime SQL surface over
+xiom.sqlite 0.4.1: integer connection handles, mandatory value binding
+(`p_text/p_int/p_real/p_null` via `prepare`/`bind_*`), identifier
+validation, JSON row mapping (exact 64-bit ints, real/text/null; blobs
+documented out of v1), repository `find/list/count/insert/update/delete`
+with `limit+1` `has_more` paging, and explicit transactions. The dedicated
+`tests/test_sql.xi` gate is **53/53 on Windows + WSL** (bindings,
+value/identifier injection rejection, CRUD, paging, rollback/commit, error
+codes); CI gains a Linux SQL gate; build scripts pass the vendored C source
+only for sqlite/SQL entries, and the serving binary still builds without
+it. Design + knex matrix: `docs/DESIGN-SQL-STORE.md`. Gates on v0.64.8:
+build both, suites x2 (82/237/4), smoke 135/135 x2 (jsonl+kv), crash x2,
+migrations 21/21, SQL 53/53. Score holds (~55.8%; the runtime data
+capability opened, no serving-path change yet)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
