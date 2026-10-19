@@ -866,8 +866,9 @@ codes); CI gains a Linux SQL gate; build scripts pass the vendored C source
 only for sqlite/SQL entries, and the serving binary still builds without
 it. Design + knex matrix: `docs/DESIGN-SQL-STORE.md`. Gates on v0.64.8:
 build both, suites x2 (82/237/4), smoke 135/135 x2 (jsonl+kv), crash x2,
-migrations 21/21, SQL 53/53. Score holds (~55.8%; the runtime data
-capability opened, no serving-path change yet)._
+migrations 21/21, SQL 53/53; CI `39328272067` green both platforms. Score
+holds (~55.8%; the runtime data capability opened, no serving-path change
+yet)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
