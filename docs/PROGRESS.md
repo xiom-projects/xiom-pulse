@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-20 (SSE + WebSocket units landed; stdlib JSON builder leak filed as `REL-20261020-1704-pulse`; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-20 (SSE + WebSocket units, Origin policy + fragmentation landed; stdlib JSON builder leak filed as `REL-20261020-1704-pulse`; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -945,8 +945,8 @@ fragmentation closes 1002; a reassembled message over 1 MiB closes 1009.
 Live `stream_smoke` grows to **20/20** (fragmented echo + orphan
 continuation close), and the 2 GB cap stays on. Full gates green both
 platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2, stream
-46/46 + live 20/20. Per `REL-20261020-1704-pulse`, Linux/1M JSON-heavy
-load remains blocked._
+46/46 + live 20/20; CI `39498806648` green both. Per
+`REL-20261020-1704-pulse`, Linux/1M JSON-heavy load remains blocked._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
