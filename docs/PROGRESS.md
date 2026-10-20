@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-19 (SQL store/repository layer + per-route rate policy + bttger bench baseline landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-20 (SSE + WebSocket units landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -897,6 +897,19 @@ remain the fix). Report + raw autocannon JSON committed; the standard
 cross-framework ranking. CI `39335266242` green both platforms; score
 holds (~55.8%; the baseline records the concurrency gap rather than
 closing it)._
+
+_Delta 2026-10-20 (SSE + WebSocket, W4): `src/stream.xi` lets the Station
+loop hand the accepted fd to a stream unit after the frozen gate.
+`GET /api/sse` writes a chunked `text/event-stream` body (events/interval
+clamps, CORS, no Content-Length, zero chunk) and `GET /api/ws` performs
+the RFC 6455 101 handshake plus a masked echo frame loop (text/binary
+echo, ping/pong, close, 1 MiB cap, 1002/1003/1009; plain GET -> 426).
+The loop records 200/101 through the shared response bookkeeping and
+closes the fd once; router/OpenAPI are unchanged. `tests/test_stream.xi`
+37/37 pure and `scripts/stream_smoke.*` 15/15 live on Windows + WSL; CI
+`39427518984` green both platforms. Score holds (~55.8%; realtime
+capability opened; dynamic stream routes, fragmentation and WS
+Origin/auth are explicit follow-ups)._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
