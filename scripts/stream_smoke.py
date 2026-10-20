@@ -115,14 +115,16 @@ def websocket(host, port, timeout):
     ).decode()
     s = socket.create_connection((host, port), timeout)
     s.settimeout(timeout)
+    origin = "http://{}:{}".format(host, port)
     req = (
-        "GET /api/ws HTTP/1.1\r\n"
-        "Host: smoke\r\n"
-        "Upgrade: websocket\r\n"
-        "Connection: Upgrade\r\n"
-        "Sec-WebSocket-Key: " + key + "\r\n"
-        "Sec-WebSocket-Version: 13\r\n"
-        "\r\n"
+        f"GET /api/ws HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Origin: {origin}\r\n"
+        f"Upgrade: websocket\r\n"
+        f"Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Key: {key}\r\n"
+        f"Sec-WebSocket-Version: 13\r\n"
+        f"\r\n"
     )
     s.sendall(req.encode())
     head = recv_until(s, b"\r\n\r\n", 4096)
@@ -141,6 +143,28 @@ def websocket(host, port, timeout):
     check("ws close echo", op == 8)
     s.close()
     return text
+
+
+def bad_origin(host, port, timeout):
+    key = "dGhlIHNhbXBsZSBub25jZQ=="
+    s = socket.create_connection((host, port), timeout)
+    s.settimeout(timeout)
+    req = (
+        f"GET /api/ws HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Origin: https://evil.example\r\n"
+        f"Upgrade: websocket\r\n"
+        f"Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Key: {key}\r\n"
+        f"Sec-WebSocket-Version: 13\r\n"
+        f"\r\n"
+    )
+    s.sendall(req.encode())
+    data = read_all(s)
+    s.close()
+    text = data.decode("utf-8", "replace")
+    check("ws bad origin 403", "HTTP/1.1 403" in text)
+    check("ws bad origin no 101", "101 Switching Protocols" not in text)
 
 
 def bad_upgrade(host, port, timeout):
@@ -165,6 +189,7 @@ def main():
     try:
         sse(args.host, args.port, args.timeout)
         websocket(args.host, args.port, args.timeout)
+        bad_origin(args.host, args.port, args.timeout)
         bad_upgrade(args.host, args.port, args.timeout)
     except Exception as exc:  # noqa: BLE001 -- smoke client reports the cause
         FAIL += 1

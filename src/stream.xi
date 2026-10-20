@@ -173,6 +173,58 @@ pub fn ws_check_req(raw: &Vec[UInt8], req: &PulseRequest) -> Str {
   return ws_check(req.method, req.version, http.header_get(req, "upgrade"), http.header_get(req, "connection"), http.header_get(req, "sec-websocket-version"), key.value);
 }
 
+fn origin_scheme(origin: Str) -> Str {
+  let idx = string.str_index_of(origin, "://");
+  if idx.is_none { return ""; }
+  return string.str_lower(string.str_slice(origin, 0, idx.value));
+}
+
+fn origin_host(origin: Str) -> Str {
+  let idx = string.str_index_of(origin, "://");
+  if idx.is_none { return ""; }
+  let rest = string.str_slice(origin, idx.value + 3, origin.len());
+  let slash = string.str_index_of(rest, "/");
+  if slash.is_some { return string.str_slice(rest, 0, slash.value); }
+  return rest;
+}
+
+fn strip_default_port(hostport: Str, scheme: Str) -> Str {
+  let lower = string.str_lower(hostport);
+  if scheme == "https" && string.str_ends_with(lower, ":443") {
+    return string.str_slice(lower, 0, lower.len() - 4);
+  }
+  if scheme == "http" && string.str_ends_with(lower, ":80") {
+    return string.str_slice(lower, 0, lower.len() - 3);
+  }
+  return lower;
+}
+
+/// ws_origin_check enforces a browser same-origin default:
+///   * no Origin (non-browser client) -> allow;
+///   * Origin host:port equals Host (default ports normalized) -> allow;
+///   * Origin is in PULSE_CORS_ORIGIN (including `*`) -> allow;
+///   * anything else -> reject (403). Auth remains the application's job.
+/// Complexity: O(headers).
+pub fn ws_origin_check(origin: Str, host: Str) -> Str {
+  if origin.len() == 0 { return ""; }
+  let scheme = origin_scheme(origin);
+  let oh = origin_host(origin);
+  if scheme.len() == 0 || oh.len() == 0 { return "invalid Origin header"; }
+  if host.len() > 0 {
+    let hh = strip_default_port(host, scheme);
+    let ohh = strip_default_port(oh, scheme);
+    if ohh == hh { return ""; }
+  }
+  let allowed = cors.cors_allow_origin(origin);
+  if allowed.len() > 0 { return ""; }
+  return "WebSocket origin not allowed";
+}
+
+/// ws_origin_check_req applies ws_origin_check to the request headers.
+pub fn ws_origin_check_req(req: &PulseRequest) -> Str {
+  return ws_origin_check(http.header_get(req, "origin"), http.header_get(req, "host"));
+}
+
 fn ws_send(fd: Int, opcode: Int, payload: &Vec[UInt8]) -> Bool {
   let frame = websocket.ws_frame_encode(opcode, payload, false);
   let r = socket.socket_send_all(fd, &frame);

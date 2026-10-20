@@ -1391,10 +1391,20 @@ pub fn main() -> Int {
               let _w = after_response(client, resp, rid, req.method, req.target, 426, rbody.len(), t0_ms, false);
               conn_open = false;
             } else {
-              let sm = stream.ws_stream(client, &raw, &req);
-              record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
-              conn_open = false;
-              served = served + 1;
+              let oe = stream.ws_origin_check_req(&req);
+              if oe.len() > 0 {
+                var hs0: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+                let rbody = envelope.error_body("forbidden", oe);
+                var resp = http.build_response_full(403, CONTENT_JSON, &hs0, rbody, false);
+                resp = with_std_headers(with_cors(resp, &req));
+                let _w = after_response(client, resp, rid, req.method, req.target, 403, rbody.len(), t0_ms, false);
+                conn_open = false;
+              } else {
+                let sm = stream.ws_stream(client, &raw, &req);
+                record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+                conn_open = false;
+                served = served + 1;
+              }
             }
           } else {
             let outcome = build_dispatch_response(&req, reuse);

@@ -70,6 +70,9 @@ a.out
 # benchmark dependencies (package-lock.json + results stay committed)
 /benchmarks/bttger/node_modules/
 
+# Python cache from the smoke clients
+__pycache__/
+
 # Secrets / env
 .env
 .env.*

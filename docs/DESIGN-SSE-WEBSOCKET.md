@@ -92,6 +92,11 @@ user-registerable stream routes yet).
   with 1003 in v1
 - max pending frame 1 MiB -> close 1009
 - idle read timeout (`PULSE_READ_TIMEOUT`) -> close 1001
+- Origin policy: no `Origin` (non-browser client) is allowed; a browser
+  `Origin` must match `Host` (default ports normalized) or be in the
+  `PULSE_CORS_ORIGIN` allowlist; otherwise 403. This is a browser
+  same-origin guard, not authentication -- user-data routes still need
+  their own auth.
 - no `wss://` in-process: TLS stays at the front proxy (W2)
 
 ### S4. Gate and metrics
@@ -119,15 +124,19 @@ deadline path is not reused.
   Content-Length, `event:`/`data:` shape)
 - WS header validation: valid handshake, missing key, wrong version,
   HTTP/1.0, missing `Connection: Upgrade`
+- WS Origin policy: absent, same-origin, default ports, non-default port,
+  cross-origin rejection, `null`, allowlist and wildcard
 
 `scripts/stream_smoke.ps1` / `.sh` (live, both platforms):
 - start the product server, `GET /api/sse?events=3&interval_ms=10`,
   verify 200 + `text/event-stream` + chunked + 3 `event: tick` + 1
   `event: done`
-- open a raw socket to `/api/ws`, send the RFC 6455 example key, verify
-  101 + `Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=`
+- open a raw socket to `/api/ws` with a same-origin `Origin`, send the
+  RFC 6455 example key, verify 101 +
+  `Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=`
 - send masked text `hello`, expect the unmasked echo; ping -> pong;
-  close -> close; quit the server
+  close -> close
+- a cross-origin handshake gets 403, and a plain GET gets 426
 
 ## 5. Out of scope (explicit)
 
@@ -135,7 +144,8 @@ deadline path is not reused.
 - SSE event bus/subscription sources (a demo tick source is used).
 - WebSocket permessage-deflate, subprotocol negotiation, fragmentation.
 - `wss://` in-process (TLS remains the front proxy; W2 owns native TLS).
-- WebSocket Origin/auth policy: the v1 endpoint is an echo demo with no
-  data access. A user-data endpoint MUST add an Origin allowlist (and its
-  own auth) before it is exposed; that is not implied by this unit.
+- WebSocket authentication: the v1 endpoint is an echo demo with no data
+  access. The Origin policy (same-origin default + CORS allowlist) is
+  enforced, but a user-data endpoint MUST add its own auth before it is
+  exposed; that is not implied by this unit.
 - Per-event rate limiting and backpressure beyond the socket timeout.

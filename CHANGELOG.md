@@ -29,11 +29,13 @@ GitHub release body.
   chunked `text/event-stream` events (events/interval knobs, CORS, proxy
   buffering off) and `GET /api/ws` performs the RFC 6455 handshake plus a
   masked echo frame loop (ping/pong, close, 1 MiB cap, 1002/1003/1009
-  rules; plain GET returns 426). Pure gate `tests/test_stream.xi` (37
-  checks) and live `scripts/stream_smoke.*` (15 checks) run on both
-  platforms; design + reference matrix in
-  `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route registration and
-  fragmentation remain follow-ups.
+  rules; plain GET returns 426). Browser `Origin` is same-origin by
+  default, with the `PULSE_CORS_ORIGIN` allowlist and a 403 otherwise;
+  authentication remains application-level. Pure gate
+  `tests/test_stream.xi` (46 checks) and live `scripts/stream_smoke.*`
+  (17 checks, launched under the RSS cap) run on both platforms; design +
+  reference matrix in `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route
+  registration and fragmentation remain follow-ups.
 - **Per-route rate policy (W6):** `PULSE_RATE_ROUTES` adds token buckets
   keyed by `METHOD PATH=RATE[/BURST]` (method `*` allowed; PATH is a route
   template) on top of the global bucket, which still runs first. Invalid

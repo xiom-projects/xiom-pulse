@@ -25,16 +25,13 @@ $srvLog = Join-Path $logDir "stream-smoke-server-$stamp.log"
 $env:PULSE_PORT = "$Port"
 $env:PULSE_RATE_LIMIT = "0"
 $env:PULSE_RATE_ROUTES = ""
+if (-not $env:PULSE_MAX_RSS_MB) { $env:PULSE_MAX_RSS_MB = "2048" }
 
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = "cmd.exe"
-$psi.Arguments = "/c `"`"$srvExe`" > `"$srvLog`" 2>&1`""
-$psi.WorkingDirectory = $repoRoot
-$psi.UseShellExecute = $false
-$psi.CreateNoWindow = $true
-$srv = New-Object System.Diagnostics.Process
-$srv.StartInfo = $psi
-$null = $srv.Start()
+# Owner directive: launch the app under the RSS watchdog.
+$capScript = Join-Path $repoRoot "scripts\capped_app.ps1"
+$capArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $capScript, "-Exe", $srvExe)
+$srvErrLog = "$srvLog.err"
+$srv = Start-Process -FilePath "powershell" -ArgumentList $capArgs -PassThru -NoNewWindow -RedirectStandardOutput $srvLog -RedirectStandardError $srvErrLog
 
 $ready = $false
 for ($i = 0; $i -lt 50; $i++) {

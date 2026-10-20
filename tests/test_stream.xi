@@ -93,6 +93,20 @@ pub fn main() -> Int {
   let req2 = http.parse_request(&raw2);
   f = f + check("ws_check_req no key", stream.ws_check_req(&raw2, &req2).len() > 0);
 
+  // WebSocket Origin policy: same-origin default + PULSE_CORS_ORIGIN allowlist.
+  f = f + check("ws origin absent", stream.ws_origin_check("", "example.com") == "");
+  f = f + check("ws origin same", stream.ws_origin_check("https://example.com", "example.com") == "");
+  f = f + check("ws origin same :443", stream.ws_origin_check("https://example.com:443", "example.com") == "");
+  f = f + check("ws origin same :80", stream.ws_origin_check("http://example.com:80", "example.com") == "");
+  f = f + check("ws origin same :8080", stream.ws_origin_check("http://example.com:8080", "example.com:8080") == "");
+  f = f + check("ws origin cross rejected", stream.ws_origin_check("https://evil.example", "example.com").len() > 0);
+  f = f + check("ws origin null rejected", stream.ws_origin_check("null", "example.com").len() > 0);
+  env.set_var("PULSE_CORS_ORIGIN", "https://allowed.example");
+  f = f + check("ws origin allowlist", stream.ws_origin_check("https://allowed.example", "example.com") == "");
+  env.set_var("PULSE_CORS_ORIGIN", "*");
+  f = f + check("ws origin wildcard", stream.ws_origin_check("https://any.example", "example.com") == "");
+  env.remove_var("PULSE_CORS_ORIGIN");
+
   if f == 0 {
     io.println("pulse-stream: GREEN");
   } else {

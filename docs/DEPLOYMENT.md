@@ -226,8 +226,9 @@ Through-proxy verification checklist:
 - Realtime v1 ships demo stream endpoints, not dynamic registration:
   `/api/sse` and `/api/ws` are fixed. WebSocket fragmentation,
   permessage-deflate and subprotocols are follow-ups; `wss://` is the
-  proxy's job. The echo endpoint has no auth/Origin allowlist -- add both
-  before putting user data behind a WebSocket route.
+  proxy's job. The echo endpoint enforces a same-origin default plus the
+  `PULSE_CORS_ORIGIN` allowlist, but has no auth -- add auth before
+  putting user data behind a WebSocket route.
 
 ## 8. Linux deployment (verified 2026-10-07)
 
