@@ -224,7 +224,7 @@ Through-proxy verification checklist:
   session persistence are roadmap items (see `docs/PROGRESS.md`).
 - `/metrics` has no auth of its own -- restrict at the proxy.
 - Realtime v1 ships demo stream endpoints, not dynamic registration:
-  `/api/sse` and `/api/ws` are fixed. WebSocket fragmentation,
+  `/api/sse` and `/api/ws` are fixed. WebSocket fragmentation is covered;
   permessage-deflate and subprotocols are follow-ups; `wss://` is the
   proxy's job. The echo endpoint enforces a same-origin default plus the
   `PULSE_CORS_ORIGIN` allowlist, but has no auth -- add auth before

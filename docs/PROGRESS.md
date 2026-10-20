@@ -937,6 +937,17 @@ cross-origin check. CI `39482651468` green both; the first run
 `PULSE_CORS_ORIGIN=*`), fixed in `db5cf48`. Score holds (~55.8%; realtime
 security tightened, no score-table change)._
 
+_Delta 2026-10-20 (WebSocket fragmentation): fragmented data messages are
+reassembled (data frame with `fin=false`, continuation frames, completion
+echoed as one frame with the original opcode); interleaved control frames
+are handled; an unexpected continuation or a new data frame during
+fragmentation closes 1002; a reassembled message over 1 MiB closes 1009.
+Live `stream_smoke` grows to **20/20** (fragmented echo + orphan
+continuation close), and the 2 GB cap stays on. Full gates green both
+platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2, stream
+46/46 + live 20/20. Per `REL-20261020-1704-pulse`, Linux/1M JSON-heavy
+load remains blocked._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

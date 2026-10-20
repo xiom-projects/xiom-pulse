@@ -88,8 +88,12 @@ user-registerable stream routes yet).
 - text (1) and binary (2) echo; ping (9) -> pong (10); pong ignored;
   close (8) echoed with the same payload
 - control frames must be FIN and <= 125 bytes (1002 otherwise)
-- fragmentation/continuation (opcode 0 or `fin = false`) is rejected
-  with 1003 in v1
+- fragmented data messages are reassembled: a data frame with
+  `fin = false` opens a message, continuation frames append, `fin = true`
+  completes it (echoed as one frame with the original opcode); control
+  frames may interleave; an unexpected continuation or a new data frame
+  during fragmentation closes 1002; a reassembled message over 1 MiB
+  closes 1009
 - max pending frame 1 MiB -> close 1009
 - idle read timeout (`PULSE_READ_TIMEOUT`) -> close 1001
 - Origin policy: no `Origin` (non-browser client) is allowed; a browser
@@ -136,13 +140,15 @@ deadline path is not reused.
   `Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=`
 - send masked text `hello`, expect the unmasked echo; ping -> pong;
   close -> close
+- send a fragmented `hel` + `lo` with an interleaved ping and expect one
+  echoed text frame; an unexpected continuation gets close 1002
 - a cross-origin handshake gets 403, and a plain GET gets 426
 
 ## 5. Out of scope (explicit)
 
 - Dynamic user stream-route registration (the router is still static).
 - SSE event bus/subscription sources (a demo tick source is used).
-- WebSocket permessage-deflate, subprotocol negotiation, fragmentation.
+- WebSocket permessage-deflate and subprotocol negotiation.
 - `wss://` in-process (TLS remains the front proxy; W2 owns native TLS).
 - WebSocket authentication: the v1 endpoint is an echo demo with no data
   access. The Origin policy (same-origin default + CORS allowlist) is

@@ -28,14 +28,15 @@ GitHub release body.
   fd to `src/stream.xi` after the frozen gate. `GET /api/sse` streams
   chunked `text/event-stream` events (events/interval knobs, CORS, proxy
   buffering off) and `GET /api/ws` performs the RFC 6455 handshake plus a
-  masked echo frame loop (ping/pong, close, 1 MiB cap, 1002/1003/1009
-  rules; plain GET returns 426). Browser `Origin` is same-origin by
-  default, with the `PULSE_CORS_ORIGIN` allowlist and a 403 otherwise;
-  authentication remains application-level. Pure gate
-  `tests/test_stream.xi` (46 checks) and live `scripts/stream_smoke.*`
-  (17 checks, launched under the RSS cap) run on both platforms; design +
-  reference matrix in `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route
-  registration and fragmentation remain follow-ups.
+  masked echo frame loop (ping/pong, close, fragmented-message
+  reassembly, 1 MiB cap, 1002/1003/1009 rules; plain GET returns 426).
+  Browser `Origin` is same-origin by default, with the
+  `PULSE_CORS_ORIGIN` allowlist and a 403 otherwise; authentication
+  remains application-level. Pure gate `tests/test_stream.xi` (46 checks)
+  and live `scripts/stream_smoke.*` (20 checks, launched under the RSS
+  cap) run on both platforms; design + reference matrix in
+  `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route registration and
+  permessage-deflate remain follow-ups.
 - **Per-route rate policy (W6):** `PULSE_RATE_ROUTES` adds token buckets
   keyed by `METHOD PATH=RATE[/BURST]` (method `*` allowed; PATH is a route
   template) on top of the global bucket, which still runs first. Invalid

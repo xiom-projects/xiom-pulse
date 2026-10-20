@@ -277,6 +277,8 @@ pub fn ws_stream(fd: Int, raw: &Vec[UInt8], _req: &PulseRequest) -> (Int, Int) {
   let _ = socket.socket_set_timeout(fd, config.cfg_read_timeout());
   var buf: Vec[UInt8] = Vec[UInt8].new();
   var echoed: Int = 0;
+  var frag_op: Int = 0;
+  var frag: Vec[UInt8] = Vec[UInt8].new();
   var open: Bool = true;
   while open {
     let parsed = websocket.ws_frame_take(&buf);
@@ -303,14 +305,43 @@ pub fn ws_stream(fd: Int, raw: &Vec[UInt8], _req: &PulseRequest) -> (Int, Int) {
       } elif !frame.masked {
         let _ = ws_close(fd, 1002, "client frames must be masked");
         open = false;
-      } elif !frame.fin || op == 0 {
-        let _ = ws_close(fd, 1003, "fragmentation unsupported");
-        open = false;
-      } elif op == 1 || op == 2 {
-        if !ws_send(fd, op, &frame.payload) {
+      } elif op == 0 {
+        // Continuation: only valid while a fragmented data message is open.
+        if frag_op == 0 {
+          let _ = ws_close(fd, 1002, "unexpected continuation");
+          open = false;
+        } elif frag.len() + frame.payload.len() > MAX_WS_PENDING {
+          let _ = ws_close(fd, 1009, "message too large");
           open = false;
         } else {
-          echoed = echoed + frame.payload.len();
+          push_bytes(&mut frag, &frame.payload);
+          if frame.fin {
+            if !ws_send(fd, frag_op, &frag) {
+              open = false;
+            } else {
+              echoed = echoed + frag.len();
+            }
+            frag_op = 0;
+            frag = Vec[UInt8].new();
+          }
+        }
+      } elif op == 1 || op == 2 {
+        if frag_op != 0 {
+          let _ = ws_close(fd, 1002, "new data frame during fragmentation");
+          open = false;
+        } elif frame.fin {
+          if !ws_send(fd, op, &frame.payload) {
+            open = false;
+          } else {
+            echoed = echoed + frame.payload.len();
+          }
+        } elif frame.payload.len() > MAX_WS_PENDING {
+          let _ = ws_close(fd, 1009, "message too large");
+          open = false;
+        } else {
+          frag_op = op;
+          frag = Vec[UInt8].new();
+          push_bytes(&mut frag, &frame.payload);
         }
       } else {
         let _ = ws_close(fd, 1003, "unsupported opcode");

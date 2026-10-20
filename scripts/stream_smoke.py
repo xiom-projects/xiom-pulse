@@ -77,10 +77,10 @@ def sse(host, port, timeout):
     return text
 
 
-def ws_frame(opcode, payload):
+def ws_frame(opcode, payload, fin=True):
     mask = b"\x11\x22\x33\x44"
     n = len(payload)
-    head = bytes([0x80 | opcode])
+    head = bytes([(0x80 if fin else 0x00) | opcode])
     if n < 126:
         head += bytes([0x80 | n])
     elif n < 65536:
@@ -135,14 +135,42 @@ def websocket(host, port, timeout):
     s.sendall(ws_frame(1, b"hello"))
     op, payload = read_frame(s)
     check("ws text echo", op == 1 and payload == b"hello")
+    s.sendall(ws_frame(1, b"hel", False))
     s.sendall(ws_frame(9, b"p"))
     op, payload = read_frame(s)
     check("ws ping/pong", op == 10 and payload == b"p")
+    s.sendall(ws_frame(0, b"lo", True))
+    op, payload = read_frame(s)
+    check("ws fragmented echo", op == 1 and payload == b"hello")
     s.sendall(ws_frame(8, b"\x03\xe8bye"))
     op, payload = read_frame(s)
     check("ws close echo", op == 8)
     s.close()
     return text
+
+
+def bad_fragment(host, port, timeout):
+    key = "dGhlIHNhbXBsZSBub25jZQ=="
+    origin = "http://{}:{}".format(host, port)
+    s = socket.create_connection((host, port), timeout)
+    s.settimeout(timeout)
+    req = (
+        f"GET /api/ws HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        f"Origin: {origin}\r\n"
+        f"Upgrade: websocket\r\n"
+        f"Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Key: {key}\r\n"
+        f"Sec-WebSocket-Version: 13\r\n"
+        f"\r\n"
+    )
+    s.sendall(req.encode())
+    _ = recv_until(s, b"\r\n\r\n", 4096)
+    s.sendall(ws_frame(0, b"x", True))
+    op, payload = read_frame(s)
+    check("ws orphan continuation close", op == 8)
+    check("ws orphan continuation 1002", payload[:2] == b"\x03\xea")
+    s.close()
 
 
 def bad_origin(host, port, timeout):
@@ -189,6 +217,7 @@ def main():
     try:
         sse(args.host, args.port, args.timeout)
         websocket(args.host, args.port, args.timeout)
+        bad_fragment(args.host, args.port, args.timeout)
         bad_origin(args.host, args.port, args.timeout)
         bad_upgrade(args.host, args.port, args.timeout)
     except Exception as exc:  # noqa: BLE001 -- smoke client reports the cause
