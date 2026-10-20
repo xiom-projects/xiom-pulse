@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-20 (SSE + WebSocket units landed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-20 (SSE + WebSocket units landed; stdlib JSON builder leak filed as `REL-20261020-1704-pulse`; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -910,6 +910,19 @@ closes the fd once; router/OpenAPI are unchanged. `tests/test_stream.xi`
 `39427518984` green both platforms. Score holds (~55.8%; realtime
 capability opened; dynamic stream routes, fragmentation and WS
 Origin/auth are explicit follow-ups)._
+
+_Delta 2026-10-20 (Linux bench attempt -> stdlib blocker):
+`benchmarks/bttger/` ran on the Linux build under the 2 GB workstation
+cap. `/serialize/big` completed 1,624 of 5,000 requests before RSS reached
+2,102,528 KB and the watchdog killed it; the remaining endpoints failed
+with the server gone. A pure probe (`tests/probes/probe_json_leak.xi`)
+builds the same 50-publication object without HTTP and is killed at
+512 MB after ~500 iterations (530,944 KB), so the retention is in the
+stdlib JSON builder (`json_set`/`json_array_push` copy-on-write), not the
+HTTP loop. Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high);
+the Linux leg and the 1M-request benchmark are blocked until it is fixed.
+The Windows baseline is unaffected; no invalid Linux result is
+published. The 2 GB watchdog is what kept the PC safe._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

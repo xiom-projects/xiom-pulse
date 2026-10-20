@@ -5,7 +5,9 @@
 **Date:** 2026-10-19 (session 22). **Commit:** `9b97eb7`. **CI:**
 `39335266242` (both platforms green, including the benchmark-app build
 gate). **Status:** baseline only, not a cross-framework ranking. Raw
-autocannon output is committed under `benchmarks/bttger/results/`.
+autocannon output is committed under `benchmarks/bttger/results/`. The
+Linux leg and the 1M-request run are **blocked** on stdlib JSON builder
+memory retention (`REL-20261020-1704-pulse`); see section 4.1.
 
 ## 1. What was measured
 
@@ -79,6 +81,25 @@ autocannon's socket timeout.
 | `insertObject` | 192.0 | 5 | 6 | 7 | 4992 | 0 | 8 |
 | `getCalculated` | 50.0 | 5 | 217 | 245 | 50 | 0 | 0 |
 
+## 4.1 Linux attempt (2026-10-20) -- blocked by a stdlib leak
+
+The capped Linux leg (same binary built for WSL, `PULSE_MAX_RSS_MB=2048`,
+5,000 requests) was stopped by the RSS watchdog during
+`getSerializedBig`: **1,624 of 5,000** requests completed, then RSS reached
+**2,102,528 KB** and the watchdog killed the process. Every later
+endpoint failed with the server gone; no valid Linux result is published.
+
+A pure repro without HTTP (`tests/probes/probe_json_leak.xi`) builds the
+same 50-publication object in a loop and is killed by a **512 MB** cap
+after ~500 iterations (RSS **530,944 KB**). The leak is in the stdlib JSON
+builder path (`json_set` / `json_array_push` copy-on-write), not the HTTP
+loop. Filed on the relay as **`REL-20261020-1704-pulse`** (pulse ->
+stdlib, high). The 1M-request benchmark and the Linux leg stay blocked
+until the stdlib fix lands.
+
+The Windows baseline above is unaffected: it completed all 5,000 requests
+per endpoint before the cap policy; see section 7 for the caveat.
+
 ## 5. Findings
 
 1. **The sequential-accept loop is the ceiling.** The Beacon core serves
@@ -138,3 +159,7 @@ reference-suite shape. Raw files:
 - The contract app is intentionally minimal (Beacon core, no Station
   middleware beyond the package's security headers). Product-server
   numbers will differ.
+- **Blocked:** the Linux leg and the full 1M amount cannot run until the
+  stdlib JSON builder leak is fixed; the Linux attempt was killed by the
+  2 GB workstation cap after 1,624 `/serialize/big` requests. The pure
+  probe reproduces it without HTTP.
