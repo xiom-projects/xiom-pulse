@@ -132,9 +132,11 @@ already default]; Windows x64 production template [O]; macOS legs
 [C v0.64.6 pair, then Q re-test]; edge TLS-version/cipher floors for
 old clients [O, documented].
 
-**W4 Realtime.** SSE unit [Q] over S: SSE connection helpers
-(completing stubs); WebSocket unit [Q] over the delivered WS helpers,
-`wss://` after W2 TLS; jobs core [Q, designed].
+**W4 Realtime.** SSE unit [Q, **done 2026-10-20**: chunked
+`text/event-stream` takeover + `/api/sse` demo]; WebSocket unit [Q,
+**done 2026-10-20**: 101 + masked frame loop + `/api/ws` echo], with
+dynamic stream-route registration, fragmentation/permessage-deflate and
+`wss://` (after W2 TLS) as follow-ups; jobs core [Q, designed].
 
 **W5 Data.** SQL migrations runner + pooling [Q; driver co-verified
 24/24]; durability Phase A/B incl. `fsync_dir` publish ordering [Q,

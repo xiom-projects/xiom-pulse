@@ -31,6 +31,7 @@ use xiom.serialize.json;
 use xiom.pulse.http;
 use xiom.pulse.app;
 use xiom.pulse.station.router;
+use xiom.pulse.station.stream;
 use xiom.pulse.envelope;
 use xiom.pulse.station.config;
 use xiom.pulse.metrics;
@@ -847,6 +848,18 @@ fn is_mutating(method: Str) -> Bool {
   return method == "POST" || method == "PUT" || method == "DELETE" || method == "PATCH";
 }
 
+/// record_response is the shared afterResponse bookkeeping for normal and
+/// streamed responses (metrics + access log exactly once; audit opt-in).
+/// Complexity: O(1).
+fn record_response(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur: Int, audit: Bool) {
+  metrics.metrics_record(status, bytes);
+  metrics.metrics_record_duration(dur);
+  access_log(rid, method, target, status, bytes, dur);
+  if audit {
+    audit_event(rid, method, target, status);
+  }
+}
+
 /// after_response is the single afterResponse call site (middleware Phase A):
 /// send the built response, then record metrics + the access log exactly
 /// once; audit only when the caller requests it (committed non-GET).
@@ -858,12 +871,7 @@ fn after_response(fd: Int, resp: Vec[UInt8], rid: Str, method: Str, target: Str,
     io.flush_stdout();
   }
   let dur = time.monotonic_ms() - t0_ms;
-  metrics.metrics_record(status, bytes);
-  metrics.metrics_record_duration(dur);
-  access_log(rid, method, target, status, bytes, dur);
-  if audit {
-    audit_event(rid, method, target, status);
-  }
+  record_response(rid, method, target, status, bytes, dur, audit);
   return w_ok;
 }
 
@@ -1363,12 +1371,39 @@ pub fn main() -> Int {
           let _w = after_response(client, gate.resp, rid, g_method, g_target, g_status, g_bytes, t0_ms, false);
           conn_open = g_reuse;
         } else {
-          let outcome = build_dispatch_response(&req, reuse);
-          let o_status = outcome.1;
-          let o_bytes = outcome.2;
-          let _w = after_response(client, outcome.0, rid, req.method, req.target, o_status, o_bytes, t0_ms, req.method != "GET");
-          conn_open = reuse;
-          served = served + 1;
+          // Realtime takeover: the stream unit owns the fd after the gate.
+          // 1 = SSE, 2 = WebSocket (docs/DESIGN-SSE-WEBSOCKET.md).
+          let sk = stream.stream_kind(req.method, router.v1_path(req.target));
+          if sk == 1 {
+            let sm = stream.sse_stream(client, &req);
+            record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+            conn_open = false;
+            served = served + 1;
+          } elif sk == 2 {
+            let we = stream.ws_check_req(&raw, &req);
+            if we.len() > 0 {
+              var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+              hs.push(("Upgrade", "websocket"));
+              hs.push(("Sec-WebSocket-Version", "13"));
+              let rbody = envelope.error_body("upgrade_required", we);
+              var resp = http.build_response_full(426, CONTENT_JSON, &hs, rbody, false);
+              resp = with_std_headers(with_cors(resp, &req));
+              let _w = after_response(client, resp, rid, req.method, req.target, 426, rbody.len(), t0_ms, false);
+              conn_open = false;
+            } else {
+              let sm = stream.ws_stream(client, &raw, &req);
+              record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+              conn_open = false;
+              served = served + 1;
+            }
+          } else {
+            let outcome = build_dispatch_response(&req, reuse);
+            let o_status = outcome.1;
+            let o_bytes = outcome.2;
+            let _w = after_response(client, outcome.0, rid, req.method, req.target, o_status, o_bytes, t0_ms, req.method != "GET");
+            conn_open = reuse;
+            served = served + 1;
+          }
         }
         if conn_open && reuse {
           // Carry pipelined trailing bytes into the next cycle (h11 rule

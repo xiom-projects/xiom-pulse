@@ -109,6 +109,36 @@ server {
 **Important:** until stdlib recv timeouts land, the proxy MUST enforce read
 timeouts -- a half-open request can hold PULSE's single-threaded loop.
 
+### 3.1 Realtime (SSE + WebSocket) through the proxy
+
+PULSE writes SSE as a chunked `text/event-stream` response and upgrades
+WebSocket on the same loopback port. The public proxy must not buffer SSE
+and must forward the upgrade:
+
+```nginx
+location = /api/sse {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 3600s;
+    proxy_set_header Connection "";
+}
+
+location = /api/ws {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 3600s;
+}
+```
+
+Caddy's `reverse_proxy` upgrades WebSocket automatically; add
+`flush_interval -1` to the SSE route to disable response buffering.
+`wss://` terminates at this proxy; PULSE itself remains plaintext HTTP/1.1.
+The direct checks are `scripts/stream_smoke.ps1` / `.sh`.
+
 ## 4. Service supervision
 
 **Windows (NSSM or Task Scheduler):**
@@ -163,6 +193,9 @@ Through-proxy verification checklist:
    `scripts\rate_smoke.ps1` for both patterns.
 5. Kill the app; proxy health check flips unhealthy; supervisor restarts it
    (process supervision is external until PULSE grows signal handling).
+6. `/api/sse` emits chunked events without proxy buffering; `/api/ws`
+   completes the 101 handshake and echoes a masked text frame through the
+   proxy (`scripts/stream_smoke.*` covers the direct path).
 
 ## 7. Known gaps that affect deployment
 
@@ -171,6 +204,11 @@ Through-proxy verification checklist:
 - Sessions are in-memory (restart logs users out); secret rotation and
   session persistence are roadmap items (see `docs/PROGRESS.md`).
 - `/metrics` has no auth of its own -- restrict at the proxy.
+- Realtime v1 ships demo stream endpoints, not dynamic registration:
+  `/api/sse` and `/api/ws` are fixed. WebSocket fragmentation,
+  permessage-deflate and subprotocols are follow-ups; `wss://` is the
+  proxy's job. The echo endpoint has no auth/Origin allowlist -- add both
+  before putting user data behind a WebSocket route.
 
 ## 8. Linux deployment (verified 2026-10-07)
 

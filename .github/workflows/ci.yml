@@ -82,6 +82,14 @@ jobs:
         shell: bash
         run: bash scripts/build.sh benchmarks/bttger/main.xi --name bench_bttger --timeout-sec 300
 
+      - name: Stream unit tests (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build.sh tests/test_stream.xi --name test_stream --timeout-sec 300
+          ./out/test_stream
+
       - name: Suites x2 + smoke (Linux)
         if: runner.os == 'Linux'
         shell: bash
@@ -93,6 +101,7 @@ jobs:
             done
           done
           bash scripts/http_smoke.sh --port 18090
+          bash scripts/stream_smoke.sh --port 18097 --server-exe ./out/pulse_app
 
       - name: Suites x2 + smoke (Windows)
         if: runner.os == 'Windows'
@@ -106,3 +115,9 @@ jobs:
           }
           & scripts\http_smoke.ps1 -Port 18090
           if ($LASTEXITCODE -ne 0) { throw "smoke failed with exit $LASTEXITCODE" }
+          & scripts\build.ps1 tests\test_stream.xi -Name test_stream -TimeoutSec 300
+          if ($LASTEXITCODE -ne 0) { throw "stream unit test build failed with exit $LASTEXITCODE" }
+          & .\out\test_stream.exe
+          if ($LASTEXITCODE -ne 0) { throw "stream unit tests failed with exit $LASTEXITCODE" }
+          & scripts\stream_smoke.ps1 -Port 18097 -ServerExe .\out\pulse_app.exe
+          if ($LASTEXITCODE -ne 0) { throw "stream smoke failed with exit $LASTEXITCODE" }
