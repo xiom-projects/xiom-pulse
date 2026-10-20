@@ -919,8 +919,12 @@ with the server gone. A pure probe (`tests/probes/probe_json_leak.xi`)
 builds the same 50-publication object without HTTP and is killed at
 512 MB after ~500 iterations (530,944 KB), so the retention is in the
 stdlib JSON builder (`json_set`/`json_array_push` copy-on-write), not the
-HTTP loop. Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high);
-the Linux leg and the 1M-request benchmark are blocked until it is fixed.
+HTTP loop. A second probe (`tests/probes/probe_json_parse.xi`) builds the
+document once and loops `json_parse` -> `json_stringify`; it is also
+killed at 512 MB after ~1,100 iterations (527,872 KB), so the parse and
+stringify paths retain too. Filed **`REL-20261020-1704-pulse`** (pulse ->
+stdlib, high; updated with the isolation result); the Linux leg and the
+1M-request benchmark are blocked until it is fixed.
 The Windows baseline is unaffected; no invalid Linux result is
 published. The 2 GB watchdog is what kept the PC safe._
 

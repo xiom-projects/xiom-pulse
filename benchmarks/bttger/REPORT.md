@@ -91,11 +91,14 @@ endpoint failed with the server gone; no valid Linux result is published.
 
 A pure repro without HTTP (`tests/probes/probe_json_leak.xi`) builds the
 same 50-publication object in a loop and is killed by a **512 MB** cap
-after ~500 iterations (RSS **530,944 KB**). The leak is in the stdlib JSON
-builder path (`json_set` / `json_array_push` copy-on-write), not the HTTP
-loop. Filed on the relay as **`REL-20261020-1704-pulse`** (pulse ->
-stdlib, high). The 1M-request benchmark and the Linux leg stay blocked
-until the stdlib fix lands.
+after ~500 iterations (RSS **530,944 KB**). A second probe
+(`tests/probes/probe_json_parse.xi`) builds the document once and then
+loops `json_parse` -> `json_stringify`; it is also killed at 512 MB after
+~1,100 iterations (RSS **527,872 KB**). The retention is therefore broader
+than the builder's copy-on-write (`json_set` / `json_array_push`): the
+parse/stringify path retains too. Filed on the relay as
+**`REL-20261020-1704-pulse`** (pulse -> stdlib, high). The 1M-request
+benchmark and the Linux leg stay blocked until the stdlib fix lands.
 
 The Windows baseline above is unaffected: it completed all 5,000 requests
 per endpoint before the cap policy; see section 7 for the caveat.
