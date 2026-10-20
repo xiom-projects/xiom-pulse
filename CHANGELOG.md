@@ -8,6 +8,11 @@ GitHub release body.
 
 ### Added
 
+- **Workstation memory cap:** `scripts/capped_app.ps1` /
+  `scripts/capped_app.sh` run the app under an RSS watchdog (default
+  **2048 MB**, `PULSE_MAX_RSS_MB` override) and kill the process tree at
+  the cap (exit 137). Use it for manual/long runs and benchmark servers;
+  CI runners are isolated.
 - **SQL store/repository layer (opt-in):** `src/sql.xi`
   (`xiom.pulse.station.sql`) over `xiom.sqlite` 0.4.1 -- integer
   connection handles, mandatory value binding (`p_text`/`p_int`/

@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; 37/37 pure + 15/15 live on Windows + WSL); CI `39427518984` green both; `main = c610e7c` at wrap start (this wrap commit follows). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, stream 37/37 + live 15/15, on v0.64.8 + stdlib `112c5b6`. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform linux-arm64 CI (cross toolchain) + macOS legs; bench Linux/1M + xlcaptain; realtime follow-ups (dynamic stream routes, fragmentation, WS Origin/auth). Doorbell armed.
+**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; 37/37 pure + 15/15 live on Windows + WSL); CI `39427518984` green both; `main = c610e7c` at wrap start (this wrap commit follows). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, stream 37/37 + live 15/15, on v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform linux-arm64 CI (cross toolchain) + macOS legs; bench Linux/1M + xlcaptain; realtime follow-ups (dynamic stream routes, fragmentation, WS Origin/auth). Doorbell armed.
 
 **SESSION 23 (2026-10-20 -- SSE + WebSocket, W4):** **REALTIME UNITS LANDED.** `src/stream.xi` (`xiom.pulse.station.stream`) takes over the accepted fd after the frozen gate. `GET /api/sse` streams chunked `text/event-stream` ticks (events/interval clamps, CORS, no `Content-Length`, zero chunk) and `GET /api/ws` performs the RFC 6455 101 handshake plus a masked echo frame loop (text/binary echo, ping/pong, close, 1 MiB cap, 1002/1003/1009; plain GET -> 426). The loop records 200/101 through the shared `record_response` path and closes the fd once; the router/OpenAPI surface is unchanged. Tests: `tests/test_stream.xi` **37/37** (pure) and `scripts/stream_smoke.*` **15/15** live on Windows + WSL; CI gains both gates. Design + fastapi/h11/fasthttp matrix: `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route registration, fragmentation/permessage-deflate and WS Origin/auth remain explicit follow-ups. `main = c062a58`; **CI `39427518984` GREEN both platforms** (ubuntu 6m22s, windows 5m34s).
 
@@ -1323,7 +1323,12 @@ next cycle); registry 3.0 pilot gate ping when production-serving
 (`REL-20261013-1707-registry`); no open PULSE ops items (1141 closed).
 Check the relay first every session -- packages/compiler move fast.
 
-DISCIPLINE: OWNER DIRECTIVE -- always the LATEST compiler, stdlib and
+DISCIPLINE: OWNER DIRECTIVE (2026-10-20) -- every manual or long app run
+on the workstation goes through `scripts\capped_app.ps1` /
+`scripts\capped_app.sh` (default **2048 MB RSS**, `PULSE_MAX_RSS_MB`
+override; the watchdog kills the tree at the cap, exit 137). Never run the
+1M benchmark or a soak uncapped. CI runners are isolated; short smoke
+scripts are bounded. Always the LATEST compiler, stdlib and
 registry packages. Pinned local builds: Windows
 %LOCALAPPDATA%\xiom.new-v0.64.8 + xiom-pins\stdlib-tag-v0.64.8; WSL
 ~/.local/share/xiom-v0648 + ~/.cache/xiom-pin/stdlib-tag-v0.64.8 (refresh

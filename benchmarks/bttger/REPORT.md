@@ -105,11 +105,13 @@ autocannon's socket timeout.
 # build the contract app (Beacon only; no SQLite C source)
 .\scripts\build.ps1 benchmarks\bttger\main.xi -Name bench_bttger
 
-# start it (the benchmark driver defaults to port 8080; 18088 avoids the
-# local Docker listener on this host)
+# start it under the workstation RSS cap (owner directive 2026-10-20);
+# the benchmark driver defaults to port 8080, 18088 avoids the local
+# Docker listener on this host
 $env:PULSE_PORT = "18088"
 $env:PULSE_IDLE_TIMEOUT = "120000"
-.\out\bench_bttger.exe
+$env:PULSE_MAX_RSS_MB = "2048"
+.\scripts\capped_app.ps1 -Exe .\out\bench_bttger.exe
 
 # in benchmarks\bttger (autocannon installed from package.json)
 $env:BENCH_PORT = "18088"

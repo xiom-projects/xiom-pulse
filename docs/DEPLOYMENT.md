@@ -109,7 +109,26 @@ server {
 **Important:** until stdlib recv timeouts land, the proxy MUST enforce read
 timeouts -- a half-open request can hold PULSE's single-threaded loop.
 
-### 3.1 Realtime (SSE + WebSocket) through the proxy
+### 3.1 Local app checks (workstation memory cap)
+
+Owner directive (2026-10-20): every manual or long app run on the
+workstation goes through the RSS watchdog, so a leak cannot take the PC
+down. Default cap **2048 MB**, override with `PULSE_MAX_RSS_MB`; the
+watchdog kills the process tree at the cap and exits **137**.
+
+```powershell
+.\scripts\capped_app.ps1 -Exe .\out\pulse_app.exe
+# or: $env:PULSE_MAX_RSS_MB = "1024"
+```
+
+```bash
+PULSE_MAX_RSS_MB=2048 ./scripts/capped_app.sh ./out/pulse_app
+```
+
+Use it for the benchmark server and any soak/manual check. CI runners are
+isolated; the short smoke scripts are bounded and launch directly.
+
+### 3.2 Realtime (SSE + WebSocket) through the proxy
 
 PULSE writes SSE as a chunked `text/event-stream` response and upgrades
 WebSocket on the same loopback port. The public proxy must not buffer SSE
