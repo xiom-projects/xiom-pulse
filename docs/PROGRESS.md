@@ -924,6 +924,19 @@ the Linux leg and the 1M-request benchmark are blocked until it is fixed.
 The Windows baseline is unaffected; no invalid Linux result is
 published. The 2 GB watchdog is what kept the PC safe._
 
+_Delta 2026-10-20 (WebSocket Origin policy): browser handshakes must now
+be same-origin (`Origin` host/port matches `Host`, default ports
+normalized) or named in `PULSE_CORS_ORIGIN`; otherwise 403 before the
+101. Origin-less non-browser clients remain allowed; authentication is
+still application-level. Tests: `test_stream` 46/46 and live
+`stream_smoke` 17/17 on both platforms. Both stream wrappers now launch
+the server under the 2 GB RSS cap; the smoke pins
+`PULSE_CORS_ORIGIN=""` so a prior `http_smoke` run cannot mask the
+cross-origin check. CI `39482651468` green both; the first run
+`39481818997` failed only in the harness (exec bit + inherited
+`PULSE_CORS_ORIGIN=*`), fixed in `db5cf48`. Score holds (~55.8%; realtime
+security tightened, no score-table change)._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
