@@ -25,6 +25,9 @@ $srvLog = Join-Path $logDir "stream-smoke-server-$stamp.log"
 $env:PULSE_PORT = "$Port"
 $env:PULSE_RATE_LIMIT = "0"
 $env:PULSE_RATE_ROUTES = ""
+# Deterministic Origin policy for the bad-origin check (http_smoke runs
+# earlier in the same CI shell and leaves PULSE_CORS_ORIGIN=* behind).
+$env:PULSE_CORS_ORIGIN = ""
 if (-not $env:PULSE_MAX_RSS_MB) { $env:PULSE_MAX_RSS_MB = "2048" }
 
 # Owner directive: launch the app under the RSS watchdog.

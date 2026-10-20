@@ -28,8 +28,11 @@ SRV_LOG="$LOG_DIR/stream-smoke-server-$(date +%Y%m%d%H%M%S).log"
 export PULSE_PORT="$PORT"
 export PULSE_RATE_LIMIT=0
 export PULSE_RATE_ROUTES=""
+# Deterministic Origin policy for the bad-origin check (http_smoke runs
+# earlier in the same CI step and exports PULSE_CORS_ORIGIN=*).
+export PULSE_CORS_ORIGIN=""
 export PULSE_MAX_RSS_MB="${PULSE_MAX_RSS_MB:-2048}"
-"$PULSE_REPO_ROOT/scripts/capped_app.sh" "$SERVER_EXE" >"$SRV_LOG" 2>&1 &
+bash "$PULSE_REPO_ROOT/scripts/capped_app.sh" "$SERVER_EXE" >"$SRV_LOG" 2>&1 &
 SRV_PID=$!
 if ! wait_listen "$PORT" 10; then
   tail -n 30 "$SRV_LOG" 2>/dev/null || true
