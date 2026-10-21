@@ -32,11 +32,13 @@ GitHub release body.
   reassembly, 1 MiB cap, 1002/1003/1009 rules; plain GET returns 426).
   Browser `Origin` is same-origin by default, with the
   `PULSE_CORS_ORIGIN` allowlist and a 403 otherwise; authentication
-  remains application-level. Pure gate `tests/test_stream.xi` (46 checks)
-  and live `scripts/stream_smoke.*` (20 checks, launched under the RSS
-  cap) run on both platforms; design + reference matrix in
-  `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route registration and
-  permessage-deflate remain follow-ups.
+  remains application-level. Stream routes live in a startup registry
+  (`init`/`register`; built-in SSE/WS kinds), appear in the `routes` CLI,
+  and accept per-route rate policy on their literal path. Pure gate
+  `tests/test_stream.xi` (57 checks) and live `scripts/stream_smoke.*`
+  (20 checks, launched under the RSS cap) run on both platforms; design +
+  reference matrix in `docs/DESIGN-SSE-WEBSOCKET.md`. User-supplied stream
+  handlers and permessage-deflate remain follow-ups.
 - **Per-route rate policy (W6):** `PULSE_RATE_ROUTES` adds token buckets
   keyed by `METHOD PATH=RATE[/BURST]` (method `*` allowed; PATH is a route
   template) on top of the global bucket, which still runs first. Invalid

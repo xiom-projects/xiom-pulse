@@ -45,7 +45,7 @@ Owner: S=stdlib, C=compiler, P=packages, Q=PULSE, O=ops.
 | 6 | Half-close + `shutdown(fd)` control (h11) | ❌ | S: `shutdown` is in the `0317-pulse` ask; needs landing |
 | 7 | Static: conditional GET (ETag/If-None-Match, Last-Modified) + Range requests (fastify-static, nginx) | ❌ | Q (no lane dependency) |
 | 8 | Response compression gzip/deflate (fastify-compress; nginx alt) | ❌ | **S: gzip/deflate primitives (new)**; O may front with nginx |
-| 9 | Streaming responses / SSE / chunked out (fastify, h11) | ✅ | SSE connection unit + chunked server writer + `/api/sse` demo (`docs/DESIGN-SSE-WEBSOCKET.md`); dynamic stream-route registration still Q |
+| 9 | Streaming responses / SSE / chunked out (fastify, h11) | ✅ | SSE connection unit + chunked server writer + `/api/sse` demo (`docs/DESIGN-SSE-WEBSOCKET.md`); startup stream registry + routes CLI + per-route rate landed; user stream handlers Q |
 | 10 | WebSockets (fastify-ws, gin) | ✅ | 101 handshake + server frame loop + `/api/ws` echo; same-origin/CORS Origin policy; masking/ping/close/fragmentation/limits covered; auth, permessage-deflate + `wss://` (edge TLS) still Q |
 | 11 | Multipart uploads (fastify-multipart) | ✅ | -- |
 | 12 | Cookies/sessions (fastify-cookie/session; registry pkgs) | ✅ | -- |

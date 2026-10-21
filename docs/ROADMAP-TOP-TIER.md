@@ -135,9 +135,9 @@ old clients [O, documented].
 **W4 Realtime.** SSE unit [Q, **done 2026-10-20**: chunked
 `text/event-stream` takeover + `/api/sse` demo]; WebSocket unit [Q,
 **done 2026-10-20**: 101 + masked frame loop + `/api/ws` echo], with
-dynamic stream-route registration, permessage-deflate and `wss://`
-(after W2 TLS) as follow-ups (fragmentation landed 2026-10-20); jobs core
-[Q, designed].
+user-supplied stream handlers (startup registry landed 2026-10-21),
+permessage-deflate and `wss://` (after W2 TLS) as follow-ups
+(fragmentation landed 2026-10-20); jobs core [Q, designed].
 
 **W5 Data.** SQL migrations runner + pooling [Q; driver co-verified
 24/24]; durability Phase A/B incl. `fsync_dir` publish ordering [Q,

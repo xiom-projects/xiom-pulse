@@ -35,14 +35,89 @@ const MAX_SSE_EVENTS: Int = 100;
 const MAX_SSE_INTERVAL_MS: Int = 5000;
 const MAX_WS_PENDING: Int = 1048576;
 
-/// stream_kind classifies a normalized target. Only GET is a stream.
-/// Complexity: O(1).
+// Runtime stream-route registry (append-only; scalar Vec state, the same
+// pattern as the kv holder). Handlers are the built-in SSE/WS kinds; user
+// handler registration remains a follow-up.
+var g_methods: Vec[Str] = Vec[Str].new();
+var g_paths: Vec[Str] = Vec[Str].new();
+var g_kinds: Vec[Int] = Vec[Int].new();
+var g_inited: Bool = false;
+
+fn valid_path(path: Str) -> Bool {
+  if path.len() < 2 { return false; }
+  if !string.str_starts_with(path, "/") { return false; }
+  if string.str_contains(path, "?") || string.str_contains(path, "#") { return false; }
+  return true;
+}
+
+fn find_route(method: Str, path: Str) -> Int {
+  var i: Int = 0;
+  while i < g_paths.len() {
+    if g_methods[i] == method && g_paths[i] == path { return i; }
+    i = i + 1;
+  }
+  return -1;
+}
+
+/// init registers the built-in demo routes once and returns the number
+/// added (0 on subsequent calls). Complexity: O(1).
+pub fn init() -> Int {
+  if g_inited { return 0; }
+  var n: Int = 0;
+  if register("GET", "/api/sse", STREAM_SSE) { n = n + 1; }
+  if register("GET", "/api/ws", STREAM_WS) { n = n + 1; }
+  g_inited = true;
+  return n;
+}
+
+/// register adds a stream route at startup. Only GET and the built-in
+/// kinds are accepted; duplicates/invalid paths fail closed.
+/// Complexity: O(routes).
+pub fn register(method: Str, path: Str, kind: Int) -> Bool {
+  if method != "GET" { return false; }
+  if kind != STREAM_SSE && kind != STREAM_WS { return false; }
+  if !valid_path(path) { return false; }
+  if find_route(method, path) >= 0 { return false; }
+  g_methods.push(method);
+  g_paths.push(path);
+  g_kinds.push(kind);
+  return true;
+}
+
+/// stream_kind classifies a normalized target. Self-initializes the demo
+/// routes. Complexity: O(routes).
 pub fn stream_kind(method: Str, target: Str) -> Int {
+  let _ = init();
   if method != "GET" { return STREAM_NONE; }
   let path = router.split_target(target).0;
-  if path == "/api/sse" { return STREAM_SSE; }
-  if path == "/api/ws" { return STREAM_WS; }
-  return STREAM_NONE;
+  let idx = find_route(method, path);
+  if idx < 0 { return STREAM_NONE; }
+  return g_kinds[idx];
+}
+
+/// route_path returns the registered path for a target (for per-route
+/// rate policy keys), or "" when unmatched. Complexity: O(routes).
+pub fn route_path(method: Str, target: Str) -> Str {
+  let _ = init();
+  let path = router.split_target(target).0;
+  let idx = find_route(method, path);
+  if idx < 0 { return ""; }
+  return g_paths[idx];
+}
+
+/// routes_text is the `routes` CLI block for stream routes.
+/// Complexity: O(routes).
+pub fn routes_text() -> Str {
+  let _ = init();
+  var out: Str = "";
+  var i: Int = 0;
+  while i < g_paths.len() {
+    var kind: Str = "ws";
+    if g_kinds[i] == STREAM_SSE { kind = "sse"; }
+    out = out + g_methods[i] + " " + g_paths[i] + " (" + kind + ")\n";
+    i = i + 1;
+  }
+  return out;
 }
 
 fn query_value(target: Str, name: Str) -> Str {

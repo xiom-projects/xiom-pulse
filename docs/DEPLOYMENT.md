@@ -223,12 +223,14 @@ Through-proxy verification checklist:
 - Sessions are in-memory (restart logs users out); secret rotation and
   session persistence are roadmap items (see `docs/PROGRESS.md`).
 - `/metrics` has no auth of its own -- restrict at the proxy.
-- Realtime v1 ships demo stream endpoints, not dynamic registration:
-  `/api/sse` and `/api/ws` are fixed. WebSocket fragmentation is covered;
+- Realtime v1 ships a startup stream registry with the demo endpoints
+  (`/api/sse`, `/api/ws`), visible in `pulse_app routes`; user-supplied
+  stream handlers are a follow-up. WebSocket fragmentation is covered;
   permessage-deflate and subprotocols are follow-ups; `wss://` is the
-  proxy's job. The echo endpoint enforces a same-origin default plus the
-  `PULSE_CORS_ORIGIN` allowlist, but has no auth -- add auth before
-  putting user data behind a WebSocket route.
+  proxy's job. Per-route rate policy works on stream paths too
+  (`PULSE_RATE_ROUTES="GET /api/sse=1/1"`). The echo endpoint enforces a
+  same-origin default plus the `PULSE_CORS_ORIGIN` allowlist, but has no
+  auth -- add auth before putting user data behind a WebSocket route.
 
 ## 8. Linux deployment (verified 2026-10-07)
 

@@ -36,7 +36,7 @@ PULSE has the wire primitives but no server-side realtime surface:
 | Reference | Mechanism | What PULSE needs | XIOM conversion |
 |---|---|---|---|
 | `fastapi/sse.py:20-33` `EventSourceResponse` | a `StreamingResponse` subclass with `media_type = "text/event-stream"` and an async iterator | one long-lived response whose body arrives event by event | `socket_stream_chunk()` per formatted event + `socket_stream_end()`; no `Content-Length` |
-| `fastapi/routing.py:410` | detects an SSE response class and keeps the streaming path | a route-level marker for "this is a stream" | `stream_kind()` intercepts the demo path before dispatch; dynamic registration is a follow-up |
+| `fastapi/routing.py:410` | detects an SSE response class and keeps the streaming path | a route-level marker for "this is a stream" | `stream_kind()` checks the startup registry before dispatch; user handler registration is a follow-up |
 | `fastapi/sse.py:142-...` (keep-alive pings) | comments/pings keep proxies and clients alive | a documented heartbeat/keep-alive shape | the demo closes after N events; the format leaves `: comment` support to the caller |
 | `h11/_connection.py:261-262` | `101 InformationalResponse` switches the client state machine to `SWITCH_UPGRADE` | 101 is a protocol switch, not a 200 with a body | `ws_handshake_response()` sends the 101 + `Upgrade`/`Connection`/`Accept` lines first; no HTTP body follows |
 | `h11/_state.py:217` | `SWITCHED_PROTOCOL` is a terminal state for HTTP | the HTTP loop must not parse a body/keep-alive after the upgrade | the Station loop sets `conn_open = false` after the frame loop; raw frames never reach the HTTP parser |
@@ -61,9 +61,16 @@ normalized target:
 
 The stream unit writes its own head, owns the connection until done, and
 returns `(status, payload_bytes)`. The loop then records metrics/access
-log and sets `conn_open = false`; the fd is closed once by the loop. The
-router/OpenAPI surface is untouched (these are demo endpoints, not
-user-registerable stream routes yet).
+log and sets `conn_open = false`; the fd is closed once by the loop.
+
+Routes live in a startup registry (`stream.init()` / `stream.register()`):
+only GET and the built-in SSE/WS kinds are accepted, duplicates and
+invalid paths fail closed, and the `routes` CLI prints the registered
+stream paths alongside the router table. Per-route rate policy applies to
+the registered literal path after the global bucket
+(`PULSE_RATE_ROUTES="GET /api/sse=1/1"`). OpenAPI stays unchanged; user
+handler registration is the remaining follow-up (the registry is the
+seam).
 
 ### S2. SSE response
 
@@ -106,7 +113,8 @@ user-registerable stream routes yet).
 ### S4. Gate and metrics
 
 The stream branch runs only after `gate_request()` returns action 0, so
-CSRF/OPTIONS/global rate (and per-route policy for router routes) run
+CSRF/OPTIONS/global rate (and per-route policy for router and registered
+stream routes) run
 first. SSE/WS are GETs, so audit stays off. Metrics record 200 (SSE) or
 101 (WS) and the payload bytes; the access-log duration is the stream
 lifetime. The global bucket is still per request, not per event.
@@ -121,8 +129,10 @@ deadline path is not reused.
 ## 4. Tests
 
 `tests/test_stream.xi` (pure):
-- `stream_kind` accepts only GET `/api/sse` and `/api/ws`; other
-  methods/paths return 0
+- `stream_kind` accepts only registered GET routes (`/api/sse`, `/api/ws`,
+  plus a custom test path); other methods/paths return 0
+- registry: idempotent init, duplicate/invalid path/method/kind rejected,
+  `route_path` for policy keys, `routes_text` includes the built-ins
 - SSE query clamps (events 1..100, interval 0..5000) and defaults
 - SSE head/event formatting (content type, chunked header, no
   Content-Length, `event:`/`data:` shape)
@@ -146,7 +156,8 @@ deadline path is not reused.
 
 ## 5. Out of scope (explicit)
 
-- Dynamic user stream-route registration (the router is still static).
+- User-supplied stream handlers (the startup registry and built-in kinds
+  exist; wiring arbitrary handler functions is still a follow-up).
 - SSE event bus/subscription sources (a demo tick source is used).
 - WebSocket permessage-deflate and subprotocol negotiation.
 - `wss://` in-process (TLS remains the front proxy; W2 owns native TLS).

@@ -29,6 +29,11 @@ fn bytes_text(b: &Vec[UInt8]) -> Str {
 pub fn main() -> Int {
   var f: Int = 0;
 
+  // Registry: self-init is idempotent and exposes the built-in demo routes.
+  let init_added = stream.init();
+  f = f + check("init idempotent", stream.init() == 0);
+  f = f + check("init builtins", init_added >= 0 && stream.stream_kind("GET", "/api/sse") == 1);
+
   // Classification: only GET /api/sse and GET /api/ws are streams.
   f = f + check("kind sse", stream.stream_kind("GET", "/api/sse") == 1);
   f = f + check("kind sse query", stream.stream_kind("GET", "/api/sse?events=2") == 1);
@@ -37,6 +42,18 @@ pub fn main() -> Int {
   f = f + check("kind other", stream.stream_kind("GET", "/api/version") == 0);
   f = f + check("kind post", stream.stream_kind("POST", "/api/ws") == 0);
   f = f + check("kind head", stream.stream_kind("HEAD", "/api/sse") == 0);
+
+  // Runtime registration (startup seam; handlers are the built-in kinds).
+  f = f + check("register custom", stream.register("GET", "/api/stream2", 1));
+  f = f + check("custom kind", stream.stream_kind("GET", "/api/stream2?x=1") == 1);
+  f = f + check("custom route path", stream.route_path("GET", "/api/stream2?x=1") == "/api/stream2");
+  f = f + check("duplicate rejected", !stream.register("GET", "/api/stream2", 2));
+  f = f + check("bad path rejected", !stream.register("GET", "api/x", 1));
+  f = f + check("bad kind rejected", !stream.register("GET", "/api/x", 3));
+  f = f + check("bad method rejected", !stream.register("POST", "/api/x", 1));
+  let rt = stream.routes_text();
+  f = f + check("routes text sse", string.str_contains(rt, "GET /api/sse (sse)\n"));
+  f = f + check("routes text custom", string.str_contains(rt, "GET /api/stream2 (sse)\n"));
 
   // Query clamps and defaults.
   f = f + check("events default", stream.sse_events("/api/sse") == 5);

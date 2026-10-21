@@ -3,9 +3,9 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; 46/46 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 11683c4` (SSE/WS + Origin + fragmentation + workstation RSS cap; this wrap commit follows; CI `39498806648` green both). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, stream 46/46 + live 20/20, on v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform linux-arm64 CI (cross toolchain) + macOS legs; bench Linux/1M + xlcaptain; realtime follow-ups (dynamic stream routes, WS auth; Origin + fragmentation landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. Doorbell armed.
+**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; startup stream registry + per-route rate; 57/57 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 11683c4` (SSE/WS + Origin + fragmentation + workstation RSS cap; this wrap commit follows; CI `39498806648` green both). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, stream 57/57 + live 20/20, on v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform linux-arm64 CI (cross toolchain) + macOS legs; bench Linux/1M + xlcaptain; realtime follow-ups (user stream handlers, WS auth; Origin + fragmentation + startup registry landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. Doorbell armed.
 
-**SESSION 23 (2026-10-20 -- SSE + WebSocket, W4):** **REALTIME UNITS LANDED.** `src/stream.xi` (`xiom.pulse.station.stream`) takes over the accepted fd after the frozen gate. `GET /api/sse` streams chunked `text/event-stream` ticks (events/interval clamps, CORS, no `Content-Length`, zero chunk) and `GET /api/ws` performs the RFC 6455 101 handshake plus a masked echo frame loop (text/binary echo, ping/pong, close, 1 MiB cap, 1002/1003/1009; plain GET -> 426). The loop records 200/101 through the shared `record_response` path and closes the fd once; the router/OpenAPI surface is unchanged. Tests: `tests/test_stream.xi` **46/46** (pure; includes the same-origin/CORS Origin policy) and `scripts/stream_smoke.*` **20/20** live on Windows + WSL (the wrappers launch the app under the 2 GB RSS cap). Fragmented data messages are reassembled with interleaved control frames; an unexpected continuation closes 1002. Design + fastapi/h11/fasthttp matrix: `docs/DESIGN-SSE-WEBSOCKET.md`. Dynamic stream-route registration, permessage-deflate and WS authentication remain explicit follow-ups; the Origin guard and fragmentation are landed. `main = c062a58`; **CI `39427518984` GREEN both platforms** (ubuntu 6m22s, windows 5m34s).
+**SESSION 23 (2026-10-20 -- SSE + WebSocket, W4):** **REALTIME UNITS LANDED.** `src/stream.xi` (`xiom.pulse.station.stream`) takes over the accepted fd after the frozen gate. `GET /api/sse` streams chunked `text/event-stream` ticks (events/interval clamps, CORS, no `Content-Length`, zero chunk) and `GET /api/ws` performs the RFC 6455 101 handshake plus a masked echo frame loop (text/binary echo, ping/pong, close, 1 MiB cap, 1002/1003/1009; plain GET -> 426). The loop records 200/101 through the shared `record_response` path and closes the fd once; the router/OpenAPI surface is unchanged. Tests: `tests/test_stream.xi` **57/57** (pure; includes the same-origin/CORS Origin policy and the startup stream registry) and `scripts/stream_smoke.*` **20/20** live on Windows + WSL (the wrappers launch the app under the 2 GB RSS cap). Fragmented data messages are reassembled with interleaved control frames; an unexpected continuation closes 1002. Stream routes are in a runtime registry (`init`/`register`; built-in SSE/WS kinds; `routes` CLI prints them) and per-route rate policy applies to their literal path. Design + fastapi/h11/fasthttp matrix: `docs/DESIGN-SSE-WEBSOCKET.md`. User-supplied stream handlers, permessage-deflate and WS authentication remain explicit follow-ups; the Origin guard, fragmentation and startup registry are landed. `main = c062a58`; **CI `39427518984` GREEN both platforms** (ubuntu 6m22s, windows 5m34s).
 
 **2026-10-20 (session 23 -- WebSocket Origin policy):** browser handshakes are now same-origin by default: `Origin` must match `Host` (default ports normalized) or be in `PULSE_CORS_ORIGIN`, otherwise **403 before the 101**; Origin-less non-browser clients stay allowed. This is the same-origin guard, not authentication. `tests/test_stream.xi` 46/46 (9 new Origin checks) and `stream_smoke` 17/17 live (same-origin handshake + cross-origin 403) on both platforms; both smoke wrappers now launch the app under the 2 GB cap, and the smoke pins `PULSE_CORS_ORIGIN=""` so a prior `http_smoke` run cannot mask the check. `main = 5f39ae5` + harness fix `db5cf48`; **CI `39482651468` GREEN both platforms** (ubuntu 6m10s, windows 5m02s). The first run `39481818997` failed only in the harness (exec bit + inherited `PULSE_CORS_ORIGIN=*`), fixed in `db5cf48`.
 
@@ -1296,11 +1296,11 @@ STATE AT WRAP 21 + SESSIONS 22-23 (2026-10-20):
 - **REALTIME UNITS LANDED (session 23, W4):** `src/stream.xi`
   (`/api/sse` chunked event stream + `/api/ws` RFC 6455 echo) after the
   frozen gate; 37/37 pure + 15/15 live on both platforms; router surface
-  unchanged; dynamic registration and WS auth are follow-ups (Origin +
-  fragmentation landed).
+  unchanged; user stream handlers and WS auth are follow-ups (Origin +
+  fragmentation + startup registry landed).
   `main = c062a58`; **CI `39427518984` GREEN both platforms**.
 - Current gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv),
-  crash x2, migrations 21/21, SQL store 53/53, stream 46/46 + live 17/17,
+  crash x2, migrations 21/21, SQL store 53/53, stream 57/57 + live 20/20,
   rate smoke (global + per-route), benchmark-app build (CI), sqlite
   probe.
 
@@ -1320,9 +1320,10 @@ NEXT -- queue (dependency order):
    (the baseline report explains why the reduced run was used); the
    xlcaptain scenarios. **Blocked on `REL-20261020-1704-pulse`** (stdlib
    JSON builder leak); run only under the 2 GB cap.
-5. Realtime follow-ups: dynamic stream-route registration (router-level),
-   permessage-deflate, and authentication before putting user data behind
-   `/api/ws` (Origin same-origin/CORS guard and fragmentation are landed).
+5. Realtime follow-ups: user-supplied stream handlers (the startup
+   registry + built-in kinds are landed), permessage-deflate, and
+   authentication before putting user data behind `/api/ws` (Origin
+   same-origin/CORS guard and fragmentation are landed).
 
 OPEN OBLIGATIONS / RELAYS: compiler m371 (`REL-20261019-1309-pulse`,
 next cycle); **stdlib JSON path leak (`REL-20261020-1704-pulse`, filed 2026-10-20,
@@ -1349,7 +1350,7 @@ on a new release). Reference-Study Protocol binding (docs\
 REFERENCE-STUDY-PROTOCOL.md): cite the matrix, no design from memory,
 blockers relay first and test back on the next release. Gates before any
 done claim: suites x2 + smoke 135/135 x2 + crash x2 (both platforms);
-rate smoke (global + per-route); stream 46/46 + live 17/17; SQL store
+rate smoke (global + per-route); stream 57/57 + live 20/20; SQL store
 53/53 + migrations 21/21; SQL builds pass the vendored sqlite C
 source ONLY for entries importing xiom.sqlite, the migrations module or
 the SQL store module. Signed conventional commits; commit/push per unit;

@@ -981,6 +981,17 @@ fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, c
       }
     }
   }
+  // Stream routes live in their own registry (not the router), so apply the
+  // same per-route policy to their literal path after the global bucket.
+  let s_target = router.v1_path(req.target);
+  if stream.stream_kind(req.method, s_target) != 0 {
+    let sp = stream.route_path(req.method, s_target);
+    if sp.len() > 0 {
+      if !ratelimit.route_rates_allow(route_rates, req.method, sp, now_ms) {
+        return rate_limited_response(req, reuse, ratelimit.route_rates_retry_after_ms(route_rates, req.method, sp));
+      }
+    }
+  }
   return res;
 }
 
@@ -1108,6 +1119,8 @@ pub fn main() -> Int {
         io.println(rs[ri].0 + " " + rs[ri].1);
         ri = ri + 1;
       }
+      let st = stream.routes_text();
+      if st.len() > 0 { io.print(st); }
       return 0;
     }
     if sc == "openapi" {

@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-20 (SSE + WebSocket units, Origin policy + fragmentation landed; stdlib JSON builder leak filed as `REL-20261020-1704-pulse`; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-21 (SSE + WebSocket units, Origin policy + fragmentation + startup stream registry landed; stdlib JSON path leak filed as `REL-20261020-1704-pulse`; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -956,6 +956,16 @@ continuation close), and the 2 GB cap stays on. Full gates green both
 platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2, stream
 46/46 + live 20/20; CI `39498806648` green both. Per
 `REL-20261020-1704-pulse`, Linux/1M JSON-heavy load remains blocked._
+
+_Delta 2026-10-21 (stream registry + per-route rate): stream routes now
+live in a startup registry (`stream.init`/`register`; GET + built-in
+SSE/WS kinds; duplicate/invalid entries fail closed). The `routes` CLI
+prints them, and per-route rate policy applies to their literal path after
+the global bucket (`GET /api/sse=1/1` observed 200 then 429 live).
+`test_stream` grows to **57/57** (registry/init/path/validation/routes
+text) and live `stream_smoke` stays **20/20**. Full gates green both
+platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2. User-supplied
+stream handlers remain the follow-up; the registry is the seam._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
