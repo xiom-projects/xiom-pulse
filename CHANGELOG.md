@@ -8,7 +8,7 @@ GitHub release body.
 
 ### Added
 
-- **linux-arm64 CI leg:** the native `ubuntu-22.04-arm` runner is in the
+- **linux-arm64 CI leg:** the native `ubuntu-24.04-arm` runner is in the
   CI matrix; `setup-xiom` selects the SHA256-pinned
   `xiom-0.64.8-linux-arm64` toolchain (and installs clang when absent),
   and the arm64 build is verified with `file` before the full SQL,
