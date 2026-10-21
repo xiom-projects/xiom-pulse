@@ -15,7 +15,7 @@
 
 **2026-10-21 (session 23 -- linux-arm64 CI):** the matrix now has a native **ubuntu-24.04-arm** leg. `setup-xiom` selects the SHA256-pinned `xiom-0.64.8-linux-arm64` toolchain, installs clang if absent, and `file` verifies the ELF before the full SQL/migrations/stream/suite/smoke/crash gates run natively. The first attempt on `ubuntu-22.04-arm` failed on a **compiler codegen bug**: module-scope `Vec` initialization emits `load i8*, i8** %struct.Vec*` (invalid for LLVM/clang 14, tolerated by 18). Filed **`REL-20261021-0717-pulse`** (pulse -> compiler, high) with `tests/probes/probe_arm64_ginit.xi`; the 24.04 leg is green. `main = 8cf4992`; **CI `39560182609` GREEN on all three platforms** (arm64, linux-x64, windows-x64).
 
-**2026-10-21 (session 23 -- macOS witness):** `macos-14` (arm64) and `macos-15-intel` (x64) were added to the matrix. The arm64 leg builds until the compiler's invalid module-scope Vec IR (`REL-20261021-0717-pulse`, same load as Linux clang 14); the x64 leg builds and the migrations suite exposes a stdlib macOS io name truncation (`cannot read 0260101000002_seed.sql`; `REL-20261021-0918-pulse`). Both jobs are **non-gating** (`continue-on-error`) so the gating matrix stays linux-x64/linux-arm64/windows-x64; CI `39575983499` is overall success. The 1609 macOS witness is re-opened by these findings; release assets remain behind `RELEASE_BUILD_MACOS`.
+**2026-10-21 (session 23 -- macOS witness):** `macos-14` (arm64) and `macos-15-intel` (x64) were added to the matrix. The arm64 leg builds until the compiler's invalid module-scope Vec IR (`REL-20261021-0717-pulse`, same load as Linux clang 14); the x64 leg builds and the migrations suite exposes a stdlib `io.list_dir` defect (`cannot read 0260101000002_seed.sql`; `REL-20261021-0918-pulse`); a local Windows x64 probe also returns numeric/garbage entry names, so it is not macOS-only and the Windows CI did not run migrations to catch it. Both jobs are **non-gating** (`continue-on-error`) so the gating matrix stays linux-x64/linux-arm64/windows-x64; CI `39575983499` is overall success. The 1609 macOS witness is re-opened by these findings; release assets remain behind `RELEASE_BUILD_MACOS`.
 
 **WRAP 22 (2026-10-19, session 22):** context-budget wrap after three units, `main = 9b97eb7` at wrap start (clean + pushed; this wrap commit follows). **SQL STORE/REPOSITORY LAYER LANDED:** `src/sql.xi` (`xiom.pulse.station.sql`) over xiom.sqlite 0.4.1 -- integer handles, mandatory value binding, identifier validation, JSON rows, repository CRUD + `limit+1` paging, transactions; `tests/test_sql.xi` 53/53 Windows + WSL; opt-in (serving binary still SQL-free); CI `39328272067` green both. **PER-ROUTE RATE POLICY LANDED (W6):** `PULSE_RATE_ROUTES` token buckets on top of the global bucket, matched by route template (HEAD as GET, `/v1` normalized); test_http 95/95, test_app 239/239, rate_smoke proves 200/429/refill both platforms; CI `39332690326` green both. **BENCH BASELINE PUBLISHED:** `benchmarks/bttger/` six-endpoint contract + adapted autocannon driver; Windows c1 clean -- 454.6/78.1/384.6/142.9/172.4/50.0 req/s, zero errors; c10 adds no throughput and times out the waiting connections (W1 sequential-accept ceiling); report + raw JSON committed; CI `39335266242` green both. Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, rate smoke, on v0.64.8 + stdlib `112c5b6`. NEXT: SSE + WebSocket, then Phase B when m371 lands, 0.3.0, platform legs, Linux/1M bench follow-ups. Doorbell cancelled for the session boundary.
 
@@ -1312,7 +1312,8 @@ STATE AT WRAP 21 + SESSIONS 22-23 (2026-10-20):
   (`REL-20261021-0717-pulse`); 24.04 passes.
 - **macOS WITNESS (session 23):** `macos-14` + `macos-15-intel` added
   **non-gating**; arm64 blocked by `REL-20261021-0717-pulse`, x64
-  migrations blocked by `REL-20261021-0918-pulse` (stdlib io).
+  migrations blocked by `REL-20261021-0918-pulse` (stdlib `io.list_dir`;
+  Windows x64 reproduces the same corruption).
   `main = 8f1a2b1`; CI `39575983499` overall success with gating legs
   green. macOS release assets remain behind `RELEASE_BUILD_MACOS`.
 - Current gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv),
@@ -1332,7 +1333,7 @@ NEXT -- queue (dependency order):
    release fleet, ping ops for dogfood.
 3. Platform: **linux-arm64 CI leg done (2026-10-21)**; the macOS witness
    is added but non-gating until `REL-20261021-0717-pulse` (arm64 IR) and
-   `REL-20261021-0918-pulse` (macOS io) land, then make it gating and add
+   `REL-20261021-0918-pulse` (io.list_dir, Win/macOS) land, then make it gating and add
    the macOS/arm64 release assets; a background heartbeat for a single
    very long migration.
 4. Follow-up bench work: Linux leg + the full 1M-request bttger amount
@@ -1349,9 +1350,9 @@ next cycle); **stdlib JSON path leak (`REL-20261020-1704-pulse`, filed 2026-10-2
 high; builder + parse/stringify both retain -- blocks Linux/1M bench and
 JSON-heavy load)**; **arm64 module-scope Vec codegen
 (`REL-20261021-0717-pulse`, filed 2026-10-21, high -- breaks arm64 on
-22.04/clang 14 and macOS arm64; 24.04 Linux leg green)**; **macOS io
-name truncation (`REL-20261021-0918-pulse`, filed 2026-10-21, high --
-blocks the macOS x64 migrations witness)**;
+22.04/clang 14 and macOS arm64; 24.04 Linux leg green)**; **io.list_dir corrupted names
+(`REL-20261021-0918-pulse`, filed 2026-10-21, high -- reproduces on
+Windows x64 + macOS x64; blocks the macOS migrations witness)**;
 registry 3.0 pilot gate ping when production-serving
 (`REL-20261013-1707-registry`); no open PULSE ops items (1141 closed).
 **RELAY BUS NOTE (2026-10-20):** `items/REL-20261020-2355-owner.md`

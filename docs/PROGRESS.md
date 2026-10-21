@@ -983,8 +983,11 @@ _Delta 2026-10-21 (macOS witness): `macos-14` (arm64) and
 `macos-15-intel` (x64) are in the matrix but **non-gating**. The arm64
 leg fails the same module-scope Vec IR as Linux clang 14
 (`REL-20261021-0717-pulse`); the x64 leg builds but the migrations suite
-exposes a stdlib io name truncation (`cannot read 0260101000002_seed.sql`;
-`REL-20261021-0918-pulse`). Both are filed high; CI `39575983499` is
+exposes a stdlib `io.list_dir` defect (`cannot read
+0260101000002_seed.sql`; `REL-20261021-0918-pulse`). A local Windows x64
+probe reproduces the same defect as numeric/garbage entry names, so it is
+not macOS-only; the Windows CI did not catch it because it does not run
+the migrations suite. Both are filed high; CI `39575983499` is
 overall success with linux-x64/linux-arm64/windows-x64 gating green. The
 1609 macOS witness is re-opened by these findings; macOS release assets
 remain behind `RELEASE_BUILD_MACOS`._
