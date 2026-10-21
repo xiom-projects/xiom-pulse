@@ -78,6 +78,19 @@ jobs:
           ./out/p_io_listdir
           echo "io-witness rc=$?"
 
+      - name: macOS list_dir fix witness (stdlib 05673f8, pre-pin)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C stdlib fetch --depth 1 origin 05673f8
+          git -C stdlib checkout --detach FETCH_HEAD
+          export XIOM_STDLIB="$PWD/stdlib"
+          bash scripts/build.sh tests/probes/p_io_listdir_roundtrip.xi --name p_io_listdir_fix --timeout-sec 300
+          ./out/p_io_listdir_fix
+          bash scripts/build.sh tests/test_migrations.xi --name test_migrations_fix --timeout-sec 600
+          ./out/test_migrations_fix
+
       - name: SQLite linkage probe (Unix)
         if: runner.os != 'Windows'
         shell: bash
