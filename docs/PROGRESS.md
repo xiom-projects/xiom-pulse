@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-21 (linux-arm64 native CI + release dry-run + non-gating macOS witness; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse`, arm64 codegen `REL-20261021-0717-pulse` and macOS io `REL-20261021-0918-pulse` filed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-21 (linux-arm64 native CI + release dry-run; macOS x64 witness green with stdlib 05673f8 pre-pin; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse` acked, arm64 codegen `REL-20261021-0717-pulse` fixed on main, macOS list_dir `REL-20261021-0918-pulse` verified; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -982,17 +982,16 @@ release asset yet; macOS remains gated._
 _Delta 2026-10-21 (macOS witness): `macos-14` (arm64) and
 `macos-15-intel` (x64) are in the matrix but **non-gating**. The arm64
 leg fails the same module-scope Vec IR as Linux clang 14
-(`REL-20261021-0717-pulse`); the x64 leg builds but the migrations suite
-fails (`cannot read 0260101000002_seed.sql`). The stdlib portable witness
-itself fails on macOS x64 (`entry[0] len=7310291289313914928
-name=105553158640064`, rc 3) while Windows/Linux pass, so
-`REL-20261021-0918-pulse` is a genuine macOS `list_dir`/dirent defect and
-was reopened. The Windows print-probe garbage is the separate compiler
-`REL-20261010-1609-stdlib` inline `Result.value[i]` concat. CI
-`39575983499` is
-overall success with linux-x64/linux-arm64/windows-x64 gating green. The
-1609 macOS witness is re-opened by these findings; macOS release assets
-remain behind `RELEASE_BUILD_MACOS`._
+(`REL-20261021-0717-pulse`). The x64 leg was red on `list_dir`; with
+stdlib **05673f8** checked out in the non-gating fix step it is fully
+green: `p_io_listdir_roundtrip` rc 0, **migrations 21/21**, SQL 53/53,
+stream 57/57 + live 20/20, suites/smoke. `REL-20261021-0918-pulse` is
+**verified**; the fix is on main, not the v0.64.8 pin. The Windows
+print-probe garbage is the separate compiler `REL-20261010-1609-stdlib`
+inline `Result.value[i]` concat. CI `39624153094` is overall success
+(x64 green, arm64 red on 0717). The next pins remove the override and
+make x64 gating; macOS release assets remain behind
+`RELEASE_BUILD_MACOS`._
 
 _Delta 2026-10-21 (linux-arm64 release dry-run): the release matrix now
 includes `linux-arm64` on `ubuntu-24.04-arm`; the packager auto-detects
@@ -1008,13 +1007,12 @@ completes 500 iterations and crosses 512 MB at ~1,000-1,200 (vs ~500 for
 `json_set`), residual compiler m375; the builder API is not in the v0.64.8
 pin. Compiler fixed the arm64 module-scope Vec IR at `aecad8c6c`; a local
 debug build emits the GEP load, so the 22.04/macOS arm64 re-test waits for
-the next tagged compiler. The stdlib portable witness was run on
-macos-15-intel and **fails** (`entry[0] len=7310291289313914928
-name=105553158640064`, rc 3) while Windows/Linux pass; `REL-20261021-0918-pulse`
-is reopened as a macOS `list_dir`/dirent defect. The Windows print-probe
+the next tagged compiler. The stdlib fix 05673f8 was verified on
+macos-15-intel: `p_io_listdir_roundtrip` rc 0, migrations 21/21, SQL
+53/53, stream/suites/smoke green (CI `39624153094`); the pre-fix pin
+still fails, so the fix is pending the next pin. The Windows print-probe
 garbage is the separate compiler `REL-20261010-1609-stdlib` inline
-`Result.value[i]` concat. The macOS migrations failure is the 0918
-defect._
+`Result.value[i]` concat._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

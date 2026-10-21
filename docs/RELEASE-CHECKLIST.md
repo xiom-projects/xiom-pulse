@@ -27,9 +27,10 @@ preconditions are called out where they differ.
 - Compiler **m371** -> middleware Phase B (the legacy loop stays).
 - Jobs core.
 - macOS release assets: the `macos-14`/`macos-15-intel` witness is
-  non-gating; arm64 is blocked by compiler `REL-20261021-0717-pulse`
-  (fixed on main, not in the v0.64.8 pin) and x64 by macOS `list_dir`
-  (`REL-20261021-0918-pulse`).
+  non-gating. x64 is green with stdlib `05673f8` pre-pin
+  (`REL-20261021-0918-pulse` verified); arm64 waits on a tagged compiler
+  with `REL-20261021-0717-pulse`. Adopt the next pins, then make x64
+  gating and enable macOS packaging.
 - Stdlib JSON path leak (`REL-20261020-1704-pulse`) + compiler m375:
   JSON-heavy/1M benchmark; not a 0.3.0 serving-path blocker for the
   current routes, but the benchmark report stays partial.

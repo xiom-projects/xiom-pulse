@@ -12,11 +12,11 @@ GitHub release body.
   `macos-15-intel` (x64) join the matrix; `setup-xiom` uses the
   SHA256-pinned macOS toolchains and the Unix gates run. The arm64 leg is
   blocked by the compiler module-scope Vec IR defect
-  (`REL-20261021-0717-pulse`, same as Linux clang 14); the x64 leg builds
-  and exposes a genuine macOS `list_dir`/dirent defect
-  (`REL-20261021-0918-pulse`; the stdlib witness fails on macOS x64 with
-  garbage entry lengths/names, rc 3). The separate Windows compiler
-  C-PULSE-17 inline `Result.value[i]` concat is
+  (`REL-20261021-0717-pulse`, same as Linux clang 14). The x64 leg was
+  red on macOS `list_dir`; with stdlib **05673f8** checked out pre-pin it
+  is fully green (witness rc 0, migrations 21/21, SQL/stream/suites), so
+  `REL-20261021-0918-pulse` is verified and lands with the next pin. The
+  separate Windows compiler C-PULSE-17 inline `Result.value[i]` concat is
   `REL-20261010-1609-stdlib`. Both jobs report but do not gate the run
   until fixed; macOS release assets remain behind `RELEASE_BUILD_MACOS`.
 - **linux-arm64 release leg:** the release matrix now packages

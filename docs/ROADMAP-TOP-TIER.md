@@ -132,9 +132,9 @@ response-compression unit + precompressed-static sidecars [Q].
 keep-alive design (MUST_CLOSE path) [Q]; JSONL no-DB first-class [Q,
 already default]; **linux-arm64 native CI leg [done 2026-10-21; arm64
 release dry-run verified; next tag ships it]**; Windows x64 production template [O]; **macOS CI
-witness added 2026-10-21 (`macos-14` + `macos-15-intel`, non-gating pending
-the compiler arm64 IR, macOS `list_dir`, and Windows inline
-payload-index findings); release legs remain Q
+witness added 2026-10-21 (`macos-14` + `macos-15-intel`; x64 green with
+stdlib 05673f8 pre-pin, arm64 pending the compiler IR fix, Windows inline
+payload index separate); release legs remain Q
 behind `RELEASE_BUILD_MACOS`**; edge TLS-version/cipher floors for old
 clients [O, documented].
 
