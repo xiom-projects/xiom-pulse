@@ -1396,7 +1396,11 @@ v0.64.9 / stdlib-v0.64.9 yet):
    `ubuntu-22.04-arm` leg and run `probe_arm64_ginit`; re-run
    `probe_fnptr` + `probe_stream_handler`, then restore the user
    `StreamHandler` registry (already verified on the debug compiler);
-   make `macos-14` gating.
+   make `macos-14` gating. Ready patch: branch
+   `wip/stream-handler-registry` (`680367c`) -- full server compiles and
+   stream smoke 20/20 on debug HEAD; rebase/cherry-pick after the pin,
+   run the full gates, then delete the branch. **Do not merge before the
+   pin.**
 3. **JSON leak** (stdlib builders + compiler m375): run
    `probe_json_builder_leak` under 512 MB, expect flat; then re-run the
    capped bttger 5k/1M and update `benchmarks/bttger/REPORT.md`.
