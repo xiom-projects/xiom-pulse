@@ -17,9 +17,10 @@ flowchart LR
 ```
 
 PULSE builds and runs on **linux-x64**, **linux-arm64** (native CI leg,
-added 2026-10-21) and **windows-x64**. macOS is gated on the upstream
-`1609-pulse` pair. Release assets currently ship linux-x64 + windows-x64;
-the arm64 leg is CI-verified but has no release asset yet.
+added 2026-10-21), **windows-x64**, and now has a **macOS CI witness**
+(`macos-14` arm64 + `macos-15-intel` x64, added 2026-10-21). Release
+assets currently ship linux-x64 + windows-x64; arm64 and macOS release
+assets are CI-verified/witnessed but remain behind the release gate.
 
 ## 1. Environment
 

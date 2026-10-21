@@ -36,6 +36,8 @@ jobs:
           - os: ubuntu-latest
           - os: ubuntu-24.04-arm
           - os: windows-latest
+          - os: macos-14
+          - os: macos-15-intel
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -45,8 +47,8 @@ jobs:
         with:
           cross-repo-token: ${{ secrets.XIOM_CROSS_REPO_TOKEN || github.token }}
 
-      - name: Build (Linux)
-        if: runner.os == 'Linux'
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: bash scripts/build.sh src/server.xi --name pulse_app --timeout-sec 300
 
@@ -63,45 +65,45 @@ jobs:
           file out/pulse_app | tee /tmp/pulse-arm64-file.txt
           grep -q "ARM aarch64" /tmp/pulse-arm64-file.txt
 
-      - name: SQLite linkage probe (Linux)
-        if: runner.os == 'Linux'
+      - name: SQLite linkage probe (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           bash scripts/build.sh tests/probes/probe_sqlite.xi --name probe_sqlite --timeout-sec 600
           ./out/probe_sqlite
 
-      - name: Migrations runner tests (Linux)
-        if: runner.os == 'Linux'
+      - name: Migrations runner tests (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           bash scripts/build.sh tests/test_migrations.xi --name test_migrations --timeout-sec 600
           ./out/test_migrations
 
-      - name: SQL store tests (Linux)
-        if: runner.os == 'Linux'
+      - name: SQL store tests (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           bash scripts/build.sh tests/test_sql.xi --name test_sql --timeout-sec 900
           ./out/test_sql
 
-      - name: Build bttger benchmark app (Linux)
-        if: runner.os == 'Linux'
+      - name: Build bttger benchmark app (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: bash scripts/build.sh benchmarks/bttger/main.xi --name bench_bttger --timeout-sec 300
 
-      - name: Stream unit tests (Linux)
-        if: runner.os == 'Linux'
+      - name: Stream unit tests (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           bash scripts/build.sh tests/test_stream.xi --name test_stream --timeout-sec 300
           ./out/test_stream
 
-      - name: Suites x2 + smoke (Linux)
-        if: runner.os == 'Linux'
+      - name: Suites x2 + smoke (Unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail

@@ -8,6 +8,12 @@ GitHub release body.
 
 ### Added
 
+- **macOS CI witness:** `macos-14` (arm64) and `macos-15-intel` (x64)
+  join the matrix; `setup-xiom` uses the SHA256-pinned macOS toolchains
+  and the Unix gates (build, SQL/migrations, stream, suites, smoke) run.
+  This is the overdue re-test for `REL-20261010-1609-pulse` / `-2`;
+  macOS release assets stay behind `RELEASE_BUILD_MACOS` until the
+  witness is green.
 - **linux-arm64 CI leg:** the native `ubuntu-24.04-arm` runner is in the
   CI matrix; `setup-xiom` selects the SHA256-pinned
   `xiom-0.64.8-linux-arm64` toolchain (and installs clang when absent),
