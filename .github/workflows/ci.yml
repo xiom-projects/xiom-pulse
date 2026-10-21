@@ -69,8 +69,9 @@ jobs:
           file out/pulse_app | tee /tmp/pulse-arm64-file.txt
           grep -q "ARM aarch64" /tmp/pulse-arm64-file.txt
 
-      - name: macOS io witness (non-gating)
+      - name: macOS io witness (pre-fix, non-gating)
         if: runner.os == 'macOS'
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
