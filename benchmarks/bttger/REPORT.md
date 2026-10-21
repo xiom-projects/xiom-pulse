@@ -96,9 +96,16 @@ after ~500 iterations (RSS **530,944 KB**). A second probe
 loops `json_parse` -> `json_stringify`; it is also killed at 512 MB after
 ~1,100 iterations (RSS **527,872 KB**). The retention is therefore broader
 than the builder's copy-on-write (`json_set` / `json_array_push`): the
-parse/stringify path retains too. Filed on the relay as
-**`REL-20261020-1704-pulse`** (pulse -> stdlib, high). The 1M-request
-benchmark and the Linux leg stay blocked until the stdlib fix lands.
+parse/stringify path retains too.
+
+`tests/probes/probe_json_isolate.xi` bisects it under a 256 MB cap:
+`json_parse` alone is killed after ~1,500 iterations (265,216 KB),
+`json_stringify` alone after ~500 iterations (264,960 KB), while 2,000,000
+plain `Str` concats complete under the same cap. The leak is specific to
+the `JsonValue` node/aggregate lifecycle, not generic string allocation.
+Filed/updated on the relay as **`REL-20261020-1704-pulse`** (pulse ->
+stdlib, high). The 1M-request benchmark and the Linux leg stay blocked
+until the stdlib fix lands.
 
 The Windows baseline above is unaffected: it completed all 5,000 requests
 per endpoint before the cap policy; see section 7 for the caveat.

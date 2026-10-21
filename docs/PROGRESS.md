@@ -922,9 +922,13 @@ stdlib JSON builder (`json_set`/`json_array_push` copy-on-write), not the
 HTTP loop. A second probe (`tests/probes/probe_json_parse.xi`) builds the
 document once and loops `json_parse` -> `json_stringify`; it is also
 killed at 512 MB after ~1,100 iterations (527,872 KB), so the parse and
-stringify paths retain too. Filed **`REL-20261020-1704-pulse`** (pulse ->
-stdlib, high; updated with the isolation result); the Linux leg and the
-1M-request benchmark are blocked until it is fixed.
+stringify paths retain too. Bisect under 256 MB: parse-only killed after
+~1,500 iterations (265,216 KB), stringify-only after ~500 iterations
+(264,960 KB), while 2,000,000 plain `Str` concats complete -- the locus is
+the `JsonValue` node/aggregate lifecycle, not generic strings. Filed
+**`REL-20261020-1704-pulse`** (pulse -> stdlib, high; updated with both
+isolation and bisect results); the Linux leg and the 1M-request benchmark
+are blocked until it is fixed.
 The Windows baseline is unaffected; no invalid Linux result is
 published. The 2 GB watchdog is what kept the PC safe._
 
