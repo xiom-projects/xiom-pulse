@@ -16,6 +16,11 @@ GitHub release body.
   and exposes a stdlib macOS io name truncation in the migrations suite
   (`REL-20261021-0918-pulse`). Both jobs report but do not gate the run
   until fixed; macOS release assets remain behind `RELEASE_BUILD_MACOS`.
+- **linux-arm64 release leg:** the release matrix now packages
+  `linux-arm64` natively on `ubuntu-24.04-arm` (the packager auto-detects
+  aarch64 and emits `pulse-<ver>-linux-arm64.zip` + `.sha256`). Dry-run
+  only; the next release will ship linux-x64, linux-arm64 and
+  windows-x64 by default.
 - **linux-arm64 CI leg:** the native `ubuntu-24.04-arm` runner is in the
   CI matrix; `setup-xiom` selects the SHA256-pinned
   `xiom-0.64.8-linux-arm64` toolchain (and installs clang when absent),

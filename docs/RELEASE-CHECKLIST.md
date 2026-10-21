@@ -10,6 +10,11 @@ preconditions are called out where they differ.
 
 ## 0. Preconditions
 
+- **linux-arm64 leg (0.3.0+):** the release matrix now packages
+  `linux-arm64` on `ubuntu-24.04-arm` natively (`scripts/release.sh`
+  auto-detects aarch64 and names `pulse-<ver>-linux-arm64.zip`). The
+  dry-run fleet must be green before the bump. Release assets therefore
+  include linux-x64, linux-arm64 and windows-x64 by default.
 - **macOS legs (0.2.0 only):** the compiler/stdlib pairing must carry
   the three darwin items (SESSION digest: stdlib `xiom_runtime.c`
   `_SC_AVPHYS_PAGES`, stdlib `fp128_helpers.c` x86 asm, compiler
