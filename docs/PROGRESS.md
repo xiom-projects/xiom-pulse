@@ -1014,6 +1014,15 @@ still fails, so the fix is pending the next pin. The Windows print-probe
 garbage is the separate compiler `REL-20261010-1609-stdlib` inline
 `Result.value[i]` concat._
 
+_Delta 2026-10-21 (user stream handlers, blocked): attempted a
+`StreamHandler` registry (function values stored in `Vec`) to finish
+dynamic stream routes. On v0.64.8, indirect calls through a stored
+function value infer `()` (`let b: Int = g(41)` -> T001 found `()`), and
+the Vec storage path emits invalid IR (`store i64 %fnptr, i64* ...` where
+the value is `ptr`). Reverted; the built-in SSE/WS registry remains.
+Filed **`REL-20261021-1703-pulse`** (pulse -> compiler, high) with
+`tests/probes/probe_fnptr.xi`; re-test on the next pin._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.

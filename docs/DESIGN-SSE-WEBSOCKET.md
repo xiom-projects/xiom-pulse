@@ -156,8 +156,10 @@ deadline path is not reused.
 
 ## 5. Out of scope (explicit)
 
-- User-supplied stream handlers (the startup registry and built-in kinds
-  exist; wiring arbitrary handler functions is still a follow-up).
+- User-supplied stream handlers: the startup registry and built-in kinds
+  exist, but storing function values in a `Vec` is blocked by the compiler
+  defect `REL-20261021-1703-pulse` (indirect call infers `()`, Vec storage
+  emits invalid IR). Re-test on the next pin.
 - SSE event bus/subscription sources (a demo tick source is used).
 - WebSocket permessage-deflate and subprotocol negotiation.
 - `wss://` in-process (TLS remains the front proxy; W2 owns native TLS).

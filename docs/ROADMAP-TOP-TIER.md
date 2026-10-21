@@ -141,7 +141,8 @@ clients [O, documented].
 **W4 Realtime.** SSE unit [Q, **done 2026-10-20**: chunked
 `text/event-stream` takeover + `/api/sse` demo]; WebSocket unit [Q,
 **done 2026-10-20**: 101 + masked frame loop + `/api/ws` echo], with
-user-supplied stream handlers (startup registry landed 2026-10-21),
+user-supplied stream handlers (startup registry landed 2026-10-21;
+blocked on compiler function-value `REL-20261021-1703-pulse`),
 permessage-deflate and `wss://` (after W2 TLS) as follow-ups
 (fragmentation landed 2026-10-20); jobs core [Q, designed].
 
