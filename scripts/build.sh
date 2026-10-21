@@ -70,10 +70,10 @@ if grep -qE '^[[:space:]]*use (xiom\.sqlite|xiom\.pulse\.station\.(migrations|sq
   done
 fi
 if [ -n "$TIMEOUT_BIN" ]; then
-  ( cd "$PULSE_REPO_ROOT" && exec "$TIMEOUT_BIN" "$TIMEOUT_SEC" "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" "${EXTRA_ARGS[@]}" ) >"$TMP" 2>&1
+  ( cd "$PULSE_REPO_ROOT" && exec "$TIMEOUT_BIN" "$TIMEOUT_SEC" "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} ) >"$TMP" 2>&1
 else
   pulse_log "build: no timeout/gtimeout available; building without a watchdog (job timeout applies)"
-  ( cd "$PULSE_REPO_ROOT" && exec "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" "${EXTRA_ARGS[@]}" ) >"$TMP" 2>&1
+  ( cd "$PULSE_REPO_ROOT" && exec "$XIOM_COMPILER" -o "$OUT_BIN" "$FILE_ABS" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} ) >"$TMP" 2>&1
 fi
 RC=$?
 sed -n '1,400p' "$TMP"
