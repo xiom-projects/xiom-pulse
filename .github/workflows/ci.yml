@@ -69,6 +69,15 @@ jobs:
           file out/pulse_app | tee /tmp/pulse-arm64-file.txt
           grep -q "ARM aarch64" /tmp/pulse-arm64-file.txt
 
+      - name: macOS io witness (non-gating)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build.sh tests/probes/p_io_listdir_roundtrip.xi --name p_io_listdir --timeout-sec 300
+          ./out/p_io_listdir
+          echo "io-witness rc=$?"
+
       - name: SQLite linkage probe (Unix)
         if: runner.os != 'Windows'
         shell: bash

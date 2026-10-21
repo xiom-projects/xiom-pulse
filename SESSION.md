@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; startup stream registry + per-route rate; 57/57 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 388bdd5` (SSE/WS + Origin + fragmentation + startup registry + per-route rate + workstation RSS cap + linux-arm64 CI + linux-arm64 release dry-run + non-gating macOS witness; this wrap commit follows; CI `39575983499` overall success and release dry-run `39588855890` green on linux-x64/linux-arm64/windows-x64). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2 on all three platforms; migrations 21/21, SQL 53/53, stream 57/57 + live 20/20 on both Linux legs; v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform macOS release legs (witness non-gating, blocked on `REL-20261021-0717-pulse` + `REL-20261021-0918-pulse`); bench Linux/1M + xlcaptain; realtime follow-ups (user stream handlers, WS auth; Origin + fragmentation + startup registry landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. Doorbell armed.
+**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; startup stream registry + per-route rate; 57/57 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 388bdd5` (SSE/WS + Origin + fragmentation + startup registry + per-route rate + workstation RSS cap + linux-arm64 CI + linux-arm64 release dry-run + non-gating macOS witness; this wrap commit follows; CI `39575983499` overall success and release dry-run `39588855890` green on linux-x64/linux-arm64/windows-x64). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2 on all three platforms; migrations 21/21, SQL 53/53, stream 57/57 + live 20/20 on both Linux legs; v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform macOS release legs (witness non-gating, blocked on `REL-20261021-0717-pulse` + `REL-20261021-0918-pulse`); bench Linux/1M + xlcaptain; realtime follow-ups (user stream handlers, WS auth; Origin + fragmentation + startup registry landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. **Test-back (2026-10-21):** stdlib acked with in-place builders (526fd96); on stdlib main 0bf5984 the builder probe completes 500 iterations and crosses 512 MB at ~1,000-1,200 (vs ~500 for `json_set`), residual m375; not in the pin. Compiler fixed m0717 (aecad8c6c); local debug IR verified. C-PULSE-17 was re-confirmed as the known compiler inline `Result.value[i]` concat bug (`REL-20261010-1609-stdlib`, still acked); `io.list_dir` itself is correct and our `REL-20261021-0918-pulse` was closed as duplicate. The macOS migrations failure still needs isolation (the runner binds the payload first, so it may be the vector-copy path). Doorbell armed.
 
 **SESSION 23 (2026-10-20 -- SSE + WebSocket, W4):** **REALTIME UNITS LANDED.** `src/stream.xi` (`xiom.pulse.station.stream`) takes over the accepted fd after the frozen gate. `GET /api/sse` streams chunked `text/event-stream` ticks (events/interval clamps, CORS, no `Content-Length`, zero chunk) and `GET /api/ws` performs the RFC 6455 101 handshake plus a masked echo frame loop (text/binary echo, ping/pong, close, 1 MiB cap, 1002/1003/1009; plain GET -> 426). The loop records 200/101 through the shared `record_response` path and closes the fd once; the router/OpenAPI surface is unchanged. Tests: `tests/test_stream.xi` **57/57** (pure; includes the same-origin/CORS Origin policy and the startup stream registry) and `scripts/stream_smoke.*` **20/20** live on Windows + WSL (the wrappers launch the app under the 2 GB RSS cap). Fragmented data messages are reassembled with interleaved control frames; an unexpected continuation closes 1002. Stream routes are in a runtime registry (`init`/`register`; built-in SSE/WS kinds; `routes` CLI prints them) and per-route rate policy applies to their literal path. Design + fastapi/h11/fasthttp matrix: `docs/DESIGN-SSE-WEBSOCKET.md`. User-supplied stream handlers, permessage-deflate and WS authentication remain explicit follow-ups; the Origin guard, fragmentation and startup registry are landed. `main = c062a58`; **CI `39427518984` GREEN both platforms** (ubuntu 6m22s, windows 5m34s).
 
@@ -15,7 +15,7 @@
 
 **2026-10-21 (session 23 -- linux-arm64 CI):** the matrix now has a native **ubuntu-24.04-arm** leg. `setup-xiom` selects the SHA256-pinned `xiom-0.64.8-linux-arm64` toolchain, installs clang if absent, and `file` verifies the ELF before the full SQL/migrations/stream/suite/smoke/crash gates run natively. The first attempt on `ubuntu-22.04-arm` failed on a **compiler codegen bug**: module-scope `Vec` initialization emits `load i8*, i8** %struct.Vec*` (invalid for LLVM/clang 14, tolerated by 18). Filed **`REL-20261021-0717-pulse`** (pulse -> compiler, high) with `tests/probes/probe_arm64_ginit.xi`; the 24.04 leg is green. `main = 8cf4992`; **CI `39560182609` GREEN on all three platforms** (arm64, linux-x64, windows-x64).
 
-**2026-10-21 (session 23 -- macOS witness):** `macos-14` (arm64) and `macos-15-intel` (x64) were added to the matrix. The arm64 leg builds until the compiler's invalid module-scope Vec IR (`REL-20261021-0717-pulse`, same load as Linux clang 14); the x64 leg builds and the migrations suite exposes a stdlib `io.list_dir` defect (`cannot read 0260101000002_seed.sql`; `REL-20261021-0918-pulse`); a local Windows x64 probe also returns numeric/garbage entry names, so it is not macOS-only and the Windows CI did not run migrations to catch it. Both jobs are **non-gating** (`continue-on-error`) so the gating matrix stays linux-x64/linux-arm64/windows-x64; CI `39575983499` is overall success. The 1609 macOS witness is re-opened by these findings; release assets remain behind `RELEASE_BUILD_MACOS`.
+**2026-10-21 (session 23 -- macOS witness):** `macos-14` (arm64) and `macos-15-intel` (x64) were added to the matrix. The arm64 leg builds until the compiler's invalid module-scope Vec IR (`REL-20261021-0717-pulse`, same load as Linux clang 14); the x64 leg builds but the migrations suite fails (`cannot read 0260101000002_seed.sql`). The direct print probe hits the known **C-PULSE-17 / compiler `REL-20261010-1609-stdlib`** inline `Result.value[i]` concat bug; `io.list_dir` itself returns owned names, and our `REL-20261021-0918-pulse` was closed as duplicate. The migrations failure needs separate isolation (it binds the list_dir payload). Both jobs are **non-gating** (`continue-on-error`) so the gating matrix stays linux-x64/linux-arm64/windows-x64; CI `39575983499` is overall success. The 1609 macOS witness is re-opened by these findings; release assets remain behind `RELEASE_BUILD_MACOS`.
 
 **2026-10-21 (session 23 -- release dry-run, linux-arm64):** the release matrix now includes `linux-arm64` on `ubuntu-24.04-arm`; `scripts/release.sh` auto-detects aarch64 and emits `pulse-<ver>-linux-arm64.zip` + `.sha256`. Dry-run **`39588855890` is green on linux-x64, linux-arm64 and windows-x64** with the full fleet (suites x2, smoke, rate, crash, kv soak), packaging, artifact upload and provenance. No public release was cut; the next tag ships three assets; macOS stays opt-in. `main = 388bdd5`.
 
@@ -1314,8 +1314,8 @@ STATE AT WRAP 21 + SESSIONS 22-23 (2026-10-20):
   (`REL-20261021-0717-pulse`); 24.04 passes.
 - **macOS WITNESS (session 23):** `macos-14` + `macos-15-intel` added
   **non-gating**; arm64 blocked by `REL-20261021-0717-pulse`, x64
-  migrations blocked by `REL-20261021-0918-pulse` (stdlib `io.list_dir`;
-  Windows x64 reproduces the same corruption).
+  migrations failure rides C-PULSE-17 / `REL-20261010-1609-stdlib`
+  (compiler inline payload index; our 0918 item closed duplicate).
   `main = 8f1a2b1`; CI `39575983499` overall success with gating legs
   green. macOS release assets remain behind `RELEASE_BUILD_MACOS`.
 - **LINUX-ARM64 RELEASE DRY-RUN (session 23):** release matrix includes
@@ -1340,9 +1340,9 @@ NEXT -- queue (dependency order):
 3. Platform: **linux-arm64 CI + release dry-run done (2026-10-21)**;
    the next tag ships three assets. The macOS witness is added but
    non-gating until `REL-20261021-0717-pulse` (arm64 IR) and
-   `REL-20261021-0918-pulse` (io.list_dir, Win/macOS) land, then make it
-   gating and add the macOS assets; a background heartbeat for a single
-   very long migration.
+   `REL-20261010-1609-stdlib` (C-PULSE-17 inline payload index) land,
+   then make it gating and add the macOS assets; a background heartbeat
+   for a single very long migration.
 4. Follow-up bench work: Linux leg + the full 1M-request bttger amount
    (the baseline report explains why the reduced run was used); the
    xlcaptain scenarios. **Blocked on `REL-20261020-1704-pulse`** (stdlib
@@ -1353,13 +1353,19 @@ NEXT -- queue (dependency order):
    same-origin/CORS guard and fragmentation are landed).
 
 OPEN OBLIGATIONS / RELAYS: compiler m371 (`REL-20261019-1309-pulse`,
-next cycle); **stdlib JSON path leak (`REL-20261020-1704-pulse`, filed 2026-10-20,
-high; builder + parse/stringify both retain -- blocks Linux/1M bench and
-JSON-heavy load)**; **arm64 module-scope Vec codegen
-(`REL-20261021-0717-pulse`, filed 2026-10-21, high -- breaks arm64 on
-22.04/clang 14 and macOS arm64; 24.04 Linux leg green)**; **io.list_dir corrupted names
-(`REL-20261021-0918-pulse`, filed 2026-10-21, high -- reproduces on
-Windows x64 + macOS x64; blocks the macOS migrations witness)**;
+next cycle); **stdlib JSON path leak (`REL-20261020-1704-pulse`,
+acked)** -- in-place builders 526fd96 tested on stdlib main 0bf5984:
+500 iterations complete, 512 MB crossed at ~1,000-1,200 (vs ~500 for
+json_set); residual m375; builder API is not in the v0.64.8 pin, so
+Linux/1M bench stays blocked. **arm64 module-scope Vec codegen
+(`REL-20261021-0717-pulse`, fixed at aecad8c6c)** -- local debug build
+emits the GEP load; re-test the 22.04 arm64 leg and macOS arm64 on the
+next tagged compiler. **C-PULSE-17 / compiler inline
+`Result.value[i]` concat (`REL-20261010-1609-stdlib`, acked, high)** --
+`io.list_dir` returns owned names; our print probe hit this known codegen
+bug and `REL-20261021-0918-pulse` was closed as duplicate. The macOS
+migrations failure still needs isolation (the runner binds the payload
+first, so it may be the vector-copy path).
 registry 3.0 pilot gate ping when production-serving
 (`REL-20261013-1707-registry`); no open PULSE ops items (1141 closed).
 **RELAY BUS NOTE (2026-10-20):** `items/REL-20261020-2355-owner.md`

@@ -3,9 +3,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
 // The macOS x64 migrations witness reads `20260101000002_seed.sql` back as
-// `0260101000002_seed.sql`. This probe writes a long and a short name,
-// lists the directory, prints each entry and length, and reads both paths
-// back. Run it on macOS from CI; the output goes to the stdlib finding.
+// `0260101000002_seed.sql`. The list_dir entries are borrowed pointers; the
+// stdlib portable witness passes because it compares before allocating.
+// This probe intentionally prints the returned names (allocating), exposing
+// the dangling entries on Windows and macOS. Run it on macOS from CI; the
+// output goes to the stdlib finding.
 module probe_io_macos
 
 use xiom.io;

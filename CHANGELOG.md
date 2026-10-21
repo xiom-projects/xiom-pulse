@@ -13,8 +13,10 @@ GitHub release body.
   SHA256-pinned macOS toolchains and the Unix gates run. The arm64 leg is
   blocked by the compiler module-scope Vec IR defect
   (`REL-20261021-0717-pulse`, same as Linux clang 14); the x64 leg builds
-  and exposes a stdlib macOS io name truncation in the migrations suite
-  (`REL-20261021-0918-pulse`). Both jobs report but do not gate the run
+  and exposes the known compiler C-PULSE-17 inline `Result.value[i]`
+  concat bug in the migrations suite (`REL-20261010-1609-stdlib`); the
+  PULSE duplicate `REL-20261021-0918-pulse` was closed. Both jobs report
+  but do not gate the run
   until fixed; macOS release assets remain behind `RELEASE_BUILD_MACOS`.
 - **linux-arm64 release leg:** the release matrix now packages
   `linux-arm64` natively on `ubuntu-24.04-arm` (the packager auto-detects

@@ -983,11 +983,12 @@ _Delta 2026-10-21 (macOS witness): `macos-14` (arm64) and
 `macos-15-intel` (x64) are in the matrix but **non-gating**. The arm64
 leg fails the same module-scope Vec IR as Linux clang 14
 (`REL-20261021-0717-pulse`); the x64 leg builds but the migrations suite
-exposes a stdlib `io.list_dir` defect (`cannot read
-0260101000002_seed.sql`; `REL-20261021-0918-pulse`). A local Windows x64
-probe reproduces the same defect as numeric/garbage entry names, so it is
-not macOS-only; the Windows CI did not catch it because it does not run
-the migrations suite. Both are filed high; CI `39575983499` is
+fails (`cannot read 0260101000002_seed.sql`). The direct print probe hits
+the known **C-PULSE-17 / compiler `REL-20261010-1609-stdlib`** inline
+`Result.value[i]` concat bug; `io.list_dir` itself returns owned names,
+and our `REL-20261021-0918-pulse` was closed as duplicate. The migrations
+failure still needs separate isolation (it binds the payload). CI
+`39575983499` is
 overall success with linux-x64/linux-arm64/windows-x64 gating green. The
 1609 macOS witness is re-opened by these findings; macOS release assets
 remain behind `RELEASE_BUILD_MACOS`._
@@ -999,6 +1000,17 @@ aarch64 and emits `pulse-<ver>-linux-arm64.zip` + `.sha256`. Dry-run
 full fleet (suites x2, smoke, rate, crash, kv soak), packaging, artifact
 upload and provenance. No public release was cut; the next tag ships
 three assets; macOS stays opt-in._
+
+_Delta 2026-10-21 (relay test-back): stdlib acked the JSON leak with
+in-place builders (526fd96); on stdlib main 0bf5984 the builder probe
+completes 500 iterations and crosses 512 MB at ~1,000-1,200 (vs ~500 for
+`json_set`), residual compiler m375; the builder API is not in the v0.64.8
+pin. Compiler fixed the arm64 module-scope Vec IR at `aecad8c6c`; a local
+debug build emits the GEP load, so the 22.04/macOS arm64 re-test waits for
+the next tagged compiler. C-PULSE-17 was re-confirmed as
+`REL-20261010-1609-stdlib` (compiler inline `Result.value[i]` concat);
+`io.list_dir` itself is correct and `REL-20261021-0918-pulse` was closed
+as duplicate. The macOS migrations failure remains under isolation._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

@@ -19,7 +19,7 @@ flowchart LR
 PULSE builds and runs on **linux-x64**, **linux-arm64** (native CI leg,
 added 2026-10-21), **windows-x64**, and has a **non-gating macOS witness**
 (`macos-14` arm64 + `macos-15-intel` x64, added 2026-10-21) pending the
-compiler arm64 IR and stdlib macOS io findings. Release assets currently
+compiler arm64 IR and C-PULSE-17 inline payload-index findings. Release assets currently
 ship linux-x64 + windows-x64; arm64 and macOS release assets remain behind
 the release gate. The release workflow now dry-run-verifies **linux-x64,
 linux-arm64 and windows-x64**; the next tag ships all three.
