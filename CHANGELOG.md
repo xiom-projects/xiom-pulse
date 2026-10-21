@@ -8,12 +8,14 @@ GitHub release body.
 
 ### Added
 
-- **macOS CI witness:** `macos-14` (arm64) and `macos-15-intel` (x64)
-  join the matrix; `setup-xiom` uses the SHA256-pinned macOS toolchains
-  and the Unix gates (build, SQL/migrations, stream, suites, smoke) run.
-  This is the overdue re-test for `REL-20261010-1609-pulse` / `-2`;
-  macOS release assets stay behind `RELEASE_BUILD_MACOS` until the
-  witness is green.
+- **macOS witness (non-gating):** `macos-14` (arm64) and
+  `macos-15-intel` (x64) join the matrix; `setup-xiom` uses the
+  SHA256-pinned macOS toolchains and the Unix gates run. The arm64 leg is
+  blocked by the compiler module-scope Vec IR defect
+  (`REL-20261021-0717-pulse`, same as Linux clang 14); the x64 leg builds
+  and exposes a stdlib macOS io name truncation in the migrations suite
+  (`REL-20261021-0918-pulse`). Both jobs report but do not gate the run
+  until fixed; macOS release assets remain behind `RELEASE_BUILD_MACOS`.
 - **linux-arm64 CI leg:** the native `ubuntu-24.04-arm` runner is in the
   CI matrix; `setup-xiom` selects the SHA256-pinned
   `xiom-0.64.8-linux-arm64` toolchain (and installs clang when absent),

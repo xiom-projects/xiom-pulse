@@ -39,7 +39,7 @@ current plan), `docs/FRAMEWORK-ROADMAP-PULSE.md` (milestone history),
 - **T7 Observability.** metrics/logs/rid (have) + tracing (OTel)
   decision + export.
 - **T8 Platforms/legacy.** linux-x64 + windows (have) + **linux-arm64
-  native CI (2026-10-21)** + **macOS CI witness (2026-10-21:
+  native CI (2026-10-21)** + **macOS witness (2026-10-21, non-gating:
   `macos-14` + `macos-15-intel`)**; HTTP/1.0-class clients and `Connection` semantics; JSONL
   no-DB deployments stay first-class; Windows x64 production template.
 - **T9 Proof.** Published benchmark report (bttger six endpoints +
@@ -131,9 +131,10 @@ response-compression unit + precompressed-static sidecars [Q].
 keep-alive design (MUST_CLOSE path) [Q]; JSONL no-DB first-class [Q,
 already default]; **linux-arm64 native CI leg [done 2026-10-21; arm64
 release asset Q]**; Windows x64 production template [O]; **macOS CI
-witness added 2026-10-21 (`macos-14` + `macos-15-intel`); release legs
-remain Q behind `RELEASE_BUILD_MACOS`**; edge TLS-version/cipher floors
-for old clients [O, documented].
+witness added 2026-10-21 (`macos-14` + `macos-15-intel`, non-gating pending
+the compiler arm64 IR and stdlib macOS io findings); release legs remain Q
+behind `RELEASE_BUILD_MACOS`**; edge TLS-version/cipher floors for old
+clients [O, documented].
 
 **W4 Realtime.** SSE unit [Q, **done 2026-10-20**: chunked
 `text/event-stream` takeover + `/api/sse` demo]; WebSocket unit [Q,
