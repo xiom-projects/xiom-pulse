@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-21 (SSE + WebSocket units, Origin policy + fragmentation + startup stream registry landed; stdlib JSON path leak filed as `REL-20261020-1704-pulse`; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-21 (linux-arm64 native CI leg + SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse` and arm64 codegen `REL-20261021-0717-pulse` filed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -967,6 +967,17 @@ text) and live `stream_smoke` stays **20/20**. Full gates green both
 platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2; CI
 `39548433814` green both. User-supplied stream handlers remain the
 follow-up; the registry is the seam._
+
+_Delta 2026-10-21 (linux-arm64 CI): the matrix now has a native
+`ubuntu-24.04-arm` leg. `setup-xiom` selects the SHA256-pinned
+`xiom-0.64.8-linux-arm64` toolchain, installs clang when needed, and the
+build is verified as AArch64 before the full SQL/migrations/stream/suite/
+smoke/crash gates run natively. The first 22.04 attempt exposed a compiler
+codegen bug (invalid module-scope `Vec` initializer IR, rejected by LLVM
+14, tolerated by 18), filed as **`REL-20261021-0717-pulse`** with
+`tests/probes/probe_arm64_ginit.xi`. The 24.04 leg is green; CI
+`39560182609` passes on linux-x64, linux-arm64 and windows-x64. No arm64
+release asset yet; macOS remains gated._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

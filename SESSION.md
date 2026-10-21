@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; startup stream registry + per-route rate; 57/57 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 005d03f` (SSE/WS + Origin + fragmentation + startup registry + per-route rate + workstation RSS cap; this wrap commit follows; CI `39548433814` green both). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, stream 57/57 + live 20/20, on v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform linux-arm64 CI (cross toolchain) + macOS legs; bench Linux/1M + xlcaptain; realtime follow-ups (user stream handlers, WS auth; Origin + fragmentation + startup registry landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. Doorbell armed.
+**WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; startup stream registry + per-route rate; 57/57 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 8cf4992` (SSE/WS + Origin + fragmentation + startup registry + per-route rate + workstation RSS cap + linux-arm64 CI; this wrap commit follows; CI `39560182609` green on linux-x64, linux-arm64 and windows-x64). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2 on all three platforms; migrations 21/21, SQL 53/53, stream 57/57 + live 20/20 on both Linux legs; v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform linux-arm64 CI (cross toolchain) + macOS legs; bench Linux/1M + xlcaptain; realtime follow-ups (user stream handlers, WS auth; Origin + fragmentation + startup registry landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. Doorbell armed.
 
 **SESSION 23 (2026-10-20 -- SSE + WebSocket, W4):** **REALTIME UNITS LANDED.** `src/stream.xi` (`xiom.pulse.station.stream`) takes over the accepted fd after the frozen gate. `GET /api/sse` streams chunked `text/event-stream` ticks (events/interval clamps, CORS, no `Content-Length`, zero chunk) and `GET /api/ws` performs the RFC 6455 101 handshake plus a masked echo frame loop (text/binary echo, ping/pong, close, 1 MiB cap, 1002/1003/1009; plain GET -> 426). The loop records 200/101 through the shared `record_response` path and closes the fd once; the router/OpenAPI surface is unchanged. Tests: `tests/test_stream.xi` **57/57** (pure; includes the same-origin/CORS Origin policy and the startup stream registry) and `scripts/stream_smoke.*` **20/20** live on Windows + WSL (the wrappers launch the app under the 2 GB RSS cap). Fragmented data messages are reassembled with interleaved control frames; an unexpected continuation closes 1002. Stream routes are in a runtime registry (`init`/`register`; built-in SSE/WS kinds; `routes` CLI prints them) and per-route rate policy applies to their literal path. Design + fastapi/h11/fasthttp matrix: `docs/DESIGN-SSE-WEBSOCKET.md`. User-supplied stream handlers, permessage-deflate and WS authentication remain explicit follow-ups; the Origin guard, fragmentation and startup registry are landed. `main = c062a58`; **CI `39427518984` GREEN both platforms** (ubuntu 6m22s, windows 5m34s).
 
@@ -12,6 +12,8 @@
 **2026-10-20 (session 23 -- WebSocket fragmentation):** fragmented data messages are reassembled across continuation frames and echoed as one frame with the original opcode; control frames may interleave; an unexpected continuation or a new data frame mid-fragment closes 1002, and a message over 1 MiB closes 1009. `stream_smoke` **20/20** live on Windows + WSL (fragmented echo + orphan continuation close). Full gates green: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, stream 46/46 + live 20/20. `main = 11683c4`; **CI `39498806648` GREEN both platforms** (ubuntu 5m15s, windows 4m45s).
 
 **2026-10-21 (session 23 -- stream registry + per-route rate):** stream routes live in a startup registry (`init`/`register`; GET + built-in SSE/WS kinds; duplicates/invalid paths fail closed). The `routes` CLI prints them, and per-route rate policy applies to the registered literal path after the global bucket (`GET /api/sse=1/1` -> 200 then 429 live). `test_stream` **57/57** (registry/init/path/validation/routes text), live `stream_smoke` **20/20**. Full gates green both platforms: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2. `main = 005d03f`; **CI `39548433814` GREEN both platforms** (ubuntu 6m31s).
+
+**2026-10-21 (session 23 -- linux-arm64 CI):** the matrix now has a native **ubuntu-24.04-arm** leg. `setup-xiom` selects the SHA256-pinned `xiom-0.64.8-linux-arm64` toolchain, installs clang if absent, and `file` verifies the ELF before the full SQL/migrations/stream/suite/smoke/crash gates run natively. The first attempt on `ubuntu-22.04-arm` failed on a **compiler codegen bug**: module-scope `Vec` initialization emits `load i8*, i8** %struct.Vec*` (invalid for LLVM/clang 14, tolerated by 18). Filed **`REL-20261021-0717-pulse`** (pulse -> compiler, high) with `tests/probes/probe_arm64_ginit.xi`; the 24.04 leg is green. `main = 8cf4992`; **CI `39560182609` GREEN on all three platforms** (arm64, linux-x64, windows-x64).
 
 **WRAP 22 (2026-10-19, session 22):** context-budget wrap after three units, `main = 9b97eb7` at wrap start (clean + pushed; this wrap commit follows). **SQL STORE/REPOSITORY LAYER LANDED:** `src/sql.xi` (`xiom.pulse.station.sql`) over xiom.sqlite 0.4.1 -- integer handles, mandatory value binding, identifier validation, JSON rows, repository CRUD + `limit+1` paging, transactions; `tests/test_sql.xi` 53/53 Windows + WSL; opt-in (serving binary still SQL-free); CI `39328272067` green both. **PER-ROUTE RATE POLICY LANDED (W6):** `PULSE_RATE_ROUTES` token buckets on top of the global bucket, matched by route template (HEAD as GET, `/v1` normalized); test_http 95/95, test_app 239/239, rate_smoke proves 200/429/refill both platforms; CI `39332690326` green both. **BENCH BASELINE PUBLISHED:** `benchmarks/bttger/` six-endpoint contract + adapted autocannon driver; Windows c1 clean -- 454.6/78.1/384.6/142.9/172.4/50.0 req/s, zero errors; c10 adds no throughput and times out the waiting connections (W1 sequential-accept ceiling); report + raw JSON committed; CI `39335266242` green both. Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, rate smoke, on v0.64.8 + stdlib `112c5b6`. NEXT: SSE + WebSocket, then Phase B when m371 lands, 0.3.0, platform legs, Linux/1M bench follow-ups. Doorbell cancelled for the session boundary.
 
@@ -1301,10 +1303,15 @@ STATE AT WRAP 21 + SESSIONS 22-23 (2026-10-20):
   unchanged; user stream handlers and WS auth are follow-ups (Origin +
   fragmentation + startup registry landed).
   `main = c062a58`; **CI `39427518984` GREEN both platforms**.
+- **LINUX-ARM64 CI LEG (session 23):** native `ubuntu-24.04-arm` in the
+  matrix; arm64 toolchain pin + clang check + ELF verify; full gates
+  native. `main = 8cf4992`; **CI `39560182609` GREEN on all three
+  platforms**. The 22.04/clang-14 build exposed a compiler codegen bug
+  (`REL-20261021-0717-pulse`); 24.04 passes.
 - Current gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv),
-  crash x2, migrations 21/21, SQL store 53/53, stream 57/57 + live 20/20,
-  rate smoke (global + per-route), benchmark-app build (CI), sqlite
-  probe.
+  crash x2 on linux-x64, linux-arm64 and windows-x64; migrations 21/21,
+  SQL store 53/53, stream 57/57 + live 20/20 on both Linux legs; rate
+  smoke (global + per-route), benchmark-app build (CI), sqlite probe.
 
 NEXT -- queue (dependency order):
 1. **Phase B when compiler m371 lands**: re-apply the stateful pre/after
@@ -1316,8 +1323,9 @@ NEXT -- queue (dependency order):
    bump src/version.xi + APP_VERSION + package.xi, CHANGELOG, tag
    `pulse-v*` (guard: tag == version, ancestor of main), watch the
    release fleet, ping ops for dogfood.
-3. Platform: add the **linux-arm64** CI leg and the macOS release legs;
-   a background heartbeat for a single very long migration.
+3. Platform: **linux-arm64 CI leg done (2026-10-21)**; add the macOS
+   legs and an arm64 release asset; a background heartbeat for a single
+   very long migration.
 4. Follow-up bench work: Linux leg + the full 1M-request bttger amount
    (the baseline report explains why the reduced run was used); the
    xlcaptain scenarios. **Blocked on `REL-20261020-1704-pulse`** (stdlib
@@ -1330,7 +1338,9 @@ NEXT -- queue (dependency order):
 OPEN OBLIGATIONS / RELAYS: compiler m371 (`REL-20261019-1309-pulse`,
 next cycle); **stdlib JSON path leak (`REL-20261020-1704-pulse`, filed 2026-10-20,
 high; builder + parse/stringify both retain -- blocks Linux/1M bench and
-JSON-heavy load)**;
+JSON-heavy load)**; **arm64 module-scope Vec codegen
+(`REL-20261021-0717-pulse`, filed 2026-10-21, high -- breaks arm64 on
+22.04/clang 14; 24.04 leg green)**;
 registry 3.0 pilot gate ping when production-serving
 (`REL-20261013-1707-registry`); no open PULSE ops items (1141 closed).
 **RELAY BUS NOTE (2026-10-20):** `items/REL-20261020-2355-owner.md`
@@ -1351,7 +1361,8 @@ registry packages. Pinned local builds: Windows
 on a new release). Reference-Study Protocol binding (docs\
 REFERENCE-STUDY-PROTOCOL.md): cite the matrix, no design from memory,
 blockers relay first and test back on the next release. Gates before any
-done claim: suites x2 + smoke 135/135 x2 + crash x2 (both platforms);
+done claim: suites x2 + smoke 135/135 x2 + crash x2 on linux-x64,
+linux-arm64 and windows-x64;
 rate smoke (global + per-route); stream 57/57 + live 20/20; SQL store
 53/53 + migrations 21/21; SQL builds pass the vendored sqlite C
 source ONLY for entries importing xiom.sqlite, the migrations module or
