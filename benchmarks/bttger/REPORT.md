@@ -101,8 +101,11 @@ parse/stringify path retains too.
 `tests/probes/probe_json_isolate.xi` bisects it under a 256 MB cap:
 `json_parse` alone is killed after ~1,500 iterations (265,216 KB),
 `json_stringify` alone after ~500 iterations (264,960 KB), while 2,000,000
-plain `Str` concats complete under the same cap. The leak is specific to
-the `JsonValue` node/aggregate lifecycle, not generic string allocation.
+plain `Str` concats complete under the same cap. Windows x64 reproduces
+the same profile (parse ~2,000 iterations/298 MB, stringify ~500/258 MB,
+plain strings clean), so it is not platform-specific. The leak is specific
+to the `JsonValue` node/aggregate lifecycle, not generic string
+allocation.
 Filed/updated on the relay as **`REL-20261020-1704-pulse`** (pulse ->
 stdlib, high). The 1M-request benchmark and the Linux leg stay blocked
 until the stdlib fix lands.
