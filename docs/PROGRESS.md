@@ -964,8 +964,9 @@ prints them, and per-route rate policy applies to their literal path after
 the global bucket (`GET /api/sse=1/1` observed 200 then 429 live).
 `test_stream` grows to **57/57** (registry/init/path/validation/routes
 text) and live `stream_smoke` stays **20/20**. Full gates green both
-platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2. User-supplied
-stream handlers remain the follow-up; the registry is the seam._
+platforms: suites x2 95/239/4, smoke 135/135 x2, crash x2; CI
+`39548433814` green both. User-supplied stream handlers remain the
+follow-up; the registry is the seam._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
