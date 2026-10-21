@@ -84,8 +84,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git -C stdlib fetch --depth 1 origin 05673f8
-          git -C stdlib checkout --detach FETCH_HEAD
+          git -C stdlib fetch --unshallow origin || true
+          git -C stdlib fetch origin main
+          git -C stdlib checkout 05673f86481ff3786705226020c763e71b5cc941
           export XIOM_STDLIB="$PWD/stdlib"
           bash scripts/build.sh tests/probes/p_io_listdir_roundtrip.xi --name p_io_listdir_fix --timeout-sec 300
           ./out/p_io_listdir_fix
