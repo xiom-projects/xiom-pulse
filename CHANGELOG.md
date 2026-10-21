@@ -8,6 +8,12 @@ GitHub release body.
 
 ### Added
 
+- **linux-arm64 CI leg:** the native `ubuntu-22.04-arm` runner is in the
+  CI matrix; `setup-xiom` selects the SHA256-pinned
+  `xiom-0.64.8-linux-arm64` toolchain (and installs clang when absent),
+  and the arm64 build is verified with `file` before the full SQL,
+  stream, suite, smoke and crash gates run natively. No arm64 release
+  asset yet; macOS remains gated.
 - **Workstation memory cap:** `scripts/capped_app.ps1` /
   `scripts/capped_app.sh` run the app under an RSS watchdog (default
   **2048 MB**, `PULSE_MAX_RSS_MB` override) and kill the process tree at

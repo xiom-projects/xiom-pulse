@@ -10,9 +10,10 @@ The embeddable core is packaged separately as **PULSE Beacon** (registry id
 `xiom.pulse`), and Station consumes that same package -- **one core, never a
 fork**. Tier map below.
 
-> **Status:** 0.2.1 released (linux-x64 + windows-x64, tag `pulse-v0.2.1`);
-> a live demo runs at pulse.xiom-lang.org. Not top-tier complete yet --
-> weighted tracker in `docs/PROGRESS.md`.
+> **Status:** 0.2.2 released (linux-x64 + windows-x64, tag `pulse-v0.2.2`);
+> the **linux-arm64** native CI leg is added (build + full gates); a live
+> demo runs at pulse.xiom-lang.org. Not top-tier complete yet -- weighted
+> tracker in `docs/PROGRESS.md`.
 > **Consumer lane:** this repo never edits `E:\xiom-lang\stdlib`,
 > `E:\xiom-lang\xiom`, or `E:\xiom-packages\packages`; upstream defects are
 > reported through minimal repro bundles + findings rows in `SESSION.md`.
@@ -56,7 +57,8 @@ lane hashes are recorded in `SESSION.md` at every wrap.
 |---|---|
 | Compiler | **v0.64.8** (versioned install; `dev-env` prefers it over the v0.64.7/unversioned fallbacks) |
 | Stdlib | pin **`112c5b6`** (tag `stdlib-v0.64.8`; extracted release tag) |
-| Packages | registry (`%LOCALAPPDATA%\xiom\packages`): the 11 deps -- xiom.pulse 0.2.1, xiom.http 0.1.8, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.kv 0.1.0 |
+| Packages | registry (`%LOCALAPPDATA%\xiom\packages`): the 13 deps -- xiom.pulse 0.3.1, xiom.http 0.1.8, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.kv 0.1.0, xiom.sqlite 0.4.1 (+ the SQL store layer's `xiom.sqlite` optional build) |
+| Platforms | linux-x64, **linux-arm64** (native CI leg), windows-x64; macOS gated on upstream (`1609-pulse`); release assets currently linux-x64 + windows-x64 |
 
 `XIOM_RUNTIME_DIR` is **retired** on v0.64.0 (release R65 links the
 installed `lib\runtime` + `lib\xiom`): PULSE verified env-free with both

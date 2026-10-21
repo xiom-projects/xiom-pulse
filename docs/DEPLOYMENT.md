@@ -16,6 +16,11 @@ flowchart LR
     M[Prometheus] -->|scrape /metrics via proxy or loopback| U
 ```
 
+PULSE builds and runs on **linux-x64**, **linux-arm64** (native CI leg,
+added 2026-10-21) and **windows-x64**. macOS is gated on the upstream
+`1609-pulse` pair. Release assets currently ship linux-x64 + windows-x64;
+the arm64 leg is CI-verified but has no release asset yet.
+
 ## 1. Environment
 
 | Variable | Default | Meaning |

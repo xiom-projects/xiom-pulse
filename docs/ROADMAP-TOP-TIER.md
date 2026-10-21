@@ -38,7 +38,8 @@ current plan), `docs/FRAMEWORK-ROADMAP-PULSE.md` (milestone history),
   from the route table, CLI (have + extend).
 - **T7 Observability.** metrics/logs/rid (have) + tracing (OTel)
   decision + export.
-- **T8 Platforms/legacy.** linux + windows (have) + macOS (v0.64.6
+- **T8 Platforms/legacy.** linux-x64 + windows (have) + **linux-arm64
+  native CI (2026-10-21)** + macOS (v0.64.6
   pair); HTTP/1.0-class clients and `Connection` semantics; JSONL
   no-DB deployments stay first-class; Windows x64 production template.
 - **T9 Proof.** Published benchmark report (bttger six endpoints +
@@ -128,7 +129,8 @@ response-compression unit + precompressed-static sidecars [Q].
 
 **W3 Legacy & platform.** HTTP/1.0 + `Connection` semantics via the
 keep-alive design (MUST_CLOSE path) [Q]; JSONL no-DB first-class [Q,
-already default]; Windows x64 production template [O]; macOS legs
+already default]; **linux-arm64 native CI leg [done 2026-10-21; arm64
+release asset Q]**; Windows x64 production template [O]; macOS legs
 [C v0.64.6 pair, then Q re-test]; edge TLS-version/cipher floors for
 old clients [O, documented].
 

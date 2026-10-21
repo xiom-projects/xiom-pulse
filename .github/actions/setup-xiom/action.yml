@@ -37,9 +37,16 @@ runs:
       run: |
         set -euo pipefail
         ver="${XIOM_TOOLCHAIN_VERSION}"
-        url="https://dl.xiom-lang.org/releases/${ver}/xiom-${ver#v}-linux-x64.tar.gz"
+        if [ "${RUNNER_ARCH}" = "ARM64" ]; then
+          plat="linux-arm64"
+          sha="${XIOM_LINUX_ARM64_SHA256}"
+        else
+          plat="linux-x64"
+          sha="${XIOM_LINUX_SHA256}"
+        fi
+        url="https://dl.xiom-lang.org/releases/${ver}/xiom-${ver#v}-${plat}.tar.gz"
         curl -sSL "$url" -o /tmp/xiom-toolchain.tar.gz
-        echo "${XIOM_LINUX_SHA256}  /tmp/xiom-toolchain.tar.gz" | sha256sum -c -
+        echo "${sha}  /tmp/xiom-toolchain.tar.gz" | sha256sum -c -
         mkdir -p "$HOME/.local/share/xiom"
         tar -xzf /tmp/xiom-toolchain.tar.gz -C "$HOME/.local/share/xiom"
         # C-PULSE-13 is CLOSED (m232): xiom pkg resolves the same home as
@@ -68,6 +75,17 @@ runs:
         # C-PULSE-13 is CLOSED (m232): no bridge needed.
         echo "$HOME/.local/share/xiom/bin" >> "$GITHUB_PATH"
         "$HOME/.local/share/xiom/bin/xiom" --version
+
+    - name: Ensure clang (Linux arm64)
+      if: runner.os == 'Linux' && runner.arch == 'ARM64'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v clang >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y clang
+        fi
+        clang --version | head -1
 
     - name: Install rcedit (Windows exe icon)
       if: runner.os == 'Windows'
