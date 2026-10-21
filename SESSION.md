@@ -1383,6 +1383,25 @@ registry 3.0 pilot gate ping when production-serving
 the engine normalizes it. Do not edit another lane's item.
 Check the relay first every session -- packages/compiler move fast.
 
+NEXT-PIN ADOPTION (blocked upstream as of 2026-10-21T19:00Z; no
+v0.64.9 / stdlib-v0.64.9 yet):
+1. **stdlib-v0.64.9** (carries `list_dir` 05673f8): bump
+   `STDLIB_VERSION`, refresh both local tag dirs (`stdlib-tag-v0.64.9`),
+   delete the macOS pre-fix + fix-witness CI steps, make `macos-15-intel`
+   gating (keep `macos-14` non-gating until the compiler pin), and run
+   migrations 21/21 + `p_io_listdir_roundtrip` on macOS.
+2. **Compiler v0.64.9** (carries 0717 `aecad8c6c`; hopefully 1703
+   function values): bump `XIOM_TOOLCHAIN_VERSION`, all workflow SHA pins
+   (linux-x64/arm64/windows/macOS), local installs; re-add the
+   `ubuntu-22.04-arm` leg and run `probe_arm64_ginit`; run
+   `probe_fnptr` and restore the user `StreamHandler` registry if green;
+   make `macos-14` gating.
+3. **JSON leak** (stdlib builders + compiler m375): run
+   `probe_json_builder_leak` under 512 MB, expect flat; then re-run the
+   capped bttger 5k/1M and update `benchmarks/bttger/REPORT.md`.
+4. Release 0.3.0 after 1+2+3 and the owner decision; bump the version
+   literals, tag, watch the three-leg release fleet, ping ops.
+
 DISCIPLINE: OWNER DIRECTIVE (2026-10-20) -- every manual or long app run
 on the workstation goes through `scripts\capped_app.ps1` /
 `scripts\capped_app.sh` (default **2048 MB RSS**, `PULSE_MAX_RSS_MB`
