@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-21 (linux-arm64 native CI leg + SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse` and arm64 codegen `REL-20261021-0717-pulse` filed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-21 (linux-arm64 native CI + non-gating macOS witness; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse`, arm64 codegen `REL-20261021-0717-pulse` and macOS io `REL-20261021-0918-pulse` filed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -978,6 +978,16 @@ codegen bug (invalid module-scope `Vec` initializer IR, rejected by LLVM
 `tests/probes/probe_arm64_ginit.xi`. The 24.04 leg is green; CI
 `39560182609` passes on linux-x64, linux-arm64 and windows-x64. No arm64
 release asset yet; macOS remains gated._
+
+_Delta 2026-10-21 (macOS witness): `macos-14` (arm64) and
+`macos-15-intel` (x64) are in the matrix but **non-gating**. The arm64
+leg fails the same module-scope Vec IR as Linux clang 14
+(`REL-20261021-0717-pulse`); the x64 leg builds but the migrations suite
+exposes a stdlib io name truncation (`cannot read 0260101000002_seed.sql`;
+`REL-20261021-0918-pulse`). Both are filed high; CI `39575983499` is
+overall success with linux-x64/linux-arm64/windows-x64 gating green. The
+1609 macOS witness is re-opened by these findings; macOS release assets
+remain behind `RELEASE_BUILD_MACOS`._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
