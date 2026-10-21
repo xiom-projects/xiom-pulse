@@ -35,6 +35,12 @@ const MAX_SSE_EVENTS: Int = 100;
 const MAX_SSE_INTERVAL_MS: Int = 5000;
 const MAX_WS_PENDING: Int = 1048576;
 
+/// StreamHandler owns the connection for one registered route. It returns
+/// (status, payload bytes); the loop records the result and closes the fd.
+pub type StreamHandler = fn(Int, &Vec[UInt8], &PulseRequest) -> (Int, Int);
+
+var g_handlers: Vec[StreamHandler] = Vec[StreamHandler].new();
+
 // Runtime stream-route registry (append-only; scalar Vec state, the same
 // pattern as the kv holder). Handlers are the built-in SSE/WS kinds; user
 // handler registration remains a follow-up.
@@ -59,21 +65,36 @@ fn find_route(method: Str, path: Str) -> Int {
   return -1;
 }
 
+fn builtin_sse(fd: Int, _raw: &Vec[UInt8], req: &PulseRequest) -> (Int, Int) {
+  return sse_stream(fd, req);
+}
+
 /// init registers the built-in demo routes once and returns the number
 /// added (0 on subsequent calls). Complexity: O(1).
 pub fn init() -> Int {
   if g_inited { return 0; }
   var n: Int = 0;
-  if register("GET", "/api/sse", STREAM_SSE) { n = n + 1; }
-  if register("GET", "/api/ws", STREAM_WS) { n = n + 1; }
+  if register_handler("GET", "/api/sse", STREAM_SSE, builtin_sse) { n = n + 1; }
+  if register_handler("GET", "/api/ws", STREAM_WS, ws_stream) { n = n + 1; }
   g_inited = true;
   return n;
 }
 
-/// register adds a stream route at startup. Only GET and the built-in
-/// kinds are accepted; duplicates/invalid paths fail closed.
-/// Complexity: O(routes).
+/// register adds a built-in kind route at startup (the handler is selected
+/// from the kind). Complexity: O(routes).
 pub fn register(method: Str, path: Str, kind: Int) -> Bool {
+  if kind == STREAM_SSE {
+    return register_handler(method, path, kind, builtin_sse);
+  } elif kind == STREAM_WS {
+    return register_handler(method, path, kind, ws_stream);
+  }
+  return false;
+}
+
+/// register_handler adds a user handler at startup. Only GET is accepted;
+/// duplicates/invalid paths fail closed; the handler owns the fd once the
+/// gate has passed. Complexity: O(routes).
+pub fn register_handler(method: Str, path: Str, kind: Int, handler: StreamHandler) -> Bool {
   if method != "GET" { return false; }
   if kind != STREAM_SSE && kind != STREAM_WS { return false; }
   if !valid_path(path) { return false; }
@@ -81,6 +102,7 @@ pub fn register(method: Str, path: Str, kind: Int) -> Bool {
   g_methods.push(method);
   g_paths.push(path);
   g_kinds.push(kind);
+  g_handlers.push(handler);
   return true;
 }
 
@@ -103,6 +125,19 @@ pub fn route_path(method: Str, target: Str) -> Str {
   let idx = find_route(method, path);
   if idx < 0 { return ""; }
   return g_paths[idx];
+}
+
+/// dispatch invokes the registered handler for a matched target. The
+/// caller has already run the gate and, for WS, the upgrade/Origin checks.
+/// Returns (0, 0) when the route has no handler.
+/// Complexity: O(routes).
+pub fn dispatch(fd: Int, raw: &Vec[UInt8], req: &PulseRequest, target: Str) -> (Int, Int) {
+  let _ = init();
+  let path = router.split_target(target).0;
+  let idx = find_route("GET", path);
+  if idx < 0 || idx >= g_handlers.len() { return (0, 0); }
+  let handler = g_handlers[idx];
+  return handler(fd, raw, req);
 }
 
 /// routes_text is the `routes` CLI block for stream routes.

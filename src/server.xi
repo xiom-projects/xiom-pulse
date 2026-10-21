@@ -1386,10 +1386,19 @@ pub fn main() -> Int {
         } else {
           // Realtime takeover: the stream unit owns the fd after the gate.
           // 1 = SSE, 2 = WebSocket (docs/DESIGN-SSE-WEBSOCKET.md).
-          let sk = stream.stream_kind(req.method, router.v1_path(req.target));
+          let s_target = router.v1_path(req.target);
+          let sk = stream.stream_kind(req.method, s_target);
           if sk == 1 {
-            let sm = stream.sse_stream(client, &req);
-            record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+            let sm = stream.dispatch(client, &raw, &req, s_target);
+            if sm.0 == 0 {
+              var hs0: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+              let rbody = envelope.error_body("stream_unavailable", "stream handler missing");
+              var resp = http.build_response_full(500, CONTENT_JSON, &hs0, rbody, false);
+              resp = with_std_headers(with_cors(resp, &req));
+              let _w = after_response(client, resp, rid, req.method, req.target, 500, rbody.len(), t0_ms, false);
+            } else {
+              record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+            }
             conn_open = false;
             served = served + 1;
           } elif sk == 2 {
@@ -1413,8 +1422,16 @@ pub fn main() -> Int {
                 let _w = after_response(client, resp, rid, req.method, req.target, 403, rbody.len(), t0_ms, false);
                 conn_open = false;
               } else {
-                let sm = stream.ws_stream(client, &raw, &req);
-                record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+                let sm = stream.dispatch(client, &raw, &req, s_target);
+                if sm.0 == 0 {
+                  var hs0: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+                  let rbody = envelope.error_body("stream_unavailable", "stream handler missing");
+                  var resp = http.build_response_full(500, CONTENT_JSON, &hs0, rbody, false);
+                  resp = with_std_headers(with_cors(resp, &req));
+                  let _w = after_response(client, resp, rid, req.method, req.target, 500, rbody.len(), t0_ms, false);
+                } else {
+                  record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+                }
                 conn_open = false;
                 served = served + 1;
               }
