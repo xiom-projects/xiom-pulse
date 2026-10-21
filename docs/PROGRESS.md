@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-21 (linux-arm64 native CI + non-gating macOS witness; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse`, arm64 codegen `REL-20261021-0717-pulse` and macOS io `REL-20261021-0918-pulse` filed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-21 (linux-arm64 native CI + release dry-run + non-gating macOS witness; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse`, arm64 codegen `REL-20261021-0717-pulse` and macOS io `REL-20261021-0918-pulse` filed; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -991,6 +991,14 @@ the migrations suite. Both are filed high; CI `39575983499` is
 overall success with linux-x64/linux-arm64/windows-x64 gating green. The
 1609 macOS witness is re-opened by these findings; macOS release assets
 remain behind `RELEASE_BUILD_MACOS`._
+
+_Delta 2026-10-21 (linux-arm64 release dry-run): the release matrix now
+includes `linux-arm64` on `ubuntu-24.04-arm`; the packager auto-detects
+aarch64 and emits `pulse-<ver>-linux-arm64.zip` + `.sha256`. Dry-run
+`39588855890` is green on linux-x64, linux-arm64 and windows-x64 with the
+full fleet (suites x2, smoke, rate, crash, kv soak), packaging, artifact
+upload and provenance. No public release was cut; the next tag ships
+three assets; macOS stays opt-in._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
