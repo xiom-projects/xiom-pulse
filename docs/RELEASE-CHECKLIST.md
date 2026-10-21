@@ -8,6 +8,36 @@ immutable, so every literal below must be updated and verified BEFORE
 tagging. Follow this list in order. Scope: any release; the 0.2.0
 preconditions are called out where they differ.
 
+## 0.3.0 readiness (2026-10-21)
+
+**Included and green now:**
+
+- Keep-alive A/B, durability A/B, middleware Phase A (read / gate /
+  dispatch / after_response; gate order 11/11), SQL class MVP
+  (migrations 21/21) plus the opt-in repository/query layer (53/53),
+  SSE + WebSocket (Origin policy, fragmentation, startup registry,
+  per-route rate; 57/57 + 20/20 live), static conditional/Range, bttger
+  baseline, linux-arm64 CI and release packaging dry-run.
+- Gating matrix: **linux-x64, linux-arm64, windows-x64**; suites x2 /
+  smoke x2 / crash x2; SQL/migrations/stream on both Linux legs.
+  Release dry-run `39588855890` green with three packages + provenance.
+
+**Not in the 0.3.0 cut (blocked or deferred):**
+
+- Compiler **m371** -> middleware Phase B (the legacy loop stays).
+- Jobs core.
+- macOS release assets: the `macos-14`/`macos-15-intel` witness is
+  non-gating; arm64 is blocked by compiler `REL-20261021-0717-pulse`
+  (fixed on main, not in the v0.64.8 pin) and x64 by macOS `list_dir`
+  (`REL-20261021-0918-pulse`).
+- Stdlib JSON path leak (`REL-20261020-1704-pulse`) + compiler m375:
+  JSON-heavy/1M benchmark; not a 0.3.0 serving-path blocker for the
+  current routes, but the benchmark report stays partial.
+- Dynamic user stream handlers and WS authentication.
+
+**Decision needed:** cut 0.3.0 with the above scope, or hold for m371 /
+jobs / macOS. The mechanical bump+tag steps below are unchanged.
+
 ## 0. Preconditions
 
 - **linux-arm64 leg (0.3.0+):** the release matrix now packages
