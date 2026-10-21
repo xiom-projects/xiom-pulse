@@ -65,7 +65,7 @@ Owner: S=stdlib, C=compiler, P=packages, Q=PULSE, O=ops.
 | 26 | Distributed tracing (OTel in top stacks) | ❌ | optional; no lane gate (decide later) |
 | 27 | Multi-worker operation (K processes behind nginx) | ❌ | S: `SO_REUSEPORT` (#5); O: unit/systemd template |
 | 28 | Outbound HTTP client with guard (undici/axios class) | ✅ | -- |
-| 29 | Platform parity | ✅ linux-x64/win + linux-arm64; macOS witness non-gating | C: macOS release assets (`1609-pulse`, `-2`); blockers `REL-20261021-0717-pulse` (arm64 IR) + `REL-20261010-1609-stdlib` (C-PULSE-17 inline payload index); 0918 closed duplicate; arm64 release packaging dry-run verified, ships next tag |
+| 29 | Platform parity | ✅ linux-x64/win + linux-arm64; macOS witness non-gating | C: macOS release assets (`1609-pulse`, `-2`); blockers `REL-20261021-0717-pulse` (arm64 IR) + `REL-20261021-0918-pulse` (macOS `list_dir`) + `REL-20261010-1609-stdlib` (Windows inline payload index); arm64 release packaging dry-run verified, ships next tag |
 | 30 | Toolchain reliability for adoption | 🟡 v0.64.4 held | C: kv-mode exit-0 (`REL-20261012-1418-pulse`); SIGILL (`1615`) gates 0.2.1 |
 
 ## 2. Lane asks (self-contained)

@@ -983,11 +983,12 @@ _Delta 2026-10-21 (macOS witness): `macos-14` (arm64) and
 `macos-15-intel` (x64) are in the matrix but **non-gating**. The arm64
 leg fails the same module-scope Vec IR as Linux clang 14
 (`REL-20261021-0717-pulse`); the x64 leg builds but the migrations suite
-fails (`cannot read 0260101000002_seed.sql`). The direct print probe hits
-the known **C-PULSE-17 / compiler `REL-20261010-1609-stdlib`** inline
-`Result.value[i]` concat bug; `io.list_dir` itself returns owned names,
-and our `REL-20261021-0918-pulse` was closed as duplicate. The migrations
-failure still needs separate isolation (it binds the payload). CI
+fails (`cannot read 0260101000002_seed.sql`). The stdlib portable witness
+itself fails on macOS x64 (`entry[0] len=7310291289313914928
+name=105553158640064`, rc 3) while Windows/Linux pass, so
+`REL-20261021-0918-pulse` is a genuine macOS `list_dir`/dirent defect and
+was reopened. The Windows print-probe garbage is the separate compiler
+`REL-20261010-1609-stdlib` inline `Result.value[i]` concat. CI
 `39575983499` is
 overall success with linux-x64/linux-arm64/windows-x64 gating green. The
 1609 macOS witness is re-opened by these findings; macOS release assets
@@ -1007,10 +1008,13 @@ completes 500 iterations and crosses 512 MB at ~1,000-1,200 (vs ~500 for
 `json_set`), residual compiler m375; the builder API is not in the v0.64.8
 pin. Compiler fixed the arm64 module-scope Vec IR at `aecad8c6c`; a local
 debug build emits the GEP load, so the 22.04/macOS arm64 re-test waits for
-the next tagged compiler. C-PULSE-17 was re-confirmed as
-`REL-20261010-1609-stdlib` (compiler inline `Result.value[i]` concat);
-`io.list_dir` itself is correct and `REL-20261021-0918-pulse` was closed
-as duplicate. The macOS migrations failure remains under isolation._
+the next tagged compiler. The stdlib portable witness was run on
+macos-15-intel and **fails** (`entry[0] len=7310291289313914928
+name=105553158640064`, rc 3) while Windows/Linux pass; `REL-20261021-0918-pulse`
+is reopened as a macOS `list_dir`/dirent defect. The Windows print-probe
+garbage is the separate compiler `REL-20261010-1609-stdlib` inline
+`Result.value[i]` concat. The macOS migrations failure is the 0918
+defect._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
