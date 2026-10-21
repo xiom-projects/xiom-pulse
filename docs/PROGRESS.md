@@ -1021,7 +1021,10 @@ function value infer `()` (`let b: Int = g(41)` -> T001 found `()`), and
 the Vec storage path emits invalid IR (`store i64 %fnptr, i64* ...` where
 the value is `ptr`). Reverted; the built-in SSE/WS registry remains.
 Filed **`REL-20261021-1703-pulse`** (pulse -> compiler, high) with
-`tests/probes/probe_fnptr.xi`; re-test on the next pin._
+`tests/probes/probe_fnptr.xi`. Compiler main `c9b1f1009` fixes it;
+verified on local debug HEAD `badba26cd` -- `probe_fnptr` rc 0 and the
+exact `StreamHandler` shape prints `var=4,7` / `vec=4,7`. Restore the
+registry on the next tagged compiler._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and

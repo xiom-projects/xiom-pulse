@@ -19,7 +19,7 @@
 
 **2026-10-21 (session 23 -- release dry-run, linux-arm64):** the release matrix now includes `linux-arm64` on `ubuntu-24.04-arm`; `scripts/release.sh` auto-detects aarch64 and emits `pulse-<ver>-linux-arm64.zip` + `.sha256`. Dry-run **`39588855890` is green on linux-x64, linux-arm64 and windows-x64** with the full fleet (suites x2, smoke, rate, crash, kv soak), packaging, artifact upload and provenance. No public release was cut; the next tag ships three assets; macOS stays opt-in. `main = 388bdd5`.
 
-**2026-10-21 (session 23 -- user stream handlers, blocked):** attempted a `StreamHandler` registry (function values stored in a module-level Vec) to complete dynamic stream routes. The pinned compiler infers calls through stored function values as `()` (`let b: Int = g(41)` -> T001 found `()`), and the Vec storage path emits invalid IR (`store i64 %fnptr, i64* ...` where the value is `ptr`). Reverted the attempt; the built-in SSE/WS registry remains. Filed **`REL-20261021-1703-pulse`** (pulse -> compiler, high) with `tests/probes/probe_fnptr.xi`; re-test on the next pin and restore the registry.
+**2026-10-21 (session 23 -- user stream handlers, blocked):** attempted a `StreamHandler` registry (function values stored in a module-level Vec) to complete dynamic stream routes. The pinned compiler infers calls through stored function values as `()` (`let b: Int = g(41)` -> T001 found `()`), and the Vec storage path emits invalid IR (`store i64 %fnptr, i64* ...` where the value is `ptr`). Reverted the attempt; the built-in SSE/WS registry remains. Filed **`REL-20261021-1703-pulse`** (pulse -> compiler, high) with `tests/probes/probe_fnptr.xi`; **verified on compiler main `c9b1f1009`** (local debug HEAD `badba26cd`): `probe_fnptr` rc 0 and the exact `StreamHandler` shape (`fn(Int, &Vec[UInt8], &PulseRequest) -> (Int, Int)`) prints `var=4,7` / `vec=4,7`. Registry restore waits for a tagged compiler.
 
 **WRAP 22 (2026-10-19, session 22):** context-budget wrap after three units, `main = 9b97eb7` at wrap start (clean + pushed; this wrap commit follows). **SQL STORE/REPOSITORY LAYER LANDED:** `src/sql.xi` (`xiom.pulse.station.sql`) over xiom.sqlite 0.4.1 -- integer handles, mandatory value binding, identifier validation, JSON rows, repository CRUD + `limit+1` paging, transactions; `tests/test_sql.xi` 53/53 Windows + WSL; opt-in (serving binary still SQL-free); CI `39328272067` green both. **PER-ROUTE RATE POLICY LANDED (W6):** `PULSE_RATE_ROUTES` token buckets on top of the global bucket, matched by route template (HEAD as GET, `/v1` normalized); test_http 95/95, test_app 239/239, rate_smoke proves 200/429/refill both platforms; CI `39332690326` green both. **BENCH BASELINE PUBLISHED:** `benchmarks/bttger/` six-endpoint contract + adapted autocannon driver; Windows c1 clean -- 454.6/78.1/384.6/142.9/172.4/50.0 req/s, zero errors; c10 adds no throughput and times out the waiting connections (W1 sequential-accept ceiling); report + raw JSON committed; CI `39335266242` green both. Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, rate smoke, on v0.64.8 + stdlib `112c5b6`. NEXT: SSE + WebSocket, then Phase B when m371 lands, 0.3.0, platform legs, Linux/1M bench follow-ups. Doorbell cancelled for the session boundary.
 
@@ -1350,11 +1350,11 @@ NEXT -- queue (dependency order):
    (the baseline report explains why the reduced run was used); the
    xlcaptain scenarios. **Blocked on `REL-20261020-1704-pulse`** (stdlib
    JSON builder leak); run only under the 2 GB cap.
-5. Realtime follow-ups: user-supplied stream handlers are blocked on
-   the compiler function-value defect (`REL-20261021-1703-pulse`); the
-   startup registry + built-in kinds are landed. Permessage-deflate and
-   authentication before user data on `/api/ws` remain (Origin guard and
-   fragmentation are landed).
+5. Realtime follow-ups: user-supplied stream handlers are **fixed on
+   compiler main `c9b1f1009`** (verified locally); restore the registry
+   on the next tagged compiler. The startup registry + built-in kinds are
+   landed. Permessage-deflate and authentication before user data on
+   `/api/ws` remain (Origin guard and fragmentation are landed).
 
 OPEN OBLIGATIONS / RELAYS: compiler m371 (`REL-20261019-1309-pulse`,
 next cycle); **stdlib JSON path leak (`REL-20261020-1704-pulse`,
@@ -1371,10 +1371,10 @@ fix is on main and lands in the next pin, then x64 becomes gating.
 **Windows inline payload index (`REL-20261010-1609-stdlib`, acked,
 high)** -- our print probe hits the known compiler inline
 `Result.value[i]` concat bug; separate from the macOS fix.
-**Stored function values (`REL-20261021-1703-pulse`, open, high)** --
-calls through module-level/Vec function values infer `()` and the
-Vec storage emits invalid IR; blocks user stream handlers. Re-test on
-the next pin.
+**Stored function values (`REL-20261021-1703-pulse`, VERIFIED fixed
+`c9b1f1009`)** -- local debug HEAD verifies `probe_fnptr` and the exact
+`StreamHandler` shape; restore the user handler registry on the next
+tagged compiler. Pinned v0.64.8 still cannot build it.
 registry 3.0 pilot gate ping when production-serving
 (`REL-20261013-1707-registry`); no open PULSE ops items (1141 closed).
 **RELAY BUS NOTE (2026-10-20):** `items/REL-20261020-2355-owner.md`
@@ -1390,11 +1390,12 @@ v0.64.9 / stdlib-v0.64.9 yet):
    delete the macOS pre-fix + fix-witness CI steps, make `macos-15-intel`
    gating (keep `macos-14` non-gating until the compiler pin), and run
    migrations 21/21 + `p_io_listdir_roundtrip` on macOS.
-2. **Compiler v0.64.9** (carries 0717 `aecad8c6c`; hopefully 1703
-   function values): bump `XIOM_TOOLCHAIN_VERSION`, all workflow SHA pins
+2. **Compiler v0.64.9** (carries 0717 `aecad8c6c` and 1703
+   `c9b1f1009`): bump `XIOM_TOOLCHAIN_VERSION`, all workflow SHA pins
    (linux-x64/arm64/windows/macOS), local installs; re-add the
-   `ubuntu-22.04-arm` leg and run `probe_arm64_ginit`; run
-   `probe_fnptr` and restore the user `StreamHandler` registry if green;
+   `ubuntu-22.04-arm` leg and run `probe_arm64_ginit`; re-run
+   `probe_fnptr` + `probe_stream_handler`, then restore the user
+   `StreamHandler` registry (already verified on the debug compiler);
    make `macos-14` gating.
 3. **JSON leak** (stdlib builders + compiler m375): run
    `probe_json_builder_leak` under 512 MB, expect flat; then re-run the
