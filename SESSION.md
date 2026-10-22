@@ -70,9 +70,14 @@ NEXT (dependency order):
    `p_io_listdir_roundtrip` + migrations 21/21; restore the registry;
    move linux-arm64 to ubuntu-22.04 and make `macos-14` gating; run CI +
    release dry-run; enable macOS packaging.
-2. **HTTP POST retention**: isolate the `/insert` growth on v0.64.8 +
-   stdlib v0.64.9 (`probe_json_get_leak` is flat; check the request/
-   response lifecycle), then the capped bttger 5k/1M.
+2. **HTTP request-path retention -- INVESTIGATED (session 25, below):**
+   compiler-owned per-request leak on v0.64.8 + stdlib v0.64.9 (product
+   `GET /health` 55-60 KB/req; bttger `/serialize/big` 1.14 MB/req).
+   Bus: `REL-20261010-1549-pulse-4` (compiler, v0.65.0 P0),
+   `REL-20261020-1704-pulse` (stdlib reference APIs), new
+   `REL-20261022-2049-pulse` (`socket_recv_into`). Do not re-isolate;
+   wait for a pin/fix, then re-run `scripts/post_retention_probe.ps1`
+   and only then the capped bttger 5k/1M.
 3. **Release 0.3.0** after owner approval (SQL serving decision proposed).
 4. Remaining realtime: WS auth, permessage-deflate; Phase B stays blocked
    on m371.
@@ -86,6 +91,37 @@ DISCIPLINE: latest is **not** v0.64.9 (withdrawn); production v0.64.8
 until the v0.65.0 gate is green + owner GO. Signed conventional commits;
 commit/push per unit; update SESSION + docs/PROGRESS at every wrap;
 report blockers on the relay first.
+
+**2026-10-22 (session 25 -- HTTP request-path retention isolated):**
+The remaining growth is **per request** and **compiler-owned**; it is not
+a bttger/JSON artifact and it is not fixed by the stdlib-v0.64.9 pins.
+On v0.64.8 + stdlib tag `aa8b656` (Windows x64): the product `pulse_app`
+`GET /health` retains **55-60 KB/request** (connection-per-request and
+one keep-alive connection alike); bttger retains 39 KB (tiny GET), 36.6
+KB (`/serialize`), 55 KB (404), 71-96 KB (`/insert` 2 B-163 B), 303 KB
+(4 KB body) and **1.14 MB** (`/serialize/big`). One keep-alive 400-POST
+run has the same 89 KB/req slope, so the earlier "standalone loop flat /
+HTTP residual" reading was a measurement artifact. Standalone bisect
+(`tests/probes/probe_alloc_aggregate.xi`, peak RSS): `Vec[Int]` 139 B,
+`Map[Str,Int]` 289 B, `Str` concat 47 B per iteration, but a one-field
+JSON build+stringify **2,152 B**, a trivial `json_type` on the same
+value **1,885 B**, `json_get` 1,959 B and `json_parse("{\"a\":1}")`
+2,267 B -> by-value `JsonValue` Map/Vec copies amplify the compiler's
+missing-drop-glue class (m375); the HTTP floor is the per-read 64 KiB
+`socket_recv` Vec. Harness `scripts/post_retention_probe.ps1`; evidence
+`probe-logs/post-retention-20261022.log`. Bus: compiler
+`REL-20261010-1549-pulse-4` updated with the v0.65.0 P0 ask + acceptance;
+stdlib `REL-20261020-1704-pulse` corrected (the "2k clean" note is a
+242 MB peak, not flat) with a `&JsonValue` reference-API ask; new
+`REL-20261022-2049-pulse` asks for `socket_recv_into` /
+`socket_recv_timeout_into` so the server can reuse one read buffer.
+**0.3.0 consequence:** on this pin the stock server leaks ~5.5 MB/s at
+100 rps; `docs/RELEASE-CHECKLIST.md` now records a sustained-load gate
+and the owner decision (wait for the compile fix + recv-into, or ship
+with a documented restart/RSS-cap policy). Environment: the local
+Windows package store (`%LOCALAPPDATA%\xiom\packages`) was empty after
+the engine incident; all 12 manifest deps were reinstalled at the pinned
+versions and `pulse_app` rebuilds green.
 
 **WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
 WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the

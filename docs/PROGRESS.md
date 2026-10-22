@@ -2,7 +2,31 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-22 (stdlib-v0.64.9 adopted; v0.64.9 compiler HELD per REL-1501; compiler v0.64.8 + user StreamHandler registry reverted; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse` acked, arm64 codegen `REL-20261021-0717-pulse` fixed on main, macOS list_dir `REL-20261021-0918-pulse` verified; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
+
+_Delta 2026-10-22 (session 25 -- HTTP request-path retention isolated):
+the per-request RSS growth is **not** a bttger/JSON artifact and is **not**
+fixed by the stdlib-v0.64.9 pins. On compiler v0.64.8 + stdlib tag
+`aa8b656`, Windows x64: the product `pulse_app` `GET /health` retains
+**55-60 KB/request** (connection-per-request and one keep-alive
+connection alike); bttger retains 39 KB (tiny GET), 36.6 KB
+(`/serialize`), 55 KB (404), 71-96 KB (`/insert` 2 B-163 B), 303 KB
+(4 KB body) and **1.14 MB** (`/serialize/big`). The standalone bisect
+(`tests/probes/probe_alloc_aggregate.xi`, peak RSS) shows Vec 139 B,
+Map 289 B and Str 47 B per iteration, but a one-field JSON
+build+stringify **2,152 B** and a trivial `json_type` on the same value
+**1,885 B** (`json_get` 1,959 B, `json_parse("{\"a\":1}")` 2,267 B) ->
+by-value `JsonValue` Map/Vec copies amplify the compiler's
+missing-drop-glue class (m375); the HTTP floor is the per-read 64 KiB
+`socket_recv` Vec. Harness `scripts/post_retention_probe.ps1`; evidence
+`probe-logs/post-retention-20261022.log`. Bus: compiler
+`REL-20261010-1549-pulse-4` (v0.65.0 P0 ask + acceptance), stdlib
+`REL-20261020-1704-pulse` (corrected: 2k "clean" is a 242 MB peak, not
+flat; reference-API ask) and new `REL-20261022-2049-pulse`
+(`socket_recv_into`). The 0.3.0 release checklist now records this as a
+sustained-load gate (owner decision). The local Windows package store
+was empty after the engine incident; all 12 manifest deps were
+reinstalled at the pinned versions and `pulse_app` rebuilds green.
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no

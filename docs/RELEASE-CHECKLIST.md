@@ -34,9 +34,19 @@ preconditions are called out where they differ.
   (`REL-20261022-1826-compiler`); production stays v0.64.8 and **v0.65.0**
   is the next gate. The user StreamHandler registry and arm64 fixes wait
   for that pin; enable macOS packaging after it.
-- Stdlib JSON path leak (`REL-20261020-1704-pulse`) + compiler m375:
-  JSON-heavy/1M benchmark; not a 0.3.0 serving-path blocker for the
-  current routes, but the benchmark report stays partial.
+- **Per-request retention on the serving path** (compiler m375 / no
+  drop glue; `REL-20261010-1549-pulse-4`, new stdlib
+  `REL-20261022-2049-pulse`): measured 2026-10-22 on v0.64.8 + stdlib
+  `aa8b656`, the stock `pulse_app` retains **55-60 KB per
+  `GET /health`** (keep-alive and connection-per-request alike); bttger
+  retains 39 KB (tiny GET), 89-96 KB (`POST /insert`) and 1.14 MB
+  (`GET /serialize/big`) per request. At 100 rps that is ~5.5 MB/s. This
+  is no longer a JSON-only or benchmark-only issue: a 0.3.0 server
+  cannot run sustained load on this pin without a restart/RSS-cap
+  policy. **Owner decision:** wait for the compiler drop-glue fix plus
+  the stdlib `socket_recv_into` mitigation, or ship 0.3.0 with the
+  limitation documented. The stdlib JSON builders
+  (`REL-20261020-1704-pulse`) remain the O(tree) amplifier.
 - Dynamic user stream handlers and WS authentication.
 
 **Decision proposed (2026-10-22):** cut 0.3.0 with the above scope. The

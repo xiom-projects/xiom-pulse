@@ -225,6 +225,25 @@ publish path next (`REL-20261016-1515/-1516-packages`). The remaining
 top-tier delta sits with stdlib (`-2202-pulse`; TLS/ALPN), compiler
 (`-2202-pulse-2`) and ops (`-2202-pulse-4`).
 
+**2026-10-22 retention isolation (supersedes the JSON-only reading):**
+the per-request RSS growth is compiler-owned and hits the plain serving
+path. On v0.64.8 + stdlib tag `aa8b656` (Windows x64), the product
+`pulse_app` retains **55-60 KB per `GET /health`** (keep-alive and
+connection-per-request alike); bttger retains 39 KB for a 13-byte
+response, 89-96 KB for `POST /insert`, and **1.14 MB** for
+`GET /serialize/big`. Standalone bisect: Vec 139 B, Map 289 B, Str 47 B
+per iteration, but a one-field JSON build+stringify is 2,152 B and a
+trivial `json_type` on the same value is 1,885 B -- by-value
+`JsonValue` copies amplify the missing-drop-glue class (m375). The HTTP
+floor is the per-read 64 KiB `socket_recv` Vec. Evidence:
+`scripts/post_retention_probe.ps1`,
+`tests/probes/probe_alloc_aggregate.xi`,
+`probe-logs/post-retention-20261022.log`. Bus: compiler
+`REL-20261010-1549-pulse-4` (v0.65.0 P0 ask + acceptance), stdlib
+`REL-20261020-1704-pulse` (reference-API ask) and new stdlib
+`REL-20261022-2049-pulse` (`socket_recv_into` reuse). This is a
+production gate for sustained load, including the 0.3.0 decision.
+
 ## 8. Proof discipline
 
 Every milestone ships with: full sweeps on both platforms (fleet, suites
