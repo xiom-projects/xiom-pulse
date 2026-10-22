@@ -1246,13 +1246,13 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-20 session 23 -- SSE + WebSocket)
+## 3. Paste prompt for the next PULSE session (2026-10-22 wrap 24 -- v0.64.9 + stream handlers)
 
 ```
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
 XIOM web backend / multipurpose framework). Read SESSION.md first -- the
-WRAP 23 digest and session-23 deltas at the top are authoritative (the
-WRAP 22/21 digests sit below them); then docs\PROGRESS.md,
+WRAP 24 digest at the top is authoritative (the WRAP 23/22/21 digests sit
+below it); then docs\PROGRESS.md,
 docs\PRODUCTION-REFERENCES.md, docs\PRODUCTION-GAPS.md, docs\ROADMAP-
 TOP-TIER.md and the unit design docs. Relays: E:\xiom-lang\xiom-relays.
 Reference shelf: E:\repos (PULSE web set is MIT; xlcaptain has no LICENSE).
@@ -1261,9 +1261,14 @@ RE-ARM YOUR DOORBELL FIRST (crons are session-scoped): every 2h with the
 standard sweep (git fetch + merge --ff-only, never `git pull`; view
 --lane pulse; process items; wrap on change). Then continue the queue.
 
-STATE AT WRAP 21 + SESSIONS 22-23 (2026-10-20):
-- `main = db91d2c` at wrap start (clean, pushed; wrap commit follows).
-  CI: every run below is green on BOTH platforms.
+STATE AT WRAP 24 (2026-10-22):
+- **WRAP 24 STATE:** `main = 945d9c6` at wrap start (clean, pushed; wrap
+  commit follows). **XIOM v0.64.9 + stdlib-v0.64.9 (`aa8b656`)** adopted;
+  **user StreamHandler registry** landed; **macOS x64 gating**. CI
+  `39805179815` green on linux-x64, linux-arm64 (24.04), windows-x64 and
+  macOS x64; `REL-20261022-1529-pulse` keeps 22.04/macOS arm64 non-gating.
+- `main = db91d2c` at the WRAP 21 start (historical).
+  CI: every run below is green on BOTH platforms where noted.
 - **PULSE 0.2.2 RELEASED**: tag `pulse-v0.2.2` (3b515c6), release run
   `39304832557` SUCCESS; linux/windows artifacts + SHA256SUMS; **ops
   CLOSED REL-20261017-1141-ops -- dogfood accepted after the retest**.
@@ -1327,10 +1332,11 @@ STATE AT WRAP 21 + SESSIONS 22-23 (2026-10-20):
   `linux-arm64` on `ubuntu-24.04-arm`; dry-run `39588855890` green on
   linux-x64/linux-arm64/windows-x64 (full fleet + package + provenance).
   Next tag ships `pulse-<ver>-linux-arm64.zip`; macOS remains opt-in.
-- Current gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv),
-  crash x2 on linux-x64, linux-arm64 and windows-x64; migrations 21/21,
-  SQL store 53/53, stream 57/57 + live 20/20 on both Linux legs; rate
-  smoke (global + per-route), benchmark-app build (CI), sqlite probe.
+- Current gates on v0.64.9: suites x2 (95/239/4), smoke 135/135 x2
+  (jsonl+kv), crash x2 on linux-x64, linux-arm64 (24.04), windows-x64 and
+  macOS x64; migrations 21/21, SQL store 53/53, stream 57/57 + live 20/20
+  on both Linux legs; rate smoke, fn-value probes, benchmark-app build,
+  sqlite probe. macOS arm64 is non-gating (`REL-20261022-1529-pulse`).
 
 NEXT -- queue (dependency order):
 1. **Phase B when compiler m371 lands**: re-apply the stateful pre/after
@@ -1386,28 +1392,23 @@ registry 3.0 pilot gate ping when production-serving
 the engine normalizes it. Do not edit another lane's item.
 Check the relay first every session -- packages/compiler move fast.
 
-NEXT-PIN ADOPTION (blocked upstream as of 2026-10-21T19:00Z; no
-v0.64.9 / stdlib-v0.64.9 yet):
-1. **stdlib-v0.64.9** (carries `list_dir` 05673f8): bump
-   `STDLIB_VERSION`, refresh both local tag dirs (`stdlib-tag-v0.64.9`),
-   delete the macOS pre-fix + fix-witness CI steps, make `macos-15-intel`
-   gating (keep `macos-14` non-gating until the compiler pin), and run
-   migrations 21/21 + `p_io_listdir_roundtrip` on macOS.
-2. **Compiler v0.64.9** (carries 0717 `aecad8c6c` and 1703
-   `c9b1f1009`): bump `XIOM_TOOLCHAIN_VERSION`, all workflow SHA pins
-   (linux-x64/arm64/windows/macOS), local installs; re-add the
-   `ubuntu-22.04-arm` leg and run `probe_arm64_ginit`; re-run
-   `probe_fnptr` + `probe_stream_handler`, then restore the user
-   `StreamHandler` registry (already verified on the debug compiler);
-   make `macos-14` gating. Ready patch: branch
-   `wip/stream-handler-registry` (`680367c`) -- full server compiles and
-   stream smoke 20/20 on debug HEAD; rebase/cherry-pick after the pin,
-   run the full gates, then delete the branch. **Do not merge before the
-   pin.**
-3. **JSON leak** (stdlib builders + compiler m375): run
-   `probe_json_builder_leak` under 512 MB, expect flat; then re-run the
-   capped bttger 5k/1M and update `benchmarks/bttger/REPORT.md`.
-4. Release 0.3.0 after 1+2+3 and the owner decision; bump the version
+v0.64.9 ADOPTION COMPLETE (2026-10-22):
+1. Toolchain/stdlib pins are live; local installs refreshed. The macOS
+   pre-pin overrides are gone; `macos-15-intel` is gating. The WIP
+   `wip/stream-handler-registry` branch was cherry-picked and the branch
+   can be deleted.
+2. **Remaining blocker: `REL-20261022-1529-pulse`** -- stored-fn thunks
+   emit `ptrtoint ptr @__unsafe_block_N`; clang 14/Apple arm64 reject.
+   When fixed: move the linux-arm64 leg back to `ubuntu-22.04-arm` (24.04
+   is the gating workaround), make `macos-14` gating, and enable macOS
+   packaging.
+3. **JSON/bench:** builders + parse/stringify are clean at 2k/512MB; the
+   legacy `json_set` path and the HTTP POST/request path still grow.
+   `probe_json_get_leak` is flat, so investigate the PULSE request/
+   response lifecycle before the Linux/1M bttger runs; do not run them
+   uncapped.
+4. Release 0.3.0: owner approval is the only gate (SQL serving decision
+   is proposed in `docs/DESIGN-SQL-SERVING.md`); bump the version
    literals, tag, watch the three-leg release fleet, ping ops.
 
 DISCIPLINE: OWNER DIRECTIVE (2026-10-20) -- every manual or long app run
