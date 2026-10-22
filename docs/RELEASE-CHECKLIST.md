@@ -26,11 +26,13 @@ preconditions are called out where they differ.
 
 - Compiler **m371** -> middleware Phase B (the legacy loop stays).
 - Jobs core.
-- macOS release assets: v0.64.9 made **macOS x64 gating and green**
-  (`macos-15-intel`; full SQL/migrations/stream/suites). macOS arm64 is
-  non-gating pending `REL-20261022-1529-pulse` (opaque-pointer thunk on
-  Apple arm64); 22.04 arm64 has the same finding, so the gating Linux
-  arm64 leg uses ubuntu-24.04. Enable macOS packaging after 1529.
+- macOS release assets: **macOS x64 is gating and green** with
+  compiler v0.64.8 + stdlib-v0.64.9 (`macos-15-intel`; full gates).
+  macOS arm64 is non-gating pending 0717/`REL-20261022-1529-pulse`;
+  22.04 arm64 has the same finding, so the gating Linux arm64 leg uses
+  ubuntu-24.04. The **v0.64.9 compiler is held** (1451/1550), so the user
+  StreamHandler registry and arm64 fixes wait for a fixed archive.
+  Enable macOS packaging after that.
 - Stdlib JSON path leak (`REL-20261020-1704-pulse`) + compiler m375:
   JSON-heavy/1M benchmark; not a 0.3.0 serving-path blocker for the
   current routes, but the benchmark report stays partial.

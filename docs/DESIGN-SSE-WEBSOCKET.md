@@ -2,15 +2,16 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Design: SSE + WebSocket units (W4 realtime)
 
-Status: **IMPLEMENTED (2026-10-20; user handlers 2026-10-22, v0.64.9)** --
-`src/stream.xi` (`xiom.pulse.station.stream`) plus the `/api/sse` and
-`/api/ws` live endpoints. The serving loop keeps its accepted fd and hands
-it to the stream unit after the frozen gate; the gate order is unchanged.
-`register_handler` stores a `StreamHandler = fn(Int, &Vec[UInt8],
-&PulseRequest) -> (Int, Int)` in the startup table; the built-in SSE/WS
-handlers use the same table. Tests: `tests/test_stream.xi` (pure),
+Status: **IMPLEMENTED (2026-10-20; user-handler registry built 2026-10-22
+and held with the v0.64.9 compiler)** -- `src/stream.xi`
+(`xiom.pulse.station.stream`) plus the `/api/sse` and `/api/ws` live
+endpoints. The serving loop keeps its accepted fd and hands it to the
+stream unit after the frozen gate; the gate order is unchanged. The
+built-in registry is live; the `register_handler`/`StreamHandler` patch is
+on `29dbd25` (reverted in `5a927d3`) and returns with a compiler archive
+that passes 1451/1550. Tests: `tests/test_stream.xi` (pure),
 `tests/probes/probe_fnptr.xi` + `probe_stream_handler.xi` (stored-function
-codegen) and `scripts/stream_smoke.*` (live).
+codegen, for the fixed archive) and `scripts/stream_smoke.*` (live).
 
 References: `E:\repos\fastapi` (MIT; `fastapi/sse.py`,
 `fastapi/routing.py`), `E:\repos\h11` (MIT; `h11/_connection.py`,
@@ -159,6 +160,8 @@ deadline path is not reused.
 
 ## 5. Out of scope (explicit)
 
+- User-supplied stream handlers: patch `29dbd25` is held with the v0.64.9
+  compiler (1451/1550); restore it when a fixed archive passes.
 - Stream-route-level authentication (origin/CORS guard is landed; auth
   stays application-level).
 - A user handler's own handshake/frame policy: custom WS handlers get the

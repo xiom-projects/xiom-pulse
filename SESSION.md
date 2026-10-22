@@ -3,6 +3,18 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
+**WRAP 24 CORRECTION (2026-10-22T16:20Z):** the v0.64.9 **compiler is
+HELD** per `REL-20261022-1501-orbitdb` (official archives fail 1451/1550
+release-mode codegen; debug passes). PULSE reverted compiler pins to
+**v0.64.8** and dev-env preference; **stdlib-v0.64.9 (`aa8b656`) is kept**
+(unaffected, pins compiler v0.64.8). The user StreamHandler registry
+(`29dbd25`) was **reverted** (`5a927d3`); it returns from git history with
+a fixed archive. macOS x64 remains gating with the stdlib `list_dir` fix;
+macOS arm64 and 22.04 stay blocked on 0717/1529. Local gates on v0.64.8 +
+stdlib-v0.64.9: suites x2, smoke 135/135 x2, crash x2, migrations 21/21,
+SQL 53/53, stream 57/57 + live 20/20, rate. The WRAP 24 paragraph below
+is superseded on the compiler/registry claims.
+
 **WRAP 24 (2026-10-22, session 24):** **XIOM v0.64.9 + stdlib-v0.64.9 ADOPTED** (compiler `v0.64.9` / `ffde5aa`; stdlib tag `aa8b656`, pin in `STDLIB_VERSION`; SHA256 pins in ci/heavy/release; local Windows `%LOCALAPPDATA%\xiom.new-v0.64.9` and WSL `~/.local/share/xiom-v0649` + stdlib tag dirs). **USER STREAM HANDLERS LANDED:** `StreamHandler = fn(Int, &Vec[UInt8], &PulseRequest) -> (Int, Int)` in `Vec`, `register_handler`/`dispatch`; built-in SSE/WS use the same table; `probe_fnptr`/`probe_stream_handler` green. **CI `39805179815` GREEN on linux-x64, linux-arm64 (ubuntu-24.04), windows-x64 and macOS x64** (macOS x64 now gating; full SQL/migrations/stream/suites/smoke). Full local gates on v0.64.9 Windows + WSL: suites x2 (95/239/4), smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 57/57 + live 20/20, rate smoke. **New blocker:** `REL-20261022-1529-pulse` -- stored-fn thunks emit `ptrtoint ptr @__unsafe_block_N`; clang 14 / Apple arm64 reject, so `ubuntu-22.04-arm` and macOS arm64 stay non-gating (24.04 arm64 gating). **JSON test-back:** v0.64.9 builders + parse/stringify are clean at 2k/512MB; legacy `json_set` still retains; bttger `/insert` over HTTP hit 2GB after ~1,042 POSTs while the standalone insert-shaped loop is flat -> the remaining growth is the HTTP POST/request path (m375/PULSE), so the Linux/1M bench stays blocked. **Release dry-run `39809053080` GREEN on linux-x64, linux-arm64 and windows-x64** (full fleet + packaging + provenance). `main = b46ba13` at wrap start (this wrap commit follows). Next: REL-1529 fix (22.04/macOS arm64), HTTP POST retention investigation, then 0.3.0 (owner approval). Doorbell armed.
 
 **WRAP 23 (2026-10-20, session 23):** SSE + WebSocket units landed (`src/stream.xi`: chunked `/api/sse` + RFC 6455 `/api/ws`; same-origin/CORS Origin policy; fragmented-message reassembly; startup stream registry + per-route rate; 57/57 pure + 20/20 live on Windows + WSL, both smoke wrappers under the 2 GB RSS cap); CI `39427518984` (stream) + `39482651468` (Origin) green both; `main = 28abfb1` (SSE/WS + Origin + fragmentation + startup registry + per-route rate + workstation RSS cap + linux-arm64 CI + linux-arm64 release dry-run + non-gating macOS witness; this wrap commit follows; CI `39575983499` overall success, release dry-run `39588855890` green on linux-x64/linux-arm64/windows-x64, and macOS x64 green with stdlib `05673f8` in CI `39624153094`). Full gates: suites x2 (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2 on all three platforms; migrations 21/21, SQL 53/53, stream 57/57 + live 20/20 on both Linux legs; v0.64.8 + stdlib `112c5b6`. Owner memory cap (2026-10-20): `scripts/capped_app.*` default 2 GB RSS; use for every manual/long run. Next: Phase B blocked on compiler m371; Release 0.3.0 (needs the serving SQL surface decision plus jobs/Phase B completeness); platform macOS release legs (x64 green with stdlib 05673f8 pre-pin; arm64 waits on tagged compiler 0717); bench Linux/1M + xlcaptain; realtime follow-ups (user stream handlers, WS auth; Origin + fragmentation + startup registry landed). **BLOCKER (2026-10-21):** stdlib JSON path leaks under repeated build/parse/stringify; the capped Linux bttger leg hit the 2 GB cap after 1,624 `/serialize/big` requests, the builder probe hit 531 MB at ~500 iterations, the parse/stringify probe hit 528 MB at ~1,100 iterations, and the bisect shows parse-only and stringify-only each retain while 2M plain `Str` concats complete under 256 MB (same profile on Windows x64 and WSL). The locus is `JsonValue` node/aggregate lifecycle (`REL-20261020-1704-pulse`). Filed **`REL-20261020-1704-pulse`** (pulse -> stdlib, high); Linux leg + 1M bench are blocked. **Test-back (2026-10-21):** stdlib acked with in-place builders (526fd96); on stdlib main 0bf5984 the builder probe completes 500 iterations and crosses 512 MB at ~1,000-1,200 (vs ~500 for `json_set`), residual m375; not in the pin. Compiler fixed m0717 (aecad8c6c); local debug IR verified. The macOS x64 witness now passes with stdlib **05673f8** (pre-pin): `p_io_listdir_roundtrip` rc 0, migrations 21/21, SQL 53/53, stream/suites/smoke; **`REL-20261021-0918-pulse` is verified**. The fix is on stdlib main, not the pin. The Windows print-probe garbage is the separate known compiler 1609 inline `Result.value[i]` concat. arm64 still waits on a tagged compiler with 0717. Doorbell armed.
@@ -1262,12 +1274,13 @@ standard sweep (git fetch + merge --ff-only, never `git pull`; view
 --lane pulse; process items; wrap on change). Then continue the queue.
 
 STATE AT WRAP 24 (2026-10-22):
-- **WRAP 24 STATE:** `main = b46ba13` at wrap start (clean, pushed; wrap
-  commit follows). **XIOM v0.64.9 + stdlib-v0.64.9 (`aa8b656`)** adopted;
-  **user StreamHandler registry** landed; **macOS x64 gating**. CI
-  `39805179815` green on linux-x64, linux-arm64 (24.04), windows-x64 and
-  macOS x64; release dry-run `39809053080` green on three legs;
-  `REL-20261022-1529-pulse` keeps 22.04/macOS arm64 non-gating.
+- **WRAP 24 STATE:** compiler **v0.64.8** (v0.64.9 HELD per
+  `REL-20261022-1501-orbitdb`) + **stdlib-v0.64.9 (`aa8b656`)**;
+  **user StreamHandler registry reverted** (`5a927d3`; returns with a
+  fixed archive); **macOS x64 gating** with the stdlib `list_dir` fix.
+  `REL-20261021-0717-pulse` / `REL-20261022-1529-pulse` keep
+  22.04/macOS arm64 non-gating; 24.04 arm64 gating. Release dry-run
+  `39809053080` was green on the held archive; re-run on the fixed pin.
 - `main = db91d2c` at the WRAP 21 start (historical).
   CI: every run below is green on BOTH platforms where noted.
 - **PULSE 0.2.2 RELEASED**: tag `pulse-v0.2.2` (3b515c6), release run
@@ -1333,11 +1346,11 @@ STATE AT WRAP 24 (2026-10-22):
   `linux-arm64` on `ubuntu-24.04-arm`; dry-run `39588855890` green on
   linux-x64/linux-arm64/windows-x64 (full fleet + package + provenance).
   Next tag ships `pulse-<ver>-linux-arm64.zip`; macOS remains opt-in.
-- Current gates on v0.64.9: suites x2 (95/239/4), smoke 135/135 x2
-  (jsonl+kv), crash x2 on linux-x64, linux-arm64 (24.04), windows-x64 and
-  macOS x64; migrations 21/21, SQL store 53/53, stream 57/57 + live 20/20
-  on both Linux legs; rate smoke, fn-value probes, benchmark-app build,
-  sqlite probe. macOS arm64 is non-gating (`REL-20261022-1529-pulse`).
+- Current gates on **compiler v0.64.8 + stdlib-v0.64.9**: suites x2
+  (95/239/4), smoke 135/135 x2 (jsonl+kv), crash x2 on linux-x64,
+  linux-arm64 (24.04), windows-x64 and macOS x64; migrations 21/21, SQL
+  store 53/53, stream 57/57 + live 20/20; rate smoke, benchmark-app
+  build, sqlite probe. macOS arm64 is non-gating (0717/1529).
 
 NEXT -- queue (dependency order):
 1. **Phase B when compiler m371 lands**: re-apply the stateful pre/after
@@ -1393,23 +1406,23 @@ registry 3.0 pilot gate ping when production-serving
 the engine normalizes it. Do not edit another lane's item.
 Check the relay first every session -- packages/compiler move fast.
 
-v0.64.9 ADOPTION COMPLETE (2026-10-22):
-1. Toolchain/stdlib pins are live; local installs refreshed. The macOS
-   pre-pin overrides are gone; `macos-15-intel` is gating. The WIP
-   `wip/stream-handler-registry` branch was cherry-picked and deleted.
-2. **Remaining blocker: `REL-20261022-1529-pulse`** -- stored-fn thunks
-   emit `ptrtoint ptr @__unsafe_block_N`; clang 14/Apple arm64 reject.
-   When fixed: move the linux-arm64 leg back to `ubuntu-22.04-arm` (24.04
-   is the gating workaround), make `macos-14` gating, and enable macOS
-   packaging.
-3. **JSON/bench:** builders + parse/stringify are clean at 2k/512MB; the
-   legacy `json_set` path and the HTTP POST/request path still grow.
-   `probe_json_get_leak` is flat, so investigate the PULSE request/
-   response lifecycle before the Linux/1M bttger runs; do not run them
-   uncapped.
+POST-v0.64.9-HOLD STATE (2026-10-22):
+1. **Compiler v0.64.9 is HELD** (`REL-20261022-1501-orbitdb`); compiler
+   pins/dev-env are back on v0.64.8, stdlib-v0.64.9 (`aa8b656`) is kept.
+   The user StreamHandler registry was reverted (`5a927d3`); restore it
+   from history when a fixed archive passes 1451/1550.
+2. **Remaining blockers:** `REL-20261022-1529-pulse` (opaque ptr thunk,
+   clang 14/Apple arm64) and `REL-20261021-0717-pulse` (module Vec IR,
+   not in v0.64.8). After a fixed archive: re-adopt, restore registry,
+   move arm64 to 22.04, make macOS arm64 gating, enable macOS packaging.
+3. **JSON/bench:** stdlib v0.64.9 builders are in; with the held compiler
+   the m375 residual remains, the legacy `json_set` path still grows, and
+   bttger `/insert` over HTTP hit 2GB while the standalone insert loop is
+   flat. Investigate the PULSE request/response lifecycle before any
+   Linux/1M run; never uncapped.
 4. Release 0.3.0: owner approval is the only gate (SQL serving decision
-   is proposed in `docs/DESIGN-SQL-SERVING.md`); bump the version
-   literals, tag, watch the three-leg release fleet, ping ops.
+   is proposed in `docs/DESIGN-SQL-SERVING.md`); use compiler v0.64.8 +
+   stdlib-v0.64.9, bump the literals, tag, watch the fleet, ping ops.
 
 DISCIPLINE: OWNER DIRECTIVE (2026-10-20) -- every manual or long app run
 on the workstation goes through `scripts\capped_app.ps1` /

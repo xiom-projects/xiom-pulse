@@ -11,9 +11,12 @@ The embeddable core is packaged separately as **PULSE Beacon** (registry id
 fork**. Tier map below.
 
 > **Status:** 0.2.2 released (linux-x64 + windows-x64, tag `pulse-v0.2.2`);
-> the **linux-arm64** native CI leg is gating; the **macOS witness**
-> x64 is gating and green; arm64 is non-gating pending the opaque-pointer
-> thunk fix (`REL-20261022-1529-pulse`). A live demo
+> **stdlib-v0.64.9 is adopted; the v0.64.9 compiler is held** (1451/1550
+> release-mode codegen, `REL-20261022-1501-orbitdb`), so the compiler pin
+> and user stream handlers stay on v0.64.8 until a fixed archive. The
+> **linux-arm64** CI leg is gating (24.04); the **macOS witness** x64 is
+> gating and green, arm64 is non-gating pending the opaque-pointer thunk
+> fix (`REL-20261022-1529-pulse`). A live demo
 > runs at pulse.xiom-lang.org. Not top-tier complete yet -- weighted
 > tracker in `docs/PROGRESS.md`.
 > **Consumer lane:** this repo never edits `E:\xiom-lang\stdlib`,
@@ -57,7 +60,7 @@ lane hashes are recorded in `SESSION.md` at every wrap.
 
 | Component | Current |
 |---|---|
-| Compiler | **v0.64.9** (versioned install; `dev-env` prefers it over the v0.64.8/unversioned fallbacks) |
+| Compiler | **v0.64.8** (v0.64.9 **HELD** per `REL-20261022-1501-orbitdb`; dev-env prefers v0.64.8) |
 | Stdlib | pin **`aa8b656`** (tag `stdlib-v0.64.9`; extracted release tag) |
 | Packages | registry (`%LOCALAPPDATA%\xiom\packages`): the 13 deps -- xiom.pulse 0.3.1, xiom.http 0.1.8, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.kv 0.1.0, xiom.sqlite 0.4.1 (+ the SQL store layer's `xiom.sqlite` optional build) |
 | Platforms | linux-x64, **linux-arm64** (gating on ubuntu-24.04; 22.04 floor waits on `REL-20261022-1529-pulse`), windows-x64, **macOS x64 gating** (`macos-15-intel`), **macOS arm64 non-gating** (same 1529 opaque-pointer finding). The next tag ships linux-x64, linux-arm64 and windows-x64; macOS release assets remain gated |
