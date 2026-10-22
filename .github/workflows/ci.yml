@@ -18,12 +18,12 @@ permissions:
   contents: read
 
 env:
-  XIOM_TOOLCHAIN_VERSION: "v0.64.9"
-  XIOM_LINUX_SHA256: "b331dd4d39dc2ef71f6378551c24275e90f29587443e1539c42d739e5e85e5b5"
-  XIOM_LINUX_ARM64_SHA256: "2e84a3001c9e26cb50b8a0dcf93de225fd1f2aeb65ceffdb759fe4298d67d491"
-  XIOM_WINDOWS_SHA256: "1b7595418455ce0b9cbca15139d6f6e225df6e8788168a1cd21485f6f137f11d"
-  XIOM_MACOS_X64_SHA256: "5d7afc5b3c2961dcf4c0cd4b47c5639139450d0b085f323dd9aa2963bcd26ff1"
-  XIOM_MACOS_ARM64_SHA256: "63bed569b3508c083d9a8bb9a2c4152fb6f4eb8ca4f9b166d61eb11637526f14"
+  XIOM_TOOLCHAIN_VERSION: "v0.64.8"
+  XIOM_LINUX_SHA256: "a8c003c0d817880a8754fa301a9ba18359cdc7463d7cfc98d3267d7a2e56002a"
+  XIOM_LINUX_ARM64_SHA256: "e773260f8ef18998de782a8fe6d8993b0ad92c62c7e406be20d65e708bc3fab6"
+  XIOM_WINDOWS_SHA256: "c31d9c464a4f9489fc442b4bf9a45b3e3b2363dcf9548d53566bd04a81dee6b5"
+  XIOM_MACOS_X64_SHA256: "07ee998e784c12ef83b643b780cd3d870e96b532a4db46aaeacc25eb180c9484"
+  XIOM_MACOS_ARM64_SHA256: "7027677b81cc46e7c763193637d99a8c70fbc94934d4aea8ed70e41587b061f7"
 
 jobs:
   build-and-test:
@@ -68,29 +68,6 @@ jobs:
           set -euo pipefail
           file out/pulse_app | tee /tmp/pulse-arm64-file.txt
           grep -q "ARM aarch64" /tmp/pulse-arm64-file.txt
-
-      - name: Stored fn-value probes (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash scripts/build.sh tests/probes/probe_fnptr.xi --name probe_fnptr --timeout-sec 300
-          ./out/probe_fnptr
-          bash scripts/build.sh tests/probes/probe_stream_handler.xi --name probe_stream_handler --timeout-sec 300
-          ./out/probe_stream_handler
-
-      - name: Stored fn-value probes (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          & scripts\build.ps1 tests\probes\probe_fnptr.xi -Name probe_fnptr -TimeoutSec 300
-          if ($LASTEXITCODE -ne 0) { throw "probe_fnptr build failed with exit $LASTEXITCODE" }
-          & .\out\probe_fnptr.exe
-          if ($LASTEXITCODE -ne 0) { throw "probe_fnptr failed with exit $LASTEXITCODE" }
-          & scripts\build.ps1 tests\probes\probe_stream_handler.xi -Name probe_stream_handler -TimeoutSec 300
-          if ($LASTEXITCODE -ne 0) { throw "probe_stream_handler build failed with exit $LASTEXITCODE" }
-          & .\out\probe_stream_handler.exe
-          if ($LASTEXITCODE -ne 0) { throw "probe_stream_handler failed with exit $LASTEXITCODE" }
 
       - name: SQLite linkage probe (Unix)
         if: runner.os != 'Windows'

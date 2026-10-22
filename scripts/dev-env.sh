@@ -12,7 +12,7 @@
 # SESSION.md at every wrap.
 #
 # As of 2026-10-19 (mirrors scripts/dev-env.ps1 on Windows):
-#   compiler  v0.64.9 (versioned install ~/.local/share/xiom-v0649; falls
+#   compiler  v0.64.8 (versioned install ~/.local/share/xiom-v0648; falls
 #             back to v0647 / the canonical ~/.local/share/xiom / PATH)
 #   stdlib    $XIOM_STDLIB if set; else the latest RELEASE tag extracted to
 #             ~/.cache/xiom-pin/stdlib-tag-v0.64.9 (refresh on a new stdlib
@@ -31,10 +31,10 @@
 
 # --- compiler resolution ----------------------------------------------------
 if [ -z "${XIOM_COMPILER:-}" ]; then
-  if [ -x "$HOME/.local/share/xiom-v0649/bin/xiom" ]; then
-    XIOM_COMPILER="$HOME/.local/share/xiom-v0649/bin/xiom"
-  elif [ -x "$HOME/.local/share/xiom-v0648/bin/xiom" ]; then
+  if [ -x "$HOME/.local/share/xiom-v0648/bin/xiom" ]; then
     XIOM_COMPILER="$HOME/.local/share/xiom-v0648/bin/xiom"
+  elif [ -x "$HOME/.local/share/xiom-v0647/bin/xiom" ]; then
+    XIOM_COMPILER="$HOME/.local/share/xiom-v0647/bin/xiom"
   elif command -v xiom >/dev/null 2>&1; then
     XIOM_COMPILER="$(command -v xiom)"
   elif [ -x "$HOME/.local/bin/xiom" ]; then
