@@ -3,6 +3,90 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
+## HANDOFF PROMPT (CURRENT -- 2026-10-22, session 24 close)
+
+You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
+XIOM web backend / multipurpose framework). This session closed near the
+context limit. Read this prompt first, then SESSION.md's WRAP 24
+correction/digest, docs\PROGRESS.md, docs\PRODUCTION-REFERENCES.md,
+docs\PRODUCTION-GAPS.md, docs\ROADMAP-TOP-TIER.md and the unit design
+docs. Relays: E:\xiom-lang\xiom-relays. Reference shelf: E:\repos.
+
+RE-ARM YOUR DOORBELL FIRST (crons are session-scoped): every 2h with the
+standard sweep (git fetch + merge --ff-only, NEVER `git pull`; view --lane
+pulse; process items; wrap on change). Then continue the queue.
+
+STATE AT WRAP 24 (2026-10-22, session 24):
+- `main = cdcdca8` (clean + pushed; this handoff commit follows).
+- **Compiler: v0.64.8 production.** v0.64.9 is **WITHDRAWN**
+  (`REL-20261022-1826-compiler`: nested enum patterns + 1451/1550
+  release-mode defects; production stays v0.64.8). **v0.65.0 production
+  gate is open** (P0 correctness -> hardening -> MCU; no candidate/tag
+  before the gate is green + owner GO). **Do not adopt v0.64.9.**
+- **Stdlib: v0.64.9 `aa8b656` kept** (pins compiler v0.64.8; carries the
+  macOS `list_dir` fix + JSON/YAML/TOML/CSV byte builders). v0.65.0 will
+  pin stdlib-v0.65.0. Local Windows `%LOCALAPPDATA%\xiom.new-v0.64.8` +
+  `xiom-pins\stdlib-tag-v0.64.9`; WSL `~/.local/share/xiom-v0648` +
+  `~/.cache/xiom-pin/stdlib-tag-v0.64.9`; `dev-env` prefers v0.64.8.
+- **User StreamHandler registry: reverted** (`5a927d3`); patch kept at
+  `29dbd25` (`register_handler`/`dispatch` + `Vec[StreamHandler]`).
+  Restore it only on the v0.65.0 production pin, then re-run
+  `probe_fnptr` + `probe_stream_handler` and stream smoke. The built-in
+  SSE/WS registry is live.
+- **macOS x64 gating and green** (stdlib `list_dir` fix); **macOS arm64
+  and 22.04 arm64 non-gating** on `REL-20261021-0717-pulse` /
+  `REL-20261022-1529-pulse`; the gating linux-arm64 leg uses
+  ubuntu-24.04.
+- **CI `39815111372` green** on linux-x64, linux-arm64 (24.04),
+  windows-x64, macOS x64. **Release dry-run `39816871164` green** on
+  linux-x64, linux-arm64, windows-x64. (`39809053080` was on the
+  withdrawn v0.64.9 archive; ignore for adoption.)
+- Gates on v0.64.8 + stdlib v0.64.9: suites x2 (95/239/4), smoke
+  135/135 x2 (jsonl+kv), crash x2, migrations 21/21, SQL 53/53, stream
+  57/57 + live 20/20, rate smoke; green locally and in CI.
+- **JSON/bench:** stdlib v0.64.9 builders + parse/stringify are clean at
+  2k/512MB; legacy `json_set` still retains; bttger `/insert` over HTTP
+  hit 2GB after ~1,042 POSTs while the standalone insert-shaped loop
+  (`probe_json_get_leak`) is flat -> the remaining growth is the HTTP
+  POST/request path (m375/PULSE). **Linux/1M bench stays blocked; never
+  run uncapped.**
+- **Release 0.3.0:** SQL serving surface decision proposed in
+  `docs/DESIGN-SQL-SERVING.md` (opt-in app library; stock `pulse_app`
+  SQL-free). Owner approval is the only gate; then bump
+  `src/version.xi` + `APP_VERSION` + `package.xi`, CHANGELOG, tag
+  `pulse-v*`, watch the fleet, ping ops.
+- **Memory cap:** every manual/long app run uses
+  `scripts\capped_app.ps1` / `scripts\capped_app.sh` (default 2048 MB,
+  `PULSE_MAX_RSS_MB`; exit 137). CI runners are isolated; short smokes
+  are bounded. Never run the 1M bench uncapped.
+- **Engine incident (2026-10-22):** many `C:\Users\lefte` config dirs
+  were deleted; PULSE workspace/toolchain/stdlib pins are intact.
+  Re-authenticate any deleted tool configs; no PULSE recovery action.
+
+NEXT (dependency order):
+1. **v0.65.0**: when the production archive + stdlib-v0.65.0 are cut,
+   adopt both (SHA pins, local tag dirs, `STDLIB_VERSION`), re-run
+   `probe_arm64_ginit`, `probe_fnptr`, `probe_stream_handler`,
+   `p_io_listdir_roundtrip` + migrations 21/21; restore the registry;
+   move linux-arm64 to ubuntu-22.04 and make `macos-14` gating; run CI +
+   release dry-run; enable macOS packaging.
+2. **HTTP POST retention**: isolate the `/insert` growth on v0.64.8 +
+   stdlib v0.64.9 (`probe_json_get_leak` is flat; check the request/
+   response lifecycle), then the capped bttger 5k/1M.
+3. **Release 0.3.0** after owner approval (SQL serving decision proposed).
+4. Remaining realtime: WS auth, permessage-deflate; Phase B stays blocked
+   on m371.
+
+OPEN RELAYS: `REL-20261021-0717-pulse` and `REL-20261022-1529-pulse` are
+v0.65.0 acceptance input; `REL-20261020-1704-pulse` acked (builders in,
+m375 residual); `REL-20261021-0918-pulse` verified; `REL-20261021-1703`
+verified on the withdrawn archive; no open PULSE ops items.
+
+DISCIPLINE: latest is **not** v0.64.9 (withdrawn); production v0.64.8
+until the v0.65.0 gate is green + owner GO. Signed conventional commits;
+commit/push per unit; update SESSION + docs/PROGRESS at every wrap;
+report blockers on the relay first.
+
 **WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
 WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the
 1451/1550 family fail in release mode; production stays v0.64.8;
@@ -1263,7 +1347,7 @@ delta evidence only): packages `docs/COMPILER-FINDINGS.md`,
   unique fn names, `pub` for cross-module; probes staged in-repo (never
   `%TEMP%\kilo`); watchdog + exit-code gate on every run; suites x2.
 
-## 3. Paste prompt for the next PULSE session (2026-10-22 wrap 24 -- v0.64.9 + stream handlers)
+## 3 (superseded by the handoff prompt at the top). Paste prompt (2026-10-22 wrap 24 earlier draft)
 
 ```
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
