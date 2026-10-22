@@ -9,10 +9,10 @@
 # as a ROLLBACK OPTION (owner-visible), and keep moving on other slices.
 #
 # As of 2026-10-19:
-#   compiler  v0.64.8  %LOCALAPPDATA%\xiom.new-v0.64.8\bin\xiom.exe
+#   compiler  v0.64.9  %LOCALAPPDATA%\xiom.new-v0.64.9\bin\xiom.exe
 #             (fallbacks: v0.64.7, then the unversioned xiom.new)
 #   stdlib    latest RELEASE tag, extracted to
-#             %LOCALAPPDATA%\xiom-pins\stdlib-tag-v0.64.8 (refresh the dir
+#             %LOCALAPPDATA%\xiom-pins\stdlib-tag-v0.64.9 (refresh the dir
 #             name when a new stdlib release is cut; falls back to the
 #             v0.64.7 / v0.64.6 tag dirs, then the lane checkout)
 #   packages  %LOCALAPPDATA%\xiom\packages (latest registry versions; the
@@ -31,8 +31,8 @@ $ErrorActionPreference = "Stop"
 # An explicit XIOM_COMPILER wins (compiler A/B sweeps, e.g. a lane release
 # build); the installed toolchain is only the default. Mirrors dev-env.sh.
 if (-not $env:XIOM_COMPILER) {
-    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.8\bin\xiom.exe"
-    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.7\bin\xiom.exe"
+    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.9\bin\xiom.exe"
+    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.8\bin\xiom.exe"
     if (Test-Path -LiteralPath $latest) {
         $env:XIOM_COMPILER = $latest
     } elseif (Test-Path -LiteralPath $prev) {
@@ -42,9 +42,9 @@ if (-not $env:XIOM_COMPILER) {
     }
 }
 if (-not $env:XIOM_STDLIB) {
-    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.8"
-    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.7"
-    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.6"
+    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.9"
+    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.8"
+    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.7"
     if (Test-Path -LiteralPath $tagStdlib) {
         $env:XIOM_STDLIB = $tagStdlib
     } elseif (Test-Path -LiteralPath $prevStdlib) {
