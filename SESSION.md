@@ -12,8 +12,11 @@ release-mode codegen; debug passes). PULSE reverted compiler pins to
 a fixed archive. macOS x64 remains gating with the stdlib `list_dir` fix;
 macOS arm64 and 22.04 stay blocked on 0717/1529. Local gates on v0.64.8 +
 stdlib-v0.64.9: suites x2, smoke 135/135 x2, crash x2, migrations 21/21,
-SQL 53/53, stream 57/57 + live 20/20, rate. The WRAP 24 paragraph below
-is superseded on the compiler/registry claims.
+SQL 53/53, stream 57/57 + live 20/20, rate. **CI `39815111372` GREEN on
+linux-x64, linux-arm64 (24.04), windows-x64 and macOS x64**; release
+dry-run **`39816871164` GREEN on linux-x64/linux-arm64/windows-x64**.
+`main = 2b350a7` at wrap start (this wrap commit follows). The WRAP 24
+paragraph below is superseded on the compiler/registry claims.
 
 **WRAP 24 (2026-10-22, session 24):** **XIOM v0.64.9 + stdlib-v0.64.9 ADOPTED** (compiler `v0.64.9` / `ffde5aa`; stdlib tag `aa8b656`, pin in `STDLIB_VERSION`; SHA256 pins in ci/heavy/release; local Windows `%LOCALAPPDATA%\xiom.new-v0.64.9` and WSL `~/.local/share/xiom-v0649` + stdlib tag dirs). **USER STREAM HANDLERS LANDED:** `StreamHandler = fn(Int, &Vec[UInt8], &PulseRequest) -> (Int, Int)` in `Vec`, `register_handler`/`dispatch`; built-in SSE/WS use the same table; `probe_fnptr`/`probe_stream_handler` green. **CI `39805179815` GREEN on linux-x64, linux-arm64 (ubuntu-24.04), windows-x64 and macOS x64** (macOS x64 now gating; full SQL/migrations/stream/suites/smoke). Full local gates on v0.64.9 Windows + WSL: suites x2 (95/239/4), smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 57/57 + live 20/20, rate smoke. **New blocker:** `REL-20261022-1529-pulse` -- stored-fn thunks emit `ptrtoint ptr @__unsafe_block_N`; clang 14 / Apple arm64 reject, so `ubuntu-22.04-arm` and macOS arm64 stay non-gating (24.04 arm64 gating). **JSON test-back:** v0.64.9 builders + parse/stringify are clean at 2k/512MB; legacy `json_set` still retains; bttger `/insert` over HTTP hit 2GB after ~1,042 POSTs while the standalone insert-shaped loop is flat -> the remaining growth is the HTTP POST/request path (m375/PULSE), so the Linux/1M bench stays blocked. **Release dry-run `39809053080` GREEN on linux-x64, linux-arm64 and windows-x64** (full fleet + packaging + provenance). `main = b46ba13` at wrap start (this wrap commit follows). Next: REL-1529 fix (22.04/macOS arm64), HTTP POST retention investigation, then 0.3.0 (owner approval). Doorbell armed.
 
@@ -1279,8 +1282,9 @@ STATE AT WRAP 24 (2026-10-22):
   **user StreamHandler registry reverted** (`5a927d3`; returns with a
   fixed archive); **macOS x64 gating** with the stdlib `list_dir` fix.
   `REL-20261021-0717-pulse` / `REL-20261022-1529-pulse` keep
-  22.04/macOS arm64 non-gating; 24.04 arm64 gating. Release dry-run
-  `39809053080` was green on the held archive; re-run on the fixed pin.
+  22.04/macOS arm64 non-gating; 24.04 arm64 gating. CI `39815111372`
+  green on four gating legs; release dry-run `39816871164` green on
+  linux-x64/linux-arm64/windows-x64. Re-run both on the fixed compiler.
 - `main = db91d2c` at the WRAP 21 start (historical).
   CI: every run below is green on BOTH platforms where noted.
 - **PULSE 0.2.2 RELEASED**: tag `pulse-v0.2.2` (3b515c6), release run

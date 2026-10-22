@@ -1060,8 +1060,10 @@ v0.64.8). The user `StreamHandler` registry was reverted (`5a927d3`);
 macOS x64 remains gating with the stdlib `list_dir` fix, macOS arm64 and
 22.04 stay blocked on 0717/1529. Local gates on v0.64.8 + stdlib-v0.64.9:
 suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53,
-stream 57/57 + live 20/20, rate. The prior v0.64.9 delta's compiler and
-registry claims are superseded._
+stream 57/57 + live 20/20, rate. CI `39815111372` is green on
+linux-x64/linux-arm64(24.04)/windows-x64/macOS x64; release dry-run
+`39816871164` is green on three legs. The prior v0.64.9 delta's compiler
+and registry claims are superseded._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
