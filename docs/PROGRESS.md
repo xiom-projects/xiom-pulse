@@ -1052,9 +1052,10 @@ standalone insert-shaped loop is flat -> HTTP POST/request-path retention
 `39809053080` is green on linux-x64, linux-arm64 and windows-x64 with the
 v0.64.9 pin and registry; macOS release assets remain gated on 1529._
 
-_Delta 2026-10-22 (v0.64.9 HOLD correction): official v0.64.9 compiler
-archives fail 1451/1550 release-mode codegen
-(`REL-20261022-1501-orbitdb`). Compiler pins/dev-env reverted to
+_Delta 2026-10-22 (v0.64.9 WITHDRAWN): the v0.64.9 compiler was withdrawn
+(`REL-20261022-1826-compiler`: nested-pattern/1451/1550 release-mode
+defects; production stays v0.64.8, v0.65.0 gate opened). Compiler
+pins/dev-env reverted to
 **v0.64.8**; **stdlib-v0.64.9 (`aa8b656`) is kept** (unaffected, pins
 v0.64.8). The user `StreamHandler` registry was reverted (`5a927d3`);
 macOS x64 remains gating with the stdlib `list_dir` fix, macOS arm64 and

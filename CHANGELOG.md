@@ -8,11 +8,12 @@ GitHub release body.
 
 ### Added
 
-- **stdlib-v0.64.9 adopted; compiler v0.64.9 held:** `STDLIB_VERSION` is
-  `aa8b656` (list_dir fix + JSON/YAML/TOML/CSV byte builders) and pins
-  compiler v0.64.8 by design. The v0.64.9 compiler archive is **held**
-  (`REL-20261022-1501-orbitdb`: official archives fail 1451/1550
-  release-mode codegen), so dev-env/pins stay on v0.64.8. The user
+- **stdlib-v0.64.9 adopted; compiler v0.64.9 WITHDRAWN:** `STDLIB_VERSION`
+  is `aa8b656` (list_dir fix + JSON/YAML/TOML/CSV byte builders) and pins
+  compiler v0.64.8 by design. The v0.64.9 compiler is **withdrawn**
+  (`REL-20261022-1826-compiler`: release-mode nested-pattern/1451/1550
+  defects), production stays v0.64.8, and **v0.65.0** is the next
+  production gate. The user
   `StreamHandler` registry was implemented and then reverted with the
   held compiler (`29dbd25`/`5a927d3`); it returns from git history when a
   fixed archive passes. macOS x64 is gating with the stdlib list_dir fix;

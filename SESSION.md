@@ -3,9 +3,11 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**WRAP 24 CORRECTION (2026-10-22T16:20Z):** the v0.64.9 **compiler is
-HELD** per `REL-20261022-1501-orbitdb` (official archives fail 1451/1550
-release-mode codegen; debug passes). PULSE reverted compiler pins to
+**WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
+WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the
+1451/1550 family fail in release mode; production stays v0.64.8;
+**v0.65.0 gate opened, no rush**). It was first held per
+`REL-20261022-1501-orbitdb`. PULSE reverted compiler pins to
 **v0.64.8** and dev-env preference; **stdlib-v0.64.9 (`aa8b656`) is kept**
 (unaffected, pins compiler v0.64.8). The user StreamHandler registry
 (`29dbd25`) was **reverted** (`5a927d3`); it returns from git history with
@@ -1277,8 +1279,8 @@ standard sweep (git fetch + merge --ff-only, never `git pull`; view
 --lane pulse; process items; wrap on change). Then continue the queue.
 
 STATE AT WRAP 24 (2026-10-22):
-- **WRAP 24 STATE:** compiler **v0.64.8** (v0.64.9 HELD per
-  `REL-20261022-1501-orbitdb`) + **stdlib-v0.64.9 (`aa8b656`)**;
+- **WRAP 24 STATE:** compiler **v0.64.8** production (v0.64.9
+  WITHDRAWN; v0.65.0 gate open) + **stdlib-v0.64.9 (`aa8b656`)**;
   **user StreamHandler registry reverted** (`5a927d3`; returns with a
   fixed archive); **macOS x64 gating** with the stdlib `list_dir` fix.
   `REL-20261021-0717-pulse` / `REL-20261022-1529-pulse` keep
@@ -1410,20 +1412,25 @@ registry 3.0 pilot gate ping when production-serving
 the engine normalizes it. Do not edit another lane's item.
 Check the relay first every session -- packages/compiler move fast.
 
-POST-v0.64.9-HOLD STATE (2026-10-22):
-1. **Compiler v0.64.9 is HELD** (`REL-20261022-1501-orbitdb`); compiler
-   pins/dev-env are back on v0.64.8, stdlib-v0.64.9 (`aa8b656`) is kept.
-   The user StreamHandler registry was reverted (`5a927d3`); restore it
-   from history when a fixed archive passes 1451/1550.
-2. **Remaining blockers:** `REL-20261022-1529-pulse` (opaque ptr thunk,
-   clang 14/Apple arm64) and `REL-20261021-0717-pulse` (module Vec IR,
-   not in v0.64.8). After a fixed archive: re-adopt, restore registry,
-   move arm64 to 22.04, make macOS arm64 gating, enable macOS packaging.
-3. **JSON/bench:** stdlib v0.64.9 builders are in; with the held compiler
-   the m375 residual remains, the legacy `json_set` path still grows, and
-   bttger `/insert` over HTTP hit 2GB while the standalone insert loop is
-   flat. Investigate the PULSE request/response lifecycle before any
-   Linux/1M run; never uncapped.
+POST-v0.64.9-WITHDRAWAL STATE (2026-10-22):
+1. **Compiler v0.64.9 is WITHDRAWN** (`REL-20261022-1826-compiler`);
+   production pin remains **v0.64.8**. Stdlib-v0.64.9 (`aa8b656`) is kept
+   as the package pin (it pins compiler v0.64.8 and carries the list_dir
+   fix/builders); v0.65.0 will pin stdlib-v0.65.0. The user StreamHandler
+   registry is reverted (`5a927d3`).
+2. **v0.65.0 is the next production target** (P0 correctness incl. nested
+   patterns/1451/1550, then production hardening, then MCU; no candidate
+   before the gate is green + owner GO). Re-test on the v0.65.0 archive:
+   `probe_arm64_ginit`, `probe_fnptr`, `probe_stream_handler`,
+   `p_io_listdir_roundtrip`, migrations 21/21, then restore the registry,
+   make 22.04/macOS arm64 gating, enable macOS packaging. Holds
+   `REL-20261021-0717-pulse`, `REL-20261022-1529-pulse` are acceptance
+   input.
+3. **JSON/bench:** stdlib v0.64.9 builders are in; on v0.64.8 the m375
+   residual remains, the legacy `json_set` path still grows, and bttger
+   `/insert` over HTTP hit 2GB while the standalone insert loop is flat.
+   Investigate the PULSE request/response lifecycle before any Linux/1M
+   run; never uncapped.
 4. Release 0.3.0: owner approval is the only gate (SQL serving decision
    is proposed in `docs/DESIGN-SQL-SERVING.md`); use compiler v0.64.8 +
    stdlib-v0.64.9, bump the literals, tag, watch the fleet, ping ops.

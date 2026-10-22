@@ -8,8 +8,8 @@ and held with the v0.64.9 compiler)** -- `src/stream.xi`
 endpoints. The serving loop keeps its accepted fd and hands it to the
 stream unit after the frozen gate; the gate order is unchanged. The
 built-in registry is live; the `register_handler`/`StreamHandler` patch is
-on `29dbd25` (reverted in `5a927d3`) and returns with a compiler archive
-that passes 1451/1550. Tests: `tests/test_stream.xi` (pure),
+on `29dbd25` (reverted in `5a927d3`) and returns with the v0.65.0
+production pin (v0.64.9 is withdrawn). Tests: `tests/test_stream.xi` (pure),
 `tests/probes/probe_fnptr.xi` + `probe_stream_handler.xi` (stored-function
 codegen, for the fixed archive) and `scripts/stream_smoke.*` (live).
 

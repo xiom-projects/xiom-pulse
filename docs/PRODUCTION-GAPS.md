@@ -46,7 +46,7 @@ Owner: S=stdlib, C=compiler, P=packages, Q=PULSE, O=ops.
 | 7 | Static: conditional GET (ETag/If-None-Match, Last-Modified) + Range requests (fastify-static, nginx) | ❌ | Q (no lane dependency) |
 | 8 | Response compression gzip/deflate (fastify-compress; nginx alt) | ❌ | **S: gzip/deflate primitives (new)**; O may front with nginx |
 | 9 | Streaming responses / SSE / chunked out (fastify, h11) | ✅ | SSE connection unit + chunked server writer + `/api/sse` demo (`docs/DESIGN-SSE-WEBSOCKET.md`); startup stream registry + routes CLI + per-route rate landed; user stream handlers Q |
-| 10 | WebSockets (fastify-ws, gin) | ✅ | 101 handshake + server frame loop + `/api/ws` echo; same-origin/CORS Origin policy; masking/ping/close/fragmentation/limits covered; user `register_handler` patch held with the v0.64.9 compiler; auth, permessage-deflate + `wss://` (edge TLS) still Q |
+| 10 | WebSockets (fastify-ws, gin) | ✅ | 101 handshake + server frame loop + `/api/ws` echo; same-origin/CORS Origin policy; masking/ping/close/fragmentation/limits covered; user `register_handler` patch held until v0.65.0 (v0.64.9 withdrawn); auth, permessage-deflate + `wss://` (edge TLS) still Q |
 | 11 | Multipart uploads (fastify-multipart) | ✅ | -- |
 | 12 | Cookies/sessions (fastify-cookie/session; registry pkgs) | ✅ | -- |
 | 13 | JWT auth (fastify-jwt) | ✅ | -- |
