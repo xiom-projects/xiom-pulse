@@ -1048,7 +1048,10 @@ smoke. New blocker `REL-20261022-1529-pulse`: the fn thunks emit
 parse/stringify are clean at 2k/512MB; legacy `json_set` still retains;
 bttger `/insert` over HTTP hit 2GB after ~1,042 POSTs while the
 standalone insert-shaped loop is flat -> HTTP POST/request-path retention
-(m375/PULSE) keeps the Linux/1M bench blocked._
+(m375/PULSE) keeps the Linux/1M bench blocked. Release dry-run
+`39809053080` is green on linux-x64, linux-arm64 and windows-x64 with the
+v0.64.9 pin and registry; macOS release assets remain gated on 1529._
+
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
