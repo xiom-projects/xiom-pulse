@@ -38,7 +38,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
           - os: windows-latest
           - os: macos-14
           - os: macos-15-intel
@@ -59,7 +59,7 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: '& scripts\build.ps1 src\server.xi -Name pulse_app'
+        run: '& scripts\build.ps1 src\server.xi -Name pulse_app -TimeoutSec 600'
 
       - name: Verify arm64 binary (Linux arm64)
         if: runner.os == 'Linux' && runner.arch == 'ARM64'
