@@ -12,9 +12,8 @@ fork**. Tier map below.
 
 > **Status:** 0.2.2 released (linux-x64 + windows-x64, tag `pulse-v0.2.2`);
 > the **linux-arm64** native CI leg is gating; the **macOS witness**
-> is non-gating: x64 is green with the stdlib `list_dir` fix on main
-> (pre-pin), while arm64 waits on the compiler IR fix and Windows on the
-> separate inline payload-index fix; a live demo
+> x64 is gating and green; arm64 is non-gating pending the opaque-pointer
+> thunk fix (`REL-20261022-1529-pulse`). A live demo
 > runs at pulse.xiom-lang.org. Not top-tier complete yet -- weighted
 > tracker in `docs/PROGRESS.md`.
 > **Consumer lane:** this repo never edits `E:\xiom-lang\stdlib`,
@@ -58,10 +57,10 @@ lane hashes are recorded in `SESSION.md` at every wrap.
 
 | Component | Current |
 |---|---|
-| Compiler | **v0.64.8** (versioned install; `dev-env` prefers it over the v0.64.7/unversioned fallbacks) |
-| Stdlib | pin **`112c5b6`** (tag `stdlib-v0.64.8`; extracted release tag) |
+| Compiler | **v0.64.9** (versioned install; `dev-env` prefers it over the v0.64.8/unversioned fallbacks) |
+| Stdlib | pin **`aa8b656`** (tag `stdlib-v0.64.9`; extracted release tag) |
 | Packages | registry (`%LOCALAPPDATA%\xiom\packages`): the 13 deps -- xiom.pulse 0.3.1, xiom.http 0.1.8, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.kv 0.1.0, xiom.sqlite 0.4.1 (+ the SQL store layer's `xiom.sqlite` optional build) |
-| Platforms | linux-x64, **linux-arm64** (native CI + release dry-run), windows-x64, **macOS witness** (`macos-14` arm64 + `macos-15-intel` x64, non-gating: x64 green with stdlib `05673f8` pre-pin and `REL-20261021-0918-pulse` verified; arm64 pending tagged compiler `REL-20261021-0717-pulse`; Windows inline payload index `REL-20261010-1609-stdlib` separate). The next tag ships linux-x64, linux-arm64 and windows-x64; macOS remains gated |
+| Platforms | linux-x64, **linux-arm64** (gating on ubuntu-24.04; 22.04 floor waits on `REL-20261022-1529-pulse`), windows-x64, **macOS x64 gating** (`macos-15-intel`), **macOS arm64 non-gating** (same 1529 opaque-pointer finding). The next tag ships linux-x64, linux-arm64 and windows-x64; macOS release assets remain gated |
 
 `XIOM_RUNTIME_DIR` is **retired** on v0.64.0 (release R65 links the
 installed `lib\runtime` + `lib\xiom`): PULSE verified env-free with both

@@ -38,44 +38,44 @@ fn query_value(m: &PulseRoute, name: Str) -> Str {
 /// for on-demand iteration, not a pre-initialized object). Complexity:
 /// O(50).
 fn big_json() -> Str {
-  var pubs = json.json_array_new();
+  var pubs = json.json_array_builder_new();
   var i: Int = 0;
   while i < 50 {
-    var p = json.json_object_new();
-    p = json.json_set(p, "year", json.json_number((1821 + i) as Float64));
-    p = json.json_set(p, "related", json.json_bool(true));
-    p = json.json_set(p, "description", json.json_string("Some discovery in " + (1821 + i).to_str()));
-    pubs = json.json_array_push(pubs, p);
+    var p = json.json_object_builder_new();
+    p.put("year", json.json_number((1821 + i) as Float64));
+    p.put("related", json.json_bool(true));
+    p.put("description", json.json_string("Some discovery in " + (1821 + i).to_str()));
+    pubs.push(p.build());
     i = i + 1;
   }
-  var born = json.json_object_new();
-  born = json.json_set(born, "year", json.json_number(1800.0));
-  born = json.json_set(born, "month", json.json_string("February"));
-  born = json.json_set(born, "day", json.json_number(12.0));
-  born = json.json_set(born, "city", json.json_string("Walsall"));
-  born = json.json_set(born, "country", json.json_string("England"));
-  var died = json.json_object_new();
-  died = json.json_set(died, "year", json.json_number(1875.0));
-  died = json.json_set(died, "month", json.json_string("March"));
-  died = json.json_set(died, "day", json.json_number(7.0));
-  died = json.json_set(died, "city", json.json_string("London"));
-  died = json.json_set(died, "country", json.json_string("England"));
-  var classifier = json.json_object_new();
-  classifier = json.json_set(classifier, "name", json.json_string("John Edward Gray"));
-  classifier = json.json_set(classifier, "born", born);
-  classifier = json.json_set(classifier, "died", died);
-  classifier = json.json_set(classifier, "publications", pubs);
-  var sc = json.json_object_new();
-  sc = json.json_set(sc, "kingdom", json.json_string("Animalia"));
-  sc = json.json_set(sc, "phylum", json.json_string("Chordata"));
-  sc = json.json_set(sc, "class", json.json_string("Mammalia"));
-  sc = json.json_set(sc, "order", json.json_string("Proboscidea"));
-  sc = json.json_set(sc, "superfamily", json.json_string("Elephantoidea"));
-  sc = json.json_set(sc, "classifier", classifier);
-  var root = json.json_object_new();
-  root = json.json_set(root, "family", json.json_string("Elephantidae"));
-  root = json.json_set(root, "scientificClassification", sc);
-  return json.json_stringify(root);
+  var born = json.json_object_builder_new();
+  born.put("year", json.json_number(1800.0));
+  born.put("month", json.json_string("February"));
+  born.put("day", json.json_number(12.0));
+  born.put("city", json.json_string("Walsall"));
+  born.put("country", json.json_string("England"));
+  var died = json.json_object_builder_new();
+  died.put("year", json.json_number(1875.0));
+  died.put("month", json.json_string("March"));
+  died.put("day", json.json_number(7.0));
+  died.put("city", json.json_string("London"));
+  died.put("country", json.json_string("England"));
+  var classifier = json.json_object_builder_new();
+  classifier.put("name", json.json_string("John Edward Gray"));
+  classifier.put("born", born.build());
+  classifier.put("died", died.build());
+  classifier.put("publications", pubs.build());
+  var sc = json.json_object_builder_new();
+  sc.put("kingdom", json.json_string("Animalia"));
+  sc.put("phylum", json.json_string("Chordata"));
+  sc.put("class", json.json_string("Mammalia"));
+  sc.put("order", json.json_string("Proboscidea"));
+  sc.put("superfamily", json.json_string("Elephantoidea"));
+  sc.put("classifier", classifier.build());
+  var root = json.json_object_builder_new();
+  root.put("family", json.json_string("Elephantidae"));
+  root.put("scientificClassification", sc.build());
+  return json.json_stringify(root.build());
 }
 
 fn now_iso() -> Str {
@@ -104,9 +104,18 @@ fn insert_object(body: Str) -> HandlerOut {
   if !pv.is_ok {
     return app.out_json(400, "{\"message\":\"invalid json\"}");
   }
-  var v = json.json_set(pv.value, "id", json.json_number(300.0));
-  v = json.json_set(v, "createdAt", json.json_string(now_iso()));
-  return app.out_json(201, json.json_stringify(v));
+  // Build with the in-place builder (the legacy json_set path retains
+  // allocations in v0.64.9; the builder is the sanctioned path).
+  var b = json.json_object_builder_new();
+  let name = json.json_get(pv.value, "name");
+  if name.is_some { b.put("name", name.value); }
+  let addresses = json.json_get(pv.value, "addresses");
+  if addresses.is_some { b.put("addresses", addresses.value); }
+  let old_town = json.json_get(pv.value, "oldTown");
+  if old_town.is_some { b.put("oldTown", old_town.value); }
+  b.put("id", json.json_number(300.0));
+  b.put("createdAt", json.json_string(now_iso()));
+  return app.out_json(201, json.json_stringify(b.build()));
 }
 
 fn fib(n: Int) -> Int {

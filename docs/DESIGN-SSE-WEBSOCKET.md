@@ -2,12 +2,15 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Design: SSE + WebSocket units (W4 realtime)
 
-Status: **IMPLEMENTED (2026-10-20, session 23)** -- `src/stream.xi`
-(`xiom.pulse.station.stream`) plus the `/api/sse` and `/api/ws` live
-endpoints. The serving loop keeps its accepted fd and hands it to the
-stream unit after the frozen gate; the gate order is unchanged. Tests:
-`tests/test_stream.xi` (pure) + `scripts/stream_smoke.*` (live, both
-platforms).
+Status: **IMPLEMENTED (2026-10-20; user handlers 2026-10-22, v0.64.9)** --
+`src/stream.xi` (`xiom.pulse.station.stream`) plus the `/api/sse` and
+`/api/ws` live endpoints. The serving loop keeps its accepted fd and hands
+it to the stream unit after the frozen gate; the gate order is unchanged.
+`register_handler` stores a `StreamHandler = fn(Int, &Vec[UInt8],
+&PulseRequest) -> (Int, Int)` in the startup table; the built-in SSE/WS
+handlers use the same table. Tests: `tests/test_stream.xi` (pure),
+`tests/probes/probe_fnptr.xi` + `probe_stream_handler.xi` (stored-function
+codegen) and `scripts/stream_smoke.*` (live).
 
 References: `E:\repos\fastapi` (MIT; `fastapi/sse.py`,
 `fastapi/routing.py`), `E:\repos\h11` (MIT; `h11/_connection.py`,
@@ -156,10 +159,10 @@ deadline path is not reused.
 
 ## 5. Out of scope (explicit)
 
-- User-supplied stream handlers: the startup registry and built-in kinds
-  exist, and the compiler defect `REL-20261021-1703-pulse` is fixed on
-  main (`c9b1f1009`; verified with `probe_stream_handler`). Restore the
-  registry when a tagged compiler carries it.
+- Stream-route-level authentication (origin/CORS guard is landed; auth
+  stays application-level).
+- A user handler's own handshake/frame policy: custom WS handlers get the
+  fd after the gate/protocol/Origin checks and own the stream from there.
 - SSE event bus/subscription sources (a demo tick source is used).
 - WebSocket permessage-deflate and subprotocol negotiation.
 - `wss://` in-process (TLS remains the front proxy; W2 owns native TLS).

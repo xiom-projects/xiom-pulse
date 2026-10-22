@@ -8,6 +8,14 @@ GitHub release body.
 
 ### Added
 
+- **Toolchain v0.64.9 + stdlib-v0.64.9:** compiler and stdlib pins
+  updated (SHA256 set, local installs, `STDLIB_VERSION` = `aa8b656`);
+  macOS x64 moved to gating and green. The compiler's stored-function
+  support unblocked the **user `StreamHandler` registry**
+  (`register_handler`/`dispatch`, `Vec[StreamHandler]`), verified by
+  `probe_fnptr`/`probe_stream_handler` and the live stream smoke.
+  Remaining platform blocker: `REL-20261022-1529-pulse`
+  (`ptrtoint ptr @__unsafe_block_N` rejected by clang 14/Apple arm64).
 - **macOS witness (non-gating):** `macos-14` (arm64) and
   `macos-15-intel` (x64) join the matrix; `setup-xiom` uses the
   SHA256-pinned macOS toolchains and the Unix gates run. The arm64 leg is

@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-21 (linux-arm64 native CI + release dry-run; macOS x64 witness green with stdlib 05673f8 pre-pin; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse` acked, arm64 codegen `REL-20261021-0717-pulse` fixed on main, macOS list_dir `REL-20261021-0918-pulse` verified; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-22 (XIOM v0.64.9 + stdlib-v0.64.9 adopted; user StreamHandler registry; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; stdlib JSON path leak `REL-20261020-1704-pulse` acked, arm64 codegen `REL-20261021-0717-pulse` fixed on main, macOS list_dir `REL-20261021-0918-pulse` verified; v0.64.8 + stdlib `112c5b6`; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-08 (v0.64.1 sweep): toolchain updated in place to
 **v0.64.1**; **C-PULSE-08 CLOSED** (m212 dash+dot gates green, no
@@ -1033,6 +1033,22 @@ three-leg fleet are unchanged. SQL apps build their own binary with the
 vendored C source; one connection per process in 0.3.0 (pool deferred to
 scale-out); explicit transactions; `pulse_migrate status` gate before
 serving. Owner approval is the remaining 0.3.0 gate._
+
+_Delta 2026-10-22 (v0.64.9 adoption + user stream handlers): adopted
+XIOM v0.64.9 + stdlib-v0.64.9 (`aa8b656`; SHA pins, local installs both
+platforms). The stored-function fix unblocked the user `StreamHandler`
+registry (`register_handler`/`dispatch`; built-ins use the same table),
+verified by `probe_fnptr`/`probe_stream_handler`. CI `39805179815` is
+green on linux-x64, linux-arm64 (24.04), windows-x64 and **macOS x64**
+(now gating); local gates on v0.64.9: suites x2, smoke 135/135 x2,
+crash x2, migrations 21/21, SQL 53/53, stream 57/57 + live 20/20, rate
+smoke. New blocker `REL-20261022-1529-pulse`: the fn thunks emit
+`ptrtoint ptr @__unsafe_block_N`, rejected by clang 14/Apple arm64, so
+22.04 arm64 and macOS arm64 stay non-gating. JSON test-back: builders +
+parse/stringify are clean at 2k/512MB; legacy `json_set` still retains;
+bttger `/insert` over HTTP hit 2GB after ~1,042 POSTs while the
+standalone insert-shaped loop is flat -> HTTP POST/request-path retention
+(m375/PULSE) keeps the Linux/1M bench blocked._
 
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
