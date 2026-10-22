@@ -36,8 +36,11 @@ preconditions are called out where they differ.
   current routes, but the benchmark report stays partial.
 - Dynamic user stream handlers and WS authentication.
 
-**Decision needed:** cut 0.3.0 with the above scope, or hold for m371 /
-jobs / macOS. The mechanical bump+tag steps below are unchanged.
+**Decision proposed (2026-10-22):** cut 0.3.0 with the above scope. The
+serving SQL surface is decided as an **opt-in application library**;
+the stock `pulse_app` stays SQL-free (`docs/DESIGN-SQL-SERVING.md`).
+Jobs / Phase B / macOS remain later work. Owner approval is the only
+remaining gate; the mechanical bump+tag steps below are unchanged.
 
 ## 0. Preconditions
 

@@ -1335,9 +1335,10 @@ NEXT -- queue (dependency order):
    hooks + serve_with_ctx behind the legacy fallback; the earlier
    implementation is in git history and DESIGN-MIDDLEWARE-JOBS. Still
    blocked on the compiler lane.
-2. **Release 0.3.0**: decide the runtime SQL serving surface (the
-   store/repository layer is opt-in and not linked into `pulse_app`), then
-   bump src/version.xi + APP_VERSION + package.xi, CHANGELOG, tag
+2. **Release 0.3.0**: the serving SQL surface is **decided as an opt-in
+   application library; stock `pulse_app` stays SQL-free**
+   (`docs/DESIGN-SQL-SERVING.md`). Owner approval is the remaining gate;
+   then bump src/version.xi + APP_VERSION + package.xi, CHANGELOG, tag
    `pulse-v*` (guard: tag == version, ancestor of main), watch the
    release fleet, ping ops for dogfood.
 3. Platform: **linux-arm64 CI + release dry-run done (2026-10-21)**;

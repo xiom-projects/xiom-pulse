@@ -7,7 +7,9 @@ runtime SQL surface over `xiom.sqlite` 0.4.1; `tests/test_sql.xi` is the
 dedicated gate (**53/53 on Windows + WSL**, CI Linux leg added). The serving
 binary does **not** import this module (or the driver): SQL stays opt-in
 until the pool and the serving-grade surface are settled. `pulse_migrate`
-remains the separate tool binary. Evidence: `probe-logs/sql-test-*`.
+remains the separate tool binary. Serving decision: **opt-in
+application library; stock `pulse_app` stays SQL-free**
+(`docs/DESIGN-SQL-SERVING.md`). Evidence: `probe-logs/sql-test-*`.
 
 References: `E:\repos\knex` (knex.js 3.3.0, MIT, light clone) -- the
 immutable query-builder compilation, identifier wrapping, value binding and

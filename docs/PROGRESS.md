@@ -1026,6 +1026,14 @@ verified on local debug HEAD `badba26cd` -- `probe_fnptr` rc 0 and the
 exact `StreamHandler` shape prints `var=4,7` / `vec=4,7`. Restore the
 registry on the next tagged compiler._
 
+_Delta 2026-10-22 (SQL serving surface decision): documented
+`docs/DESIGN-SQL-SERVING.md` -- the SQL class is an opt-in application
+library; the stock `pulse_app` stays SQL-free, so release assets and the
+three-leg fleet are unchanged. SQL apps build their own binary with the
+vendored C source; one connection per process in 0.3.0 (pool deferred to
+scale-out); explicit transactions; `pulse_migrate status` gate before
+serving. Owner approval is the remaining 0.3.0 gate._
+
 **Purpose:** one page the owner can read to see what a full
 production-grade XIOM web backend consists of, what already works, and
 what is still missing. Updated by the PULSE session at every step wrap.
