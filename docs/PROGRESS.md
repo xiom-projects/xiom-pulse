@@ -15,7 +15,9 @@ closed; query credentials are redacted (`token=REDACTED`) in the access log
 and audit. New `src/wsauth.xi` (+ `station.wsauth`), config validation and
 `--check-config` output. `tests/test_stream.xi` **78/78** (21 new checks),
 new live `scripts/ws_auth_smoke.ps1` **11/11** (401/101/SSE + log
-redaction); `stream_smoke` stays 20/20, suites x1 green (95/239/4). Compiler
+redaction); `stream_smoke` stays 20/20, suites x1 green (95/239/4). CI
+**`40007323461` GREEN** on linux-x64, linux-arm64 (24.04), windows-x64 and
+macOS x64; macOS arm64 red on the known non-gating 0717/1529. Compiler
 note: two catalog-body inference holes surfaced while building this
 (typed `let` needed for a tuple-returned `Vec[Str]` element and for a
 cross-module `Str` used as a map key); workarounds applied, relay filed.

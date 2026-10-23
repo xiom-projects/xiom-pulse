@@ -142,7 +142,10 @@ config validation + `--check-config` print `ws_auth`. Gates:
 catalog-body inference holes surfaced and were worked around with typed
 `let` bindings (tuple-returned `Vec[Str]` element; cross-module `Str` used
 as a session key) -- relay filed. Remaining realtime: permessage-deflate +
-subprotocol negotiation.
+subprotocol negotiation. **CI `40007323461` GREEN** on linux-x64,
+linux-arm64 (24.04), windows-x64 and macOS x64; `macos-14` (arm64) is red
+on the known non-gating compiler defect (`REL-20261021-0717-pulse` /
+`REL-20261022-1529-pulse`).
 
 **WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
 WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the
