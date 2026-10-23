@@ -8,6 +8,16 @@ GitHub release body.
 
 ### Added
 
+- **Stream authentication (`PULSE_WS_AUTH=off|jwt|session`):** opt-in
+  credentials for `/api/sse`, `/api/ws` and any registered stream route,
+  enforced after the protocol/Origin checks and before the 101 or the
+  first SSE chunk. JWT HS256 via `Authorization: Bearer`,
+  `Sec-WebSocket-Protocol: pulse.jwt.<jwt>` (browser) or `?token=`
+  (EventSource); session mode uses the `sid` cookie. Missing/invalid
+  credentials get 401 with `WWW-Authenticate: Bearer`; unknown modes and a
+  missing JWT secret fail closed; query credentials are redacted in the
+  access log and audit file. `tests/test_stream.xi` 78/78; new live
+  `scripts/ws_auth_smoke.ps1` 11/11.
 - **stdlib-v0.64.9 adopted; compiler v0.64.9 WITHDRAWN:** `STDLIB_VERSION`
   is `aa8b656` (list_dir fix + JSON/YAML/TOML/CSV byte builders) and pins
   compiler v0.64.8 by design. The v0.64.9 compiler is **withdrawn**

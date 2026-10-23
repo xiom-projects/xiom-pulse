@@ -10,6 +10,7 @@ use xiom.env;
 use xiom.io;
 use xiom.convert;
 use xiom.serialize.json;
+use xiom.string;
 use xiom.pulse.ratelimit;
 
 /// cfg_parse_port parses a decimal port, falling back to 8080.
@@ -316,6 +317,13 @@ pub fn cfg_jwt_secret() -> Str {
   return env.var_or("PULSE_JWT_SECRET", "dev-secret-change-me");
 }
 
+/// cfg_ws_auth returns the configured stream-route auth policy as written
+/// (PULSE_WS_AUTH, default "off"); station.wsauth normalizes it and fails
+/// closed on unknown values. Complexity: O(1). Pure.
+pub fn cfg_ws_auth() -> Str {
+  return env.var_or("PULSE_WS_AUTH", "off");
+}
+
 /// cfg_store_path returns the JSONL event store path
 /// (PULSE_STORE_PATH, default "pulse-events.jsonl").
 /// Complexity: O(1). Pure.
@@ -558,6 +566,16 @@ pub fn cfg_validate() -> Vec[Str] {
   let ka = env.var_or("PULSE_KEEPALIVE", "");
   if ka.len() > 0 && ka != "0" && ka != "1" {
     w.push("PULSE_KEEPALIVE=\"" + ka + "\" is not 0 or 1; treating as enabled");
+  }
+  let wsa = env.var_or("PULSE_WS_AUTH", "");
+  if wsa.len() > 0 {
+    let wl = string.str_lower(string.str_trim(wsa));
+    let known = wl == "off" || wl == "0" || wl == "false" || wl == "jwt" || wl == "bearer" || wl == "session" || wl == "cookie";
+    if !known {
+      w.push("PULSE_WS_AUTH=\"" + wsa + "\" is not off|jwt|session; stream routes will reject (fail closed)");
+    } else if (wl == "jwt" || wl == "bearer") && env.var_or("PULSE_JWT_SECRET", "").len() == 0 {
+      w.push("PULSE_WS_AUTH=jwt without PULSE_JWT_SECRET; stream routes will reject (the dev default secret is refused)");
+    }
   }
   let ss = env.var_or("PULSE_STORE_SYNC", "");
   if ss == "0" {

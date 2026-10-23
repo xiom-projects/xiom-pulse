@@ -110,8 +110,8 @@ seam).
 - Origin policy: no `Origin` (non-browser client) is allowed; a browser
   `Origin` must match `Host` (default ports normalized) or be in the
   `PULSE_CORS_ORIGIN` allowlist; otherwise 403. This is a browser
-  same-origin guard, not authentication -- user-data routes still need
-  their own auth.
+  same-origin guard; credential enforcement is the separate opt-in
+  `PULSE_WS_AUTH` policy (S6).
 - no `wss://` in-process: TLS stays at the front proxy (W2)
 
 ### S4. Gate and metrics
@@ -130,6 +130,41 @@ SSE writes use `PULSE_WRITE_TIMEOUT`; WS reads use
 back to blocking mode for the stream helpers; the loop's own `send_all`
 deadline path is not reused.
 
+### S6. Stream authentication (`PULSE_WS_AUTH`)
+
+Stream routes carry data, so PULSE exposes an opt-in credential policy
+evaluated **after** the protocol checks and the Origin guard, and
+**before** the 101 (WS) or the first SSE chunk:
+
+| Mode | Credential | Notes |
+|---|---|---|
+| `off` (default) | none | same-origin/CORS guard only |
+| `jwt` | HS256 JWT signed with an explicitly configured `PULSE_JWT_SECRET` | the packaged dev-default secret is refused (fail closed) |
+| `session` | live `sid` session cookie | validated against the server's session store |
+
+Because browsers cannot set request headers on `WebSocket` or
+`EventSource`, the JWT may travel in any of three carriers:
+
+1. `Authorization: Bearer <jwt>` -- non-browser clients;
+2. `Sec-WebSocket-Protocol: pulse.jwt.<jwt>` (or `bearer.<jwt>`) -- the
+   browser WebSocket carrier; the server does not negotiate subprotocols,
+   it only consumes the credential entry;
+3. `?token=<jwt>` / `?access_token=<jwt>` -- the EventSource fallback.
+
+Rejection is `401` with the standard error envelope
+(`{"error":{"code":"unauthorized",...}}`) and, in jwt mode,
+`WWW-Authenticate: Bearer`; the connection closes without an upgrade.
+Unknown `PULSE_WS_AUTH` values fail closed so a typo cannot silently
+disable auth.
+
+**Secret hygiene:** query-string credentials are redacted
+(`token=REDACTED`) in the access log and the audit file by
+`station.wsauth.redact_target`; the Authorization and subprotocol headers
+are never logged. The policy is implemented in `src/wsauth.xi`
+(`xiom.pulse.station.wsauth`) and wired in `src/server.xi` for both stream
+kinds. Pure tests live in `tests/test_stream.xi`; the live acceptance is
+`scripts/ws_auth_smoke.ps1` (401/101/SSE + log redaction).
+
 ## 4. Tests
 
 `tests/test_stream.xi` (pure):
@@ -144,6 +179,9 @@ deadline path is not reused.
   HTTP/1.0, missing `Connection: Upgrade`
 - WS Origin policy: absent, same-origin, default ports, non-default port,
   cross-origin rejection, `null`, allowlist and wildcard
+- stream auth (`PULSE_WS_AUTH`): redaction, JWT via query / Authorization /
+  subprotocol, invalid / expired / wrong-secret, missing secret, session
+  cookie, and unknown-mode fail-closed
 
 `scripts/stream_smoke.ps1` / `.sh` (live, both platforms):
 - start the product server, `GET /api/sse?events=3&interval_ms=10`,
@@ -162,15 +200,10 @@ deadline path is not reused.
 
 - User-supplied stream handlers: patch `29dbd25` is held with the v0.64.9
   compiler (1451/1550); restore it when a fixed archive passes.
-- Stream-route-level authentication (origin/CORS guard is landed; auth
-  stays application-level).
 - A user handler's own handshake/frame policy: custom WS handlers get the
-  fd after the gate/protocol/Origin checks and own the stream from there.
+  fd after the gate/protocol/Origin/auth checks and own the stream from
+  there.
 - SSE event bus/subscription sources (a demo tick source is used).
 - WebSocket permessage-deflate and subprotocol negotiation.
 - `wss://` in-process (TLS remains the front proxy; W2 owns native TLS).
-- WebSocket authentication: the v1 endpoint is an echo demo with no data
-  access. The Origin policy (same-origin default + CORS allowlist) is
-  enforced, but a user-data endpoint MUST add its own auth before it is
-  exposed; that is not implied by this unit.
 - Per-event rate limiting and backpressure beyond the socket timeout.

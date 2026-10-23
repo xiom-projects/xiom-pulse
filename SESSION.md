@@ -79,8 +79,9 @@ NEXT (dependency order):
    wait for a pin/fix, then re-run `scripts/post_retention_probe.ps1`
    and only then the capped bttger 5k/1M.
 3. **Release 0.3.0** after owner approval (SQL serving decision proposed).
-4. Remaining realtime: WS auth, permessage-deflate; Phase B stays blocked
-   on m371.
+4. Remaining realtime: **stream auth LANDED** (session 26:
+   `PULSE_WS_AUTH=off|jwt|session`, see below); permessage-deflate and
+   subprotocol negotiation remain; Phase B stays blocked on m371.
 
 OPEN RELAYS: `REL-20261021-0717-pulse` and `REL-20261022-1529-pulse` are
 v0.65.0 acceptance input; `REL-20261020-1704-pulse` acked (builders in,
@@ -122,6 +123,26 @@ with a documented restart/RSS-cap policy). Environment: the local
 Windows package store (`%LOCALAPPDATA%\xiom\packages`) was empty after
 the engine incident; all 12 manifest deps were reinstalled at the pinned
 versions and `pulse_app` rebuilds green.
+
+**2026-10-23 (session 26 -- stream authentication landed):**
+`PULSE_WS_AUTH=off|jwt|session` is now enforced for `/api/sse`, `/api/ws`
+and every registered stream route, after the protocol checks + Origin
+guard and before the 101 / first SSE chunk. JWT (HS256) accepts the token
+via `Authorization: Bearer`, the browser `Sec-WebSocket-Protocol:
+pulse.jwt.<jwt>` carrier, or `?token=`/`?access_token=` (EventSource);
+`session` mode requires a live `sid` cookie. Rejection is 401 with
+`WWW-Authenticate: Bearer` (jwt mode); unknown `PULSE_WS_AUTH` values and a
+missing `PULSE_JWT_SECRET` fail closed (the dev default is refused).
+Query-string credentials are redacted in the access log and audit file.
+New `src/wsauth.xi` (`xiom.pulse.station.wsauth`), wired in `src/server.xi`;
+config validation + `--check-config` print `ws_auth`. Gates:
+`tests/test_stream.xi` **78/78** (21 new), live
+`scripts/ws_auth_smoke.ps1` **11/11** (401/101/SSE + log redaction),
+`stream_smoke` 20/20, suites x1 green (95/239/4). Two v0.64.8
+catalog-body inference holes surfaced and were worked around with typed
+`let` bindings (tuple-returned `Vec[Str]` element; cross-module `Str` used
+as a session key) -- relay filed. Remaining realtime: permessage-deflate +
+subprotocol negotiation.
 
 **WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
 WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the

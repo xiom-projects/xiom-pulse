@@ -50,6 +50,7 @@ linux-arm64 and windows-x64**; the next tag ships all three.
 | `PULSE_RATE_ROUTES` | (unset) | per-route policy: `METHOD PATH=RATE[/BURST],...` (e.g. `POST /api/events=5/10,GET /metrics=1`); `*` matches any method; PATH is a route template |
 | `PULSE_CSRF` | `1` | `0` disables CSRF checks |
 | `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS allowlist (comma-separated; `*` = any) |
+| `PULSE_WS_AUTH` | `off` | stream-route auth: `off` \| `jwt` \| `session` (see below) |
 
 Invalid values warn at startup and in `--check-config` (they fall back to
 the defaults above). `PULSE_BIND` is the address only -- the port goes in
@@ -237,9 +238,23 @@ Through-proxy verification checklist:
   stream handlers are a follow-up. WebSocket fragmentation is covered;
   permessage-deflate and subprotocols are follow-ups; `wss://` is the
   proxy's job. Per-route rate policy works on stream paths too
-  (`PULSE_RATE_ROUTES="GET /api/sse=1/1"`). The echo endpoint enforces a
-  same-origin default plus the `PULSE_CORS_ORIGIN` allowlist, but has no
-  auth -- add auth before putting user data behind a WebSocket route.
+  (`PULSE_RATE_ROUTES="GET /api/sse=1/1"`). The same-origin default plus
+  the `PULSE_CORS_ORIGIN` allowlist is always enforced. **Stream
+  authentication is opt-in** via `PULSE_WS_AUTH`:
+  - `off` (default): same-origin/CORS guard only -- no credentials.
+  - `jwt`: require a valid HS256 JWT signed with `PULSE_JWT_SECRET`.
+    Browsers cannot set headers on WebSocket/EventSource, so accept the
+    token in `Authorization: Bearer <jwt>` (non-browser),
+    `Sec-WebSocket-Protocol: pulse.jwt.<jwt>` (browser WebSocket) or
+    `?token=<jwt>` / `?access_token=<jwt>` (EventSource fallback).
+    A missing secret or an invalid/expired token gets **401 before the
+    101**, with `WWW-Authenticate: Bearer`.
+  - `session`: require a live `sid` session cookie.
+  Credentials in the query string are redacted (`token=REDACTED`) in the
+  access log and audit file. Unknown `PULSE_WS_AUTH` values fail closed,
+  and `PULSE_WS_AUTH=jwt` refuses the packaged dev-default secret.
+  Verified live by `scripts/ws_auth_smoke.ps1` (11/11) and
+  `tests/test_stream.xi`.
 
 ## 8. Linux deployment (verified 2026-10-07)
 

@@ -32,6 +32,7 @@ use xiom.pulse.http;
 use xiom.pulse.app;
 use xiom.pulse.station.router;
 use xiom.pulse.station.stream;
+use xiom.pulse.station.wsauth;
 use xiom.pulse.envelope;
 use xiom.pulse.station.config;
 use xiom.pulse.metrics;
@@ -818,7 +819,8 @@ fn send_all(fd: Int, data: &Vec[UInt8]) -> Bool {
 
 fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_ms: Int) {
   if !config.cfg_log_enabled() { return; }
-  let line = "{\"ts\":" + time.unix_timestamp().to_str() + ",\"rid\":\"" + rid + "\",\"method\":\"" + method + "\",\"target\":\"" + target + "\",\"status\":" + status.to_str() + ",\"bytes\":" + bytes.to_str() + ",\"dur_ms\":" + dur_ms.to_str() + "}";
+  let safe_target = wsauth.redact_target(target);
+  let line = "{\"ts\":" + time.unix_timestamp().to_str() + ",\"rid\":\"" + rid + "\",\"method\":\"" + method + "\",\"target\":\"" + safe_target + "\",\"status\":" + status.to_str() + ",\"bytes\":" + bytes.to_str() + ",\"dur_ms\":" + dur_ms.to_str() + "}";
   io.println(line);
   io.flush_stdout();
 }
@@ -826,7 +828,8 @@ fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_m
 fn audit_event(rid: Str, method: Str, target: Str, status: Int) {
   let path = config.cfg_audit_path();
   let _rot = audit.audit_rotate_if_needed(path, config.cfg_audit_max_bytes());
-  let line = time.unix_timestamp().to_str() + " " + rid + " " + method + " " + target + " " + status.to_str();
+  let safe_target = wsauth.redact_target(target);
+  let line = time.unix_timestamp().to_str() + " " + rid + " " + method + " " + safe_target + " " + status.to_str();
   // Durability Phase A: security-relevant records sync-before-return
   // (PULSE_AUDIT_SYNC, default on).
   if config.cfg_audit_sync() {
@@ -899,6 +902,19 @@ fn rate_limited_response(req: &PulseRequest, reuse: Bool, retry_ms: Int) -> Gate
   var resp = http.build_response_full(429, CONTENT_JSON, &hs, rbody, reuse);
   resp = with_std_headers(with_cors(resp, req));
   return GateResult{ action: 1; resp: resp; status: 429; bytes: rbody.len(); method: req.method; target: req.target; reuse: reuse; };
+}
+
+/// stream_unauthorized builds the 401 envelope for a stream route rejected by
+/// the PULSE_WS_AUTH policy (WWW-Authenticate is added in jwt mode). The
+/// connection closes after it, so it is framed without keep-alive.
+/// Complexity: O(n).
+fn stream_unauthorized(req: &PulseRequest) -> (Vec[UInt8], Int) {
+  var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  let ch = wsauth.challenge_header();
+  if ch.len() > 0 { hs.push(("WWW-Authenticate", ch)); }
+  let rbody = envelope.error_body("unauthorized", "authentication required");
+  var resp = http.build_response_full(401, CONTENT_JSON, &hs, rbody, false);
+  return (with_std_headers(with_cors(resp, req)), rbody.len());
 }
 
 /// gate_request runs the request-side stages in their frozen order (the
@@ -1170,7 +1186,7 @@ pub fn main() -> Int {
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_RATE_ROUTES PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       io.println("     PULSE_READ_TIMEOUT PULSE_WRITE_TIMEOUT PULSE_IDLE_TIMEOUT PULSE_SITE_DIR");
-      io.println("     PULSE_STORE_SYNC PULSE_AUDIT_SYNC PULSE_KEEPALIVE");
+      io.println("     PULSE_STORE_SYNC PULSE_AUDIT_SYNC PULSE_KEEPALIVE PULSE_WS_AUTH");
       return 0;
     }
     if a == "--check-config" || a == "check-config" {
@@ -1217,6 +1233,7 @@ pub fn main() -> Int {
       var secret_note: Str = "dev-default (set PULSE_JWT_SECRET for real deployments)";
       if js.len() > 0 { secret_note = "env"; }
       io.println("jwt_secret=" + secret_note);
+      io.println("ws_auth=" + config.cfg_ws_auth() + " (stream routes; off|jwt|session)");
       let warns = config.cfg_validate();
       var wi: Int = 0;
       while wi < warns.len() {
@@ -1388,10 +1405,17 @@ pub fn main() -> Int {
           // 1 = SSE, 2 = WebSocket (docs/DESIGN-SSE-WEBSOCKET.md).
           let sk = stream.stream_kind(req.method, router.v1_path(req.target));
           if sk == 1 {
-            let sm = stream.sse_stream(client, &req);
-            record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
-            conn_open = false;
-            served = served + 1;
+            let denied = wsauth.denied_reason(&req);
+            if denied.len() > 0 {
+              let au = stream_unauthorized(&req);
+              let _w = after_response(client, au.0, rid, req.method, req.target, 401, au.1, t0_ms, false);
+              conn_open = false;
+            } else {
+              let sm = stream.sse_stream(client, &req);
+              record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+              conn_open = false;
+              served = served + 1;
+            }
           } elif sk == 2 {
             let we = stream.ws_check_req(&raw, &req);
             if we.len() > 0 {
@@ -1413,10 +1437,17 @@ pub fn main() -> Int {
                 let _w = after_response(client, resp, rid, req.method, req.target, 403, rbody.len(), t0_ms, false);
                 conn_open = false;
               } else {
-                let sm = stream.ws_stream(client, &raw, &req);
-                record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
-                conn_open = false;
-                served = served + 1;
+                let denied = wsauth.denied_reason(&req);
+                if denied.len() > 0 {
+                  let au = stream_unauthorized(&req);
+                  let _w = after_response(client, au.0, rid, req.method, req.target, 401, au.1, t0_ms, false);
+                  conn_open = false;
+                } else {
+                  let sm = stream.ws_stream(client, &raw, &req);
+                  record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+                  conn_open = false;
+                  served = served + 1;
+                }
               }
             }
           } else {

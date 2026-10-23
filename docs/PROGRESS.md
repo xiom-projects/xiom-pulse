@@ -4,6 +4,22 @@
 
 **Last updated:** 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
 
+_Delta 2026-10-23 (stream auth unit): **`PULSE_WS_AUTH=off|jwt|session`**
+landed for SSE and WebSocket (and registered stream routes): credentials are
+checked after the protocol/Origin guard and before the 101/first SSE chunk.
+JWT HS256 accepts `Authorization: Bearer`, the browser carrier
+`Sec-WebSocket-Protocol: pulse.jwt.<jwt>`, and `?token=`/`?access_token=`;
+session mode uses the live `sid` cookie. Rejections are 401 +
+`WWW-Authenticate: Bearer`; unknown modes and a missing JWT secret fail
+closed; query credentials are redacted (`token=REDACTED`) in the access log
+and audit. New `src/wsauth.xi` (+ `station.wsauth`), config validation and
+`--check-config` output. `tests/test_stream.xi` **78/78** (21 new checks),
+new live `scripts/ws_auth_smoke.ps1` **11/11** (401/101/SSE + log
+redaction); `stream_smoke` stays 20/20, suites x1 green (95/239/4). Compiler
+note: two catalog-body inference holes surfaced while building this
+(typed `let` needed for a tuple-returned `Vec[Str]` element and for a
+cross-module `Str` used as a map key); workarounds applied, relay filed.
+
 _Delta 2026-10-22 (session 25 -- HTTP request-path retention isolated):
 the per-request RSS growth is **not** a bttger/JSON artifact and is **not**
 fixed by the stdlib-v0.64.9 pins. On compiler v0.64.8 + stdlib tag

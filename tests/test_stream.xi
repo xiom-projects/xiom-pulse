@@ -10,8 +10,13 @@ module test_stream
 use xiom.io;
 use xiom.env;
 use xiom.string;
+use xiom.string.slice;
+use xiom.time;
+use xiom.jwt;
 use xiom.pulse.http;
+use xiom.pulse.sessions;
 use xiom.pulse.station.stream;
+use xiom.pulse.station.wsauth;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -123,6 +128,80 @@ pub fn main() -> Int {
   env.set_var("PULSE_CORS_ORIGIN", "*");
   f = f + check("ws origin wildcard", stream.ws_origin_check("https://any.example", "example.com") == "");
   env.remove_var("PULSE_CORS_ORIGIN");
+
+  // --- stream authentication (PULSE_WS_AUTH) --------------------------------
+  let key2 = "dGhlIHNhbXBsZSBub25jZQ==";
+  let raw_ws = http.str_to_bytes("GET /api/ws HTTP/1.1\r\nHost: bench\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: " + key2 + "\r\nSec-WebSocket-Version: 13\r\n\r\n");
+  let req_ws = http.parse_request(&raw_ws);
+
+  // Default (off) keeps the same-origin-only behavior.
+  env.remove_var("PULSE_WS_AUTH");
+  f = f + check("auth default off allows", wsauth.denied_reason(&req_ws) == "");
+
+  // Credential redaction for logs/audit.
+  f = f + check("redact token", wsauth.redact_target("/api/ws?token=secret&x=1") == "/api/ws?token=REDACTED&x=1");
+  f = f + check("redact access_token", string.str_contains(wsauth.redact_target("/api/sse?access_token=abc"), "access_token=REDACTED"));
+  f = f + check("redact clean untouched", wsauth.redact_target("/api/ws?events=2") == "/api/ws?events=2");
+  f = f + check("redact no query", wsauth.redact_target("/api/ws") == "/api/ws");
+
+  // JWT mode: missing / valid across the three carriers / invalid.
+  env.set_var("PULSE_WS_AUTH", "jwt");
+  env.set_var("PULSE_JWT_SECRET", "s3cret");
+  f = f + check("auth jwt missing denied", wsauth.denied_reason(&req_ws) == "missing token");
+  let now = time.unix_timestamp();
+  let payload = "{\"sub\":\"bob\",\"exp\":" + (now + 3600).to_str() + "}";
+  let kb = slice.str_bytes("s3cret");
+  let tr = jwt.jwt_sign_hs256(payload, &kb);
+  var tok: Str = "";
+  if tr.is_ok { tok = tr.value; }
+  f = f + check("auth jwt sign ok", tok.len() > 0);
+
+  let raw_q = http.str_to_bytes("GET /api/ws?token=" + tok + " HTTP/1.1\r\nHost: bench\r\n\r\n");
+  let req_q = http.parse_request(&raw_q);
+  f = f + check("auth jwt query allowed", wsauth.denied_reason(&req_q) == "");
+  f = f + check("auth jwt query redacted", !string.str_contains(wsauth.redact_target(req_q.target), tok));
+
+  let raw_h = http.str_to_bytes("GET /api/ws HTTP/1.1\r\nHost: bench\r\nAuthorization: Bearer " + tok + "\r\n\r\n");
+  let req_h = http.parse_request(&raw_h);
+  f = f + check("auth jwt bearer allowed", wsauth.denied_reason(&req_h) == "");
+
+  let raw_p = http.str_to_bytes("GET /api/ws HTTP/1.1\r\nHost: bench\r\nSec-WebSocket-Protocol: chat, pulse.jwt." + tok + "\r\n\r\n");
+  let req_p = http.parse_request(&raw_p);
+  f = f + check("auth jwt subprotocol allowed", wsauth.denied_reason(&req_p) == "");
+  f = f + check("auth challenge bearer", wsauth.challenge_header() == "Bearer");
+
+  let raw_bad = http.str_to_bytes("GET /api/ws?token=not-a-jwt HTTP/1.1\r\nHost: bench\r\n\r\n");
+  let req_bad = http.parse_request(&raw_bad);
+  f = f + check("auth jwt invalid denied", wsauth.denied_reason(&req_bad) == "invalid token");
+
+  let payload_e = "{\"sub\":\"bob\",\"exp\":" + (now - 10).to_str() + "}";
+  let tre = jwt.jwt_sign_hs256(payload_e, &kb);
+  var tok_e: Str = "";
+  if tre.is_ok { tok_e = tre.value; }
+  let raw_e = http.str_to_bytes("GET /api/ws?token=" + tok_e + " HTTP/1.1\r\nHost: bench\r\n\r\n");
+  let req_e = http.parse_request(&raw_e);
+  f = f + check("auth jwt expired denied", wsauth.denied_reason(&req_e) == "invalid token");
+
+  env.set_var("PULSE_JWT_SECRET", "other");
+  f = f + check("auth jwt wrong secret denied", wsauth.denied_reason(&req_q) == "invalid token");
+  env.remove_var("PULSE_JWT_SECRET");
+  f = f + check("auth jwt no secret fails closed", wsauth.denied_reason(&req_q) == "jwt secret not configured");
+
+  // Session mode: live `sid` cookie.
+  env.set_var("PULSE_WS_AUTH", "session");
+  sessions.session_reset();
+  f = f + check("auth session missing denied", wsauth.denied_reason(&req_ws) == "missing session");
+  let sid = sessions.session_create("bob", 60);
+  let raw_c = http.str_to_bytes("GET /api/ws HTTP/1.1\r\nHost: bench\r\nCookie: sid=" + sid + "\r\n\r\n");
+  let req_c = http.parse_request(&raw_c);
+  f = f + check("auth session allowed", wsauth.denied_reason(&req_c) == "");
+  f = f + check("auth session challenge empty", wsauth.challenge_header() == "");
+  sessions.session_reset();
+
+  // Unknown mode fails closed (never silently disables auth).
+  env.set_var("PULSE_WS_AUTH", "jwtt");
+  f = f + check("auth unknown mode fails closed", wsauth.denied_reason(&req_c) == "invalid auth mode");
+  env.remove_var("PULSE_WS_AUTH");
 
   if f == 0 {
     io.println("pulse-stream: GREEN");
