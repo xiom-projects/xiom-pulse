@@ -25,7 +25,9 @@ map 289 B, vec 145 B, str 49 B), so the drop-glue class remains open.
 Package store: the shared home was clobbered again by a fleet repin, so
 PULSE now resolves from the lane-local `%LOCALAPPDATA%\xiom-pulse-home`
 (12 pinned deps) and `build.ps1`/`run.ps1` always source `dev-env.ps1`
-(the shared store was also restored).
+(the shared store was also restored). CI **`40088893513` success** and
+release dry-run **`40089828802` GREEN** on linux-x64, windows-x64 and
+macOS x64 (arm64 witness legs red-but-tolerated; publish skipped).
 
 _Delta 2026-10-23 (stream auth unit): **`PULSE_WS_AUTH=off|jwt|session`**
 landed for SSE and WebSocket (and registered stream routes): credentials are

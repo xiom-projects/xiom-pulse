@@ -184,6 +184,11 @@ product `GET /health` 60.6 KB/req; bttger `/serialize` 37 KB, `/insert`
 str 49 B -- the drop-glue class is still open, so the 0.3.0 sustained-load
 gate remains. The shared package store was clobbered again by a fleet
 repin; this lane now resolves from `%LOCALAPPDATA%\xiom-pulse-home`.
+CI **`40088893513` success** (linux-x64, windows-x64, macOS x64 green;
+arm64 witness legs red-but-tolerated) and release dry-run
+**`40089828802` GREEN** (linux-x64, windows-x64, macOS x64; publish
+skipped). arm64/macOS-arm64 packaging is held until
+`REL-20261024-1101-pulse` clears.
 
 **WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
 WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the
