@@ -90,8 +90,9 @@ jobs:
         include:
           - platform: linux-x64
             os: ubuntu-latest
-          - platform: linux-arm64
-            os: ubuntu-22.04-arm
+          # linux-arm64 packaging is held on v0.65.0: the arm64 product build
+          # is blocked by two compiler defects (REL-20261024-1101-pulse).
+          # Restore: - platform: linux-arm64 / os: ubuntu-22.04-arm
           - platform: windows-x64
             os: windows-latest
     steps:
