@@ -817,6 +817,22 @@ fn send_all(fd: Int, data: &Vec[UInt8]) -> Bool {
   return ok;
 }
 
+/// print_block writes a pre-formatted block line by line through
+/// io.println. It exists because io.print (stdlib `printf("%s", ...)`) emits
+/// a fixed-arity extern call that fails IR verification on arm64 with the
+/// v0.65.0 pair (REL-20261024-*/stdlib); io.println uses puts and is safe.
+/// A trailing newline in the block is not doubled. Complexity: O(lines).
+fn print_block(s: Str) {
+  let parts = string.str_split(s, "\n");
+  var i: Int = 0;
+  while i < parts.len() {
+    let line: Str = parts[i];
+    if i == parts.len() - 1 && line.len() == 0 { return; }
+    io.println(line);
+    i = i + 1;
+  }
+}
+
 fn access_log(rid: Str, method: Str, target: Str, status: Int, bytes: Int, dur_ms: Int) {
   if !config.cfg_log_enabled() { return; }
   let safe_target = wsauth.redact_target(target);
@@ -1154,7 +1170,7 @@ pub fn main() -> Int {
         ri = ri + 1;
       }
       let st = stream.routes_text();
-      if st.len() > 0 { io.print(st); }
+      if st.len() > 0 { print_block(st); }
       return 0;
     }
     if sc == "openapi" {
