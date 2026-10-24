@@ -174,9 +174,10 @@ jobs:
         with:
           subject-path: "dist/pulse-*.zip"
 
-  # macOS packaging is gating from the v0.65.0 pin: the darwin runtime and
-  # ptr-thunk blockers (REL-20261021-0717-pulse / REL-20261022-1529-pulse)
-  # are clear on this archive, and both legs run the full fleet.
+  # macOS x64 packaging is gating from the v0.65.0 pin (the darwin x64 legs
+  # are green). macOS arm64 is held: the arm64 product build is blocked by
+  # two compiler defects (REL-20261024-1101-pulse), so packaging it would
+  # fail. Re-add the arm64 leg when that item is fixed.
   build-macos:
     name: package ${{ matrix.platform }}
     needs: [guard]
@@ -191,8 +192,6 @@ jobs:
         include:
           - platform: macos-x64
             os: macos-15-intel
-          - platform: macos-arm64
-            os: macos-14
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

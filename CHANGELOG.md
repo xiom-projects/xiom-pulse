@@ -22,9 +22,11 @@ GitHub release body.
   `v0.65.0` (archive SHA256-pinned in CI/heavy/release) and
   `STDLIB_VERSION` is `3eb9c05` (stdlib-v0.65.0). v0.64.9 stays withdrawn
   (`REL-20261022-1826-compiler`); v0.64.8 is superseded. linux-arm64 now
-  runs on **ubuntu-22.04** and `macos-14` is **gating** (0717 arm64 IR and
-  1529 ptr-thunk are clear); macOS packaging is enabled in the release
-  workflow. The user `StreamHandler` registry is **restored**
+  runs on **ubuntu-22.04** and `macos-14` as **non-gating witnesses**: the
+  arm64 product build is blocked by two compiler defects
+  (`REL-20261024-1101-pulse`, one worked around via a println-based CLI
+  path), so macOS **x64** packaging is enabled while arm64 packaging is
+  held. The user `StreamHandler` registry is **restored**
   (`register_handler`/`dispatch`, `Vec[StreamHandler]`), with
   `probe_fnptr`/`probe_stream_handler` green (`var=4,7 vec=4,7`).
 - **stdlib-v0.64.9 (historical):** `STDLIB_VERSION` was `aa8b656` (list_dir

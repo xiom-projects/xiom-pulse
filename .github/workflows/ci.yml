@@ -29,8 +29,12 @@ jobs:
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # v0.65.0 clears the arm64 module-scope Vec IR defect (0717) and the
-    # stored-fn ptr thunk (1529); every leg is gating from this pin.
+    # arm64 is a WITNESS, not a gate, on v0.65.0: two compiler defects block
+    # the product build (REL-20261024-1101-pulse). (1) stdlib io.print emits
+    # a fixed-arity printf call rejected by opt/clang on arm64; (2) the
+    # contract evaluator emits `load i64, i64* %p` where %p is i8** for
+    # Result[Str, IOError] (stdlib io.xi:244). x64 legs gate normally.
+    continue-on-error: ${{ matrix.os == 'macos-14' || matrix.os == 'ubuntu-22.04-arm' }}
     strategy:
       fail-fast: false
       matrix:

@@ -96,8 +96,9 @@ production is now compiler **v0.65.0** (windows archive `ff4abb4a...`,
 checksum-verified; `%LOCALAPPDATA%\xiom.new-v0.65.0`) + stdlib **v0.65.0**
 (`3eb9c05`; `xiom-pins\stdlib-tag-v0.65.0`). v0.64.9 stays withdrawn;
 v0.64.8 is superseded. CI/heavy/release pin v0.65.0 with the five archive
-SHA256s; linux-arm64 runs on **ubuntu-22.04-arm**; `macos-14` is
-**gating** (no continue-on-error); macOS packaging is enabled. `dev-env`
+SHA256s; linux-arm64 runs on **ubuntu-22.04-arm** and `macos-14` are
+**witness-only** until `REL-20261024-1101-pulse` (two arm64 codegen
+defects) clears; macOS **x64** packaging is enabled. `dev-env`
 now resolves from the **lane-local** `%LOCALAPPDATA%\xiom-pulse-home` (the
 shared package store was clobbered again by a fleet repin) and
 `build.ps1`/`run.ps1` always source it. The user **StreamHandler registry
@@ -161,8 +162,15 @@ on the known non-gating compiler defect (`REL-20261021-0717-pulse` /
 **2026-10-24 (session 27 -- v0.65.0 adopted; registry restored):**
 Toolchain v0.65.0 (`ff4abb4a...` windows; 11 assets + SHA256SUMS verified)
 + stdlib `3eb9c05` installed; `STDLIB_VERSION` updated; CI/heavy/release
-re-pinned; linux-arm64 -> `ubuntu-22.04-arm`; `macos-14` gating; macOS
-packaging enabled. Acceptance on Windows v0.65.0: `probe_arm64_ginit`
+re-pinned; linux-arm64 -> `ubuntu-22.04-arm`; macOS **x64** packaging
+enabled. **arm64 is not yet buildable on this pair** (`REL-20261024-1101-pulse`):
+(1) stdlib `io.print` emits a fixed-arity `printf` call rejected by
+opt/clang on arm64 -- worked around PULSE-side (`print_block`, commit
+`24c4354`); (2) the contract evaluator emits `load i64, i64* %p` where
+`%p` is `i8**` for `Result[Str, IOError]` (stdlib `io.xi:244`). Both arm64
+legs are therefore non-gating witnesses and `macos-arm64` packaging is
+held; `0717`/`1529` cannot be verified until the product builds there.
+Acceptance on Windows v0.65.0: `probe_arm64_ginit`
 compiles, `probe_fnptr` and `probe_stream_handler` both
 `var=4,7 vec=4,7`, `p_io_listdir_roundtrip` green, migrations 21/21.
 Registry restored: `register_handler`/`dispatch` + `Vec[StreamHandler]`;
