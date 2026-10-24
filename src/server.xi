@@ -917,6 +917,24 @@ fn stream_unauthorized(req: &PulseRequest) -> (Vec[UInt8], Int) {
   return (with_std_headers(with_cors(resp, req)), rbody.len());
 }
 
+/// stream_dispatch runs the registered handler for a stream route and
+/// records the outcome; a missing handler answers 500 (registry bug, not a
+/// client error). The caller has run the gate/auth checks and closes the fd.
+/// Complexity: O(handler).
+fn stream_dispatch(fd: Int, raw: &Vec[UInt8], req: &PulseRequest, rid: Str, t0_ms: Int) -> Int {
+  let sm = stream.dispatch(fd, raw, req, router.v1_path(req.target));
+  if sm.0 == 0 {
+    var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+    let rbody = envelope.error_body("stream_unavailable", "stream handler missing");
+    var resp = http.build_response_full(500, CONTENT_JSON, &hs, rbody, false);
+    resp = with_std_headers(with_cors(resp, req));
+    let _w = after_response(fd, resp, rid, req.method, req.target, 500, rbody.len(), t0_ms, false);
+    return 500;
+  }
+  record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+  return sm.0;
+}
+
 /// gate_request runs the request-side stages in their frozen order (the
 /// gate_order.py pins): parse/too-large -> quit -> OPTIONS preflight ->
 /// CSRF -> global rate limit -> per-route policy. A committed gate
@@ -1411,8 +1429,7 @@ pub fn main() -> Int {
               let _w = after_response(client, au.0, rid, req.method, req.target, 401, au.1, t0_ms, false);
               conn_open = false;
             } else {
-              let sm = stream.sse_stream(client, &req);
-              record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+              let _st = stream_dispatch(client, &raw, &req, rid, t0_ms);
               conn_open = false;
               served = served + 1;
             }
@@ -1443,8 +1460,7 @@ pub fn main() -> Int {
                   let _w = after_response(client, au.0, rid, req.method, req.target, 401, au.1, t0_ms, false);
                   conn_open = false;
                 } else {
-                  let sm = stream.ws_stream(client, &raw, &req);
-                  record_response(rid, req.method, req.target, sm.0, sm.1, time.monotonic_ms() - t0_ms, false);
+                  let _st = stream_dispatch(client, &raw, &req, rid, t0_ms);
                   conn_open = false;
                   served = served + 1;
                 }

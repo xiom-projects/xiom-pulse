@@ -18,16 +18,18 @@ GitHub release body.
   missing JWT secret fail closed; query credentials are redacted in the
   access log and audit file. `tests/test_stream.xi` 78/78; new live
   `scripts/ws_auth_smoke.ps1` 11/11.
-- **stdlib-v0.64.9 adopted; compiler v0.64.9 WITHDRAWN:** `STDLIB_VERSION`
-  is `aa8b656` (list_dir fix + JSON/YAML/TOML/CSV byte builders) and pins
-  compiler v0.64.8 by design. The v0.64.9 compiler is **withdrawn**
-  (`REL-20261022-1826-compiler`: release-mode nested-pattern/1451/1550
-  defects), production stays v0.64.8, and **v0.65.0** is the next
-  production gate. The user
-  `StreamHandler` registry was implemented and then reverted with the
-  held compiler (`29dbd25`/`5a927d3`); it returns from git history when a
-  fixed archive passes. macOS x64 is gating with the stdlib list_dir fix;
-  macOS arm64/22.04 remain blocked (0717/1529).
+- **v0.65.0 adopted (compiler + stdlib):** `XIOM_TOOLCHAIN_VERSION` is
+  `v0.65.0` (archive SHA256-pinned in CI/heavy/release) and
+  `STDLIB_VERSION` is `3eb9c05` (stdlib-v0.65.0). v0.64.9 stays withdrawn
+  (`REL-20261022-1826-compiler`); v0.64.8 is superseded. linux-arm64 now
+  runs on **ubuntu-22.04** and `macos-14` is **gating** (0717 arm64 IR and
+  1529 ptr-thunk are clear); macOS packaging is enabled in the release
+  workflow. The user `StreamHandler` registry is **restored**
+  (`register_handler`/`dispatch`, `Vec[StreamHandler]`), with
+  `probe_fnptr`/`probe_stream_handler` green (`var=4,7 vec=4,7`).
+- **stdlib-v0.64.9 (historical):** `STDLIB_VERSION` was `aa8b656` (list_dir
+  fix + JSON/YAML/TOML/CSV byte builders) with compiler v0.64.8.
+  Superseded by the v0.65.0 pin above.
 - **macOS witness (non-gating):** `macos-14` (arm64) and
   `macos-15-intel` (x64) join the matrix; `setup-xiom` uses the
   SHA256-pinned macOS toolchains and the Unix gates run. The arm64 leg is

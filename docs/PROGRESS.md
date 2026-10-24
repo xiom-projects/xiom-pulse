@@ -2,7 +2,29 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
+**Last updated:** 2026-10-24 (v0.65.0 + stdlib-v0.65.0 adopted, SHA-pinned; StreamHandler registry restored; Windows fleet green -- suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 83/83, stream smoke 20/20, ws-auth 11/11; retention 5x better on `/serialize/big` (1.14 MB -> 225 KB/req) but still ~60 KB/req; lane-local package home; `PULSE_WS_AUTH` landed). Prior: 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
+
+_Delta 2026-10-24 (v0.65.0 adoption + StreamHandler registry):
+compiler **v0.65.0** (Windows archive `ff4abb4a...`, checksum-verified) and
+**stdlib-v0.65.0** (`3eb9c05`) are adopted; `dev-env` prefers
+`%LOCALAPPDATA%\xiom.new-v0.65.0` + `xiom-pins\stdlib-tag-v0.65.0`, all
+three workflows carry the new version + archive SHA256s, linux-arm64 moves
+to `ubuntu-22.04-arm` and `macos-14` is gating (0717/1529 clear), and
+macOS packaging is enabled. The user **StreamHandler registry is restored**
+(`register_handler`/`dispatch` + `Vec[StreamHandler]`, built-ins registered
+through the same table) -- `probe_fnptr` and `probe_stream_handler` print
+`var=4,7 vec=4,7`. Acceptance on Windows v0.65.0: suites x2 (95/239/4),
+smoke **135/135 x2** (jsonl + kv), crash 6/6 x2, migrations **21/21**,
+SQL 53/53, stream **83/83**, stream smoke 20/20, ws-auth 11/11, rate smoke.
+**Retention is still red but improved:** product `GET /health` 60.6 KB/req,
+bttger `/serialize` 37 KB, `/insert` 79.6 KB, `/serialize/big`
+**225 KB/req** (was 1.14 MB on v0.64.8 -> 5x better); standalone
+`probe_alloc_aggregate` rates are unchanged (obj 2,140 B, type 1,937 B,
+map 289 B, vec 145 B, str 49 B), so the drop-glue class remains open.
+Package store: the shared home was clobbered again by a fleet repin, so
+PULSE now resolves from the lane-local `%LOCALAPPDATA%\xiom-pulse-home`
+(12 pinned deps) and `build.ps1`/`run.ps1` always source `dev-env.ps1`
+(the shared store was also restored).
 
 _Delta 2026-10-23 (stream auth unit): **`PULSE_WS_AUTH=off|jwt|session`**
 landed for SSE and WebSocket (and registered stream routes): credentials are

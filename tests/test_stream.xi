@@ -31,6 +31,10 @@ fn bytes_text(b: &Vec[UInt8]) -> Str {
   return http.bytes_to_str(b, 0, b.len());
 }
 
+fn test_handler(_fd: Int, _raw: &Vec<UInt8>, _req: &PulseRequest) -> (Int, Int) {
+  return (9, 3);
+}
+
 pub fn main() -> Int {
   var f: Int = 0;
 
@@ -59,6 +63,20 @@ pub fn main() -> Int {
   let rt = stream.routes_text();
   f = f + check("routes text sse", string.str_contains(rt, "GET /api/sse (sse)\n"));
   f = f + check("routes text custom", string.str_contains(rt, "GET /api/stream2 (sse)\n"));
+
+  // User handler registry (v0.65.0 stored-fn support).
+  f = f + check("register handler", stream.register_handler("GET", "/api/custom", 2, test_handler));
+  f = f + check("handler duplicate rejected", !stream.register_handler("GET", "/api/custom", 2, test_handler));
+  f = f + check("handler bad method rejected", !stream.register_handler("POST", "/api/custom2", 2, test_handler));
+  let draw = http.str_to_bytes("GET /api/custom HTTP/1.1\r\nHost: bench\r\n\r\n");
+  let dreq = http.parse_request(&draw);
+  let dr = stream.dispatch(0, &draw, &dreq, "/api/custom");
+  let d0: Int = dr.0;
+  let d1: Int = dr.1;
+  f = f + check("dispatch handler", d0 == 9 && d1 == 3);
+  let miss = stream.dispatch(0, &draw, &dreq, "/api/absent");
+  let m0: Int = miss.0;
+  f = f + check("dispatch missing", m0 == 0);
 
   // Query clamps and defaults.
   f = f + check("events default", stream.sse_events("/api/sse") == 5);

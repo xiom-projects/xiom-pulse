@@ -64,12 +64,10 @@ STATE AT WRAP 24 (2026-10-22, session 24):
   Re-authenticate any deleted tool configs; no PULSE recovery action.
 
 NEXT (dependency order):
-1. **v0.65.0**: when the production archive + stdlib-v0.65.0 are cut,
-   adopt both (SHA pins, local tag dirs, `STDLIB_VERSION`), re-run
-   `probe_arm64_ginit`, `probe_fnptr`, `probe_stream_handler`,
-   `p_io_listdir_roundtrip` + migrations 21/21; restore the registry;
-   move linux-arm64 to ubuntu-22.04 and make `macos-14` gating; run CI +
-   release dry-run; enable macOS packaging.
+1. **v0.65.0 -- ADOPTED 2026-10-24 (see the update below):** compiler
+   v0.65.0 + stdlib `3eb9c05`, StreamHandler registry restored, CI legs
+   flipped to ubuntu-22.04-arm + gating macOS; remaining: the CI run and
+   release dry-run verdict.
 2. **HTTP request-path retention -- INVESTIGATED (session 25, below):**
    compiler-owned per-request leak on v0.64.8 + stdlib v0.64.9 (product
    `GET /health` 55-60 KB/req; bttger `/serialize/big` 1.14 MB/req).
@@ -92,6 +90,19 @@ DISCIPLINE: latest is **not** v0.64.9 (withdrawn); production v0.64.8
 until the v0.65.0 gate is green + owner GO. Signed conventional commits;
 commit/push per unit; update SESSION + docs/PROGRESS at every wrap;
 report blockers on the relay first.
+
+**2026-10-24 UPDATE -- v0.65.0 ADOPTED (supersedes the state block above):**
+production is now compiler **v0.65.0** (windows archive `ff4abb4a...`,
+checksum-verified; `%LOCALAPPDATA%\xiom.new-v0.65.0`) + stdlib **v0.65.0**
+(`3eb9c05`; `xiom-pins\stdlib-tag-v0.65.0`). v0.64.9 stays withdrawn;
+v0.64.8 is superseded. CI/heavy/release pin v0.65.0 with the five archive
+SHA256s; linux-arm64 runs on **ubuntu-22.04-arm**; `macos-14` is
+**gating** (no continue-on-error); macOS packaging is enabled. `dev-env`
+now resolves from the **lane-local** `%LOCALAPPDATA%\xiom-pulse-home` (the
+shared package store was clobbered again by a fleet repin) and
+`build.ps1`/`run.ps1` always source it. The user **StreamHandler registry
+is restored** on this pin. Windows fleet green; retention re-measured and
+still red (~60 KB/req floor).
 
 **2026-10-22 (session 25 -- HTTP request-path retention isolated):**
 The remaining growth is **per request** and **compiler-owned**; it is not
@@ -146,6 +157,25 @@ subprotocol negotiation. **CI `40007323461` GREEN** on linux-x64,
 linux-arm64 (24.04), windows-x64 and macOS x64; `macos-14` (arm64) is red
 on the known non-gating compiler defect (`REL-20261021-0717-pulse` /
 `REL-20261022-1529-pulse`).
+
+**2026-10-24 (session 27 -- v0.65.0 adopted; registry restored):**
+Toolchain v0.65.0 (`ff4abb4a...` windows; 11 assets + SHA256SUMS verified)
++ stdlib `3eb9c05` installed; `STDLIB_VERSION` updated; CI/heavy/release
+re-pinned; linux-arm64 -> `ubuntu-22.04-arm`; `macos-14` gating; macOS
+packaging enabled. Acceptance on Windows v0.65.0: `probe_arm64_ginit`
+compiles, `probe_fnptr` and `probe_stream_handler` both
+`var=4,7 vec=4,7`, `p_io_listdir_roundtrip` green, migrations 21/21.
+Registry restored: `register_handler`/`dispatch` + `Vec[StreamHandler]`;
+built-ins register through the same table (`stream.xi`, `stream_dispatch`
+in `server.xi`); `test_stream` **83/83** (5 new), stream smoke 20/20,
+ws-auth 11/11. Fleet: suites x2 (95/239/4), smoke **135/135 x2**
+(jsonl+kv), crash 6/6 x2, SQL 53/53, rate smoke. **Retention on v0.65.0:**
+product `GET /health` 60.6 KB/req; bttger `/serialize` 37 KB, `/insert`
+79.6 KB, `/serialize/big` **225 KB/req** (5x better than v0.64.8's
+1.14 MB); standalone obj 2,140 B / type 1,937 B / map 289 B / vec 145 B /
+str 49 B -- the drop-glue class is still open, so the 0.3.0 sustained-load
+gate remains. The shared package store was clobbered again by a fleet
+repin; this lane now resolves from `%LOCALAPPDATA%\xiom-pulse-home`.
 
 **WRAP 24 CORRECTION (2026-10-22T19:05Z):** the v0.64.9 **compiler is
 WITHDRAWN** (`REL-20261022-1826-compiler`: nested enum patterns and the

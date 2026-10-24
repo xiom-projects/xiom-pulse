@@ -26,10 +26,11 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-if (-not $env:XIOM_COMPILER -or -not (Test-Path -LiteralPath $env:XIOM_COMPILER)) {
-    . (Join-Path $PSScriptRoot "dev-env.ps1")
-    if (-not $env:XIOM_COMPILER) { throw "XIOM_COMPILER not resolved; check scripts\dev-env.ps1" }
-}
+# Always source dev-env: it pins the lane-local XIOM_HOME (the shared
+# package store is clobbered by fleet repins) and respects a preset
+# XIOM_COMPILER/XIOM_STDLIB for A/B sweeps.
+. (Join-Path $PSScriptRoot "dev-env.ps1")
+if (-not $env:XIOM_COMPILER) { throw "XIOM_COMPILER not resolved; check scripts\dev-env.ps1" }
 
 if ($NoRuntimeDir) {
     # A/B probe mode: intentionally drop the runtime override to reproduce
