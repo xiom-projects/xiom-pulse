@@ -27,12 +27,12 @@ permissions:
   contents: write
 
 env:
-  XIOM_TOOLCHAIN_VERSION: "v0.65.0"
-  XIOM_LINUX_SHA256: "48a58dd7d23fceb14339bf2f03bc9f4bb7c04029fba45515ef27ac8282bd1fc7"
-  XIOM_LINUX_ARM64_SHA256: "3e5c4cbe55f36a85b71845a3df7d2e5daec5670d9b5c7b119ec9269335f8972d"
-  XIOM_WINDOWS_SHA256: "ff4abb4a63fa161cae873e2b0c21b93824f5843d0352d524cddf0def01519283"
-  XIOM_MACOS_X64_SHA256: "93885108f3f55c2a7d15e68f52248ddac324ab8a3d4644b7ae0d9c9272b87056"
-  XIOM_MACOS_ARM64_SHA256: "a8384195a2783b38920efd8169cb2c0afb72c2d8ffdb94f0ce2e544276b1add2"
+  XIOM_TOOLCHAIN_VERSION: "v0.65.1"
+  XIOM_LINUX_SHA256: "5785320f0b43bdd9d1ac09fa51eb97a249df411c9420cbac7b1669eb88c604bb"
+  XIOM_LINUX_ARM64_SHA256: "c4ecb3ac3226f27ded3beb9728742e8e607a34652308c502f4a5b4995c408006"
+  XIOM_WINDOWS_SHA256: "69de1e27c9c11074c34d9b06c2dec22b4137bda399f7e2ea65846a069393c3fc"
+  XIOM_MACOS_X64_SHA256: "37d7974eace0f21da54d656463d5a15572abe8fb3c1d16400aba87d6b3c69557"
+  XIOM_MACOS_ARM64_SHA256: "bfc2e6562923bd348ca4f24a823424cfb185cd8a1e9efc946b0d7122917a259b"
 
 jobs:
   guard:
@@ -90,9 +90,8 @@ jobs:
         include:
           - platform: linux-x64
             os: ubuntu-latest
-          # linux-arm64 packaging is held on v0.65.0: the arm64 product build
-          # is blocked by two compiler defects (REL-20261024-1101-pulse).
-          # Restore: - platform: linux-arm64 / os: ubuntu-22.04-arm
+          - platform: linux-arm64
+            os: ubuntu-22.04-arm
           - platform: windows-x64
             os: windows-latest
     steps:
@@ -175,10 +174,7 @@ jobs:
         with:
           subject-path: "dist/pulse-*.zip"
 
-  # macOS x64 packaging is gating from the v0.65.0 pin (the darwin x64 legs
-  # are green). macOS arm64 is held: the arm64 product build is blocked by
-  # two compiler defects (REL-20261024-1101-pulse), so packaging it would
-  # fail. Re-add the arm64 leg when that item is fixed.
+  # macOS packaging runs both legs on v0.65.1 (x64 + arm64).
   build-macos:
     name: package ${{ matrix.platform }}
     needs: [guard]
@@ -193,6 +189,8 @@ jobs:
         include:
           - platform: macos-x64
             os: macos-15-intel
+          - platform: macos-arm64
+            os: macos-14
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

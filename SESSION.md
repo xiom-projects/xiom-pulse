@@ -105,6 +105,18 @@ shared package store was clobbered again by a fleet repin) and
 is restored** on this pin. Windows fleet green; retention re-measured and
 still red (~60 KB/req floor).
 
+**2026-10-26 UPDATE -- v0.65.1 ADOPTED (supersedes the v0.65.0 state):**
+production is compiler **v0.65.1** (windows `69de1e27...`) + stdlib
+**v0.65.1** (`0db38ae4`); v0.65.0 is superseded. All workflow pins moved;
+`dev-env` prefers `xiom.new-v0.65.1` + `stdlib-tag-v0.65.1`. Owned-Vec
+reclamation makes Vec churn flat (**144 B -> 0.1 B**/iteration) but the
+request-path floor is only slightly better (product `GET /health`
+**50 KB/req**; bttger `/insert` 78 KB; `/serialize/big` **219 KB**/req)
+and Map/Str/JSON rates are unchanged -- retention is still red. The
+product no longer instantiates `io.print`'s fixed-arity printf, so the
+v0.65.1 arm IR has no bad 2-arg `@printf`; arm64 legs are gating again
+for the CI verdict. Core suites green on the new pin.
+
 **2026-10-22 (session 25 -- HTTP request-path retention isolated):**
 The remaining growth is **per request** and **compiler-owned**; it is not
 a bttger/JSON artifact and it is not fixed by the stdlib-v0.64.9 pins.

@@ -8,6 +8,15 @@ GitHub release body.
 
 ### Added
 
+- **v0.65.1 adopted (owned-Vec reclamation):** compiler **v0.65.1**
+  (windows `69de1e27…`) + **stdlib-v0.65.1** (`0db38ae4`), all workflows
+  re-pinned. Vec temporaries are reclaimed (`probe_alloc_aggregate` vec:
+  144 B -> **0.1 B**/iteration) and the product no longer instantiates
+  the fixed-arity `printf` call. The request-path floor improves only
+  slightly (product `GET /health` ~50 KB/req; `POST /insert` 78 KB;
+  `/serialize/big` **219 KB**/req) and Map/Str/JSON rates are unchanged,
+  so the sustained-load gate remains. arm64 legs are gating again for the
+  CI verdict.
 - **Stream authentication (`PULSE_WS_AUTH=off|jwt|session`):** opt-in
   credentials for `/api/sse`, `/api/ws` and any registered stream route,
   enforced after the protocol/Origin checks and before the 101 or the

@@ -8,9 +8,9 @@
 # fleet, file the finding, note the last known-good version in SESSION.md
 # as a ROLLBACK OPTION (owner-visible), and keep moving on other slices.
 #
-# As of 2026-10-24:
-#   compiler  v0.65.0  %LOCALAPPDATA%\xiom.new-v0.65.0\bin\xiom.exe
-#             (fallbacks: v0.64.8, then the unversioned xiom.new)
+# As of 2026-10-26:
+#   compiler  v0.65.1  %LOCALAPPDATA%\xiom.new-v0.65.1\bin\xiom.exe
+#             (fallbacks: v0.65.0, v0.64.8, then the unversioned xiom.new)
 #   stdlib    latest RELEASE tag, extracted to
 #             %LOCALAPPDATA%\xiom-pins\stdlib-tag-v0.65.0 (refresh the dir
 #             name when a new stdlib release is cut; falls back to the
@@ -43,21 +43,24 @@ if (-not $env:XIOM_HOME -or $env:XIOM_HOME -eq $sharedHome) {
 # An explicit XIOM_COMPILER wins (compiler A/B sweeps, e.g. a lane release
 # build); the installed toolchain is only the default. Mirrors dev-env.sh.
 if (-not $env:XIOM_COMPILER) {
-    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.0\bin\xiom.exe"
-    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.8\bin\xiom.exe"
+    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.1\bin\xiom.exe"
+    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.0\bin\xiom.exe"
+    $prev2 = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.8\bin\xiom.exe"
     if (Test-Path -LiteralPath $latest) {
         $env:XIOM_COMPILER = $latest
     } elseif (Test-Path -LiteralPath $prev) {
         $env:XIOM_COMPILER = $prev
+    } elseif (Test-Path -LiteralPath $prev2) {
+        $env:XIOM_COMPILER = $prev2
     } else {
         $env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
     }
 }
 if (-not $env:XIOM_STDLIB) {
-    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.0"
-    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.9"
-    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.8"
-    $prev3Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.7"
+    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.1"
+    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.0"
+    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.9"
+    $prev3Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.8"
     if (Test-Path -LiteralPath $tagStdlib) {
         $env:XIOM_STDLIB = $tagStdlib
     } elseif (Test-Path -LiteralPath $prevStdlib) {
