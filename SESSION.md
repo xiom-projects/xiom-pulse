@@ -118,7 +118,9 @@ v0.65.1 arm IR has no bad 2-arg `@printf`; **arm64 is still blocked**
 though -- CI `40394381569` has x64 green but both arm64 legs fail at the
 contract-evaluator field mismatch (`load i64, i64* %p`, IR line 18915),
 so they stay witnesses and arm64 packaging stays held. Core suites green
-on the new pin.
+on the new pin. Final config: CI **`40395588843` success**; release
+dry-run **`40395595767` success** (linux-x64, windows-x64, macOS x64;
+publish skipped).
 
 **2026-10-22 (session 25 -- HTTP request-path retention isolated):**
 The remaining growth is **per request** and **compiler-owned**; it is not
@@ -288,7 +290,7 @@ paragraph below is superseded on the compiler/registry claims.
   Windows `%LOCALAPPDATA%\xiom.new-20261015-2240`, WSL
   `~/.local/share/xiom-v0645`, stdlib `092dfa0c` both). **v0.64.6 RELEASED
   2026-10-16T20:33Z** (darwin stream + stdlib `b81430ba`) -- adoption +
-  darwin/pin suites queued as §3 item 7. Historical v0.64.3 bullet: (2026-10-10 dry run
+  darwin/pin suites queued as Â§3 item 7. Historical v0.64.3 bullet: (2026-10-10 dry run
   `38075327683` green on linux-x64 + windows-x64 with the pinned stdlib
   `48850df`; dl synced; pins in `docs/OPS-REQUEST.md` D.1 and every
   workflow; macOS shas pinned for the gated legs). **Local Windows/WSL
@@ -625,7 +627,7 @@ paragraph below is superseded on the compiler/registry claims.
   stdlib pin from the compiler tag (`v0.64.5:STDLIB_VERSION`) =
   **`092dfa0c`** (the moved stdlib-v0.64.5); the dl mirror lands at the
   next :17 sweep. **NEXT SESSION = toolchain wave-2, then cut 0.2.1** --
-  full recipe is the §3 paste prompt (wrap 16). Demo stays on 0.1.0
+  full recipe is the Â§3 paste prompt (wrap 16). Demo stays on 0.1.0
   until the ops redeploy ping.
 - **NEW GATE -- v0.64.5 linux-x64 miscompile (xvector,
   `REL-20261015-2142-xvector`, compiler `acked` high):** on Linux,
@@ -680,7 +682,7 @@ paragraph below is superseded on the compiler/registry claims.
   add to an app) / **PULSE Station** (hosted edition: the full product,
   docker/k8s); one protocol core, two editions, never a fork (the
   orbitdb satellite/station pattern; the product is PULSE on both).
-  Roadmap §9 (`docs/ROADMAP-TOP-TIER.md`); publish ask
+  Roadmap Â§9 (`docs/ROADMAP-TOP-TIER.md`); publish ask
   `REL-20261016-1108-pulse` (packages acked -- `xiom.pulse` slot free,
   porter-flow scoping agreed at the keep-alive A+B freeze); codenames
   note `REL-20261016-1121-pulse`. Sequence: keep-alive A/B -> core
@@ -702,7 +704,7 @@ paragraph below is superseded on the compiler/registry claims.
   A+B check set is the Beacon core's frozen semantics.
 - **Packages deliveries on the top-tier asks (2026-10-16):**
   `xiom.template 0.2.0` LIVE (blocks/loops/auto-escape -- top-tier
-  item 1; consumer-verify queued §3 1c); `xiom.ssl` BUILDING (the
+  item 1; consumer-verify queued Â§3 1c); `xiom.ssl` BUILDING (the
   TLS ceiling item); `xiom.otel 0.1.0` built green (held on the ops
   scope); `xiom.zstd 0.3.0` real (vendored 1.5.7); real brotli in
   flight at bindings; `xiom.pulse` slot reserved + porter SPEC
@@ -1143,7 +1145,7 @@ paragraph below is superseded on the compiler/registry claims.
   "Unknown"), `scripts/release.{ps1,sh}` (dist artifacts per the ops
   naming, zip + sha256 verified on both platforms) and
   `scripts/backup.{ps1,sh}` (timestamped store+audit snapshots with
-  sha256 manifest + prune; tested; restore runbook in DEPLOYMENT §9).
+  sha256 manifest + prune; tested; restore runbook in DEPLOYMENT Â§9).
   Compiler check: dl still v0.64.0; **m215/m216/m217 (C-PULSE-08/10/11
   fixes) are in the lane source, not in an archive** -- v0.64.1 is the
   next adoption gate; C-PULSE-09 was triaged not-reproducible from
@@ -1300,7 +1302,7 @@ to the packages lane (`docs/PACKAGE-WISHLIST-PULSE.md`).
 | Storage | pending (Step 3) | -- |
 
 **Test-infra learning:** chatty servers must never be started with undrained
-PowerShell pipes (4 KiB buffer) — `concurrent.ps1` and `soak_http.ps1` both
+PowerShell pipes (4 KiB buffer) â€” `concurrent.ps1` and `soak_http.ps1` both
 redirect the server to a file via `cmd /c` now. The first Step 2 concurrent
 run deadlocked on exactly this (64 JSON log lines > 4 KiB), which is why
 the driver was fixed before the green run.
@@ -1787,7 +1789,7 @@ STATE AT WRAP 19 (2026-10-17, session 19 closed at context limit):
   0.1.0 (11/11 x2 both), otel 0.1.0 (consumer-verify still queued),
   zstd 0.3.0 real.
 - **REFERENCE-STUDY PROTOCOL is BINDING** (`docs/REFERENCE-STUDY-PROTOCOL.md`;
-  §0 standing rule). Plan reordered + reference-annotated (NEXT below).
+  Â§0 standing rule). Plan reordered + reference-annotated (NEXT below).
 - **Station-consumes path PROVEN rename-first** (`docs/DESIGN-STATION-CONSUMES.md`):
   declaring the dep silently binds duplicate module names to the PACKAGE
   (W001 warning only), so `app`/`config`/`router` must become
@@ -2110,7 +2112,7 @@ stays PRIVATE; do not push to origin without owner approval. Identity
 
 Track the LATEST toolchain: Windows compiler v0.64.0
 (%LOCALAPPDATA%\xiom.new\bin\xiom.exe); Linux/WSL compiler v0.64.0
-(~/.local/share/xiom) — the Linux lane is verified and every script has a
+(~/.local/share/xiom) â€” the Linux lane is verified and every script has a
 verified .sh twin (scripts/*.sh + scripts/lib.sh). XIOM_RUNTIME_DIR
 retired. Registry consumption still needs xiom.toml source-roots
 (C-PULSE-02).

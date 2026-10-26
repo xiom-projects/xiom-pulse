@@ -5,7 +5,7 @@
 **Last updated:** 2026-10-24 (v0.65.0 + stdlib-v0.65.0 adopted, SHA-pinned; StreamHandler registry restored; x64 fleet green -- suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 83/83, stream smoke 20/20, ws-auth 11/11; arm64 remains a witness: two compiler defects (`REL-20261024-1101-pulse`) block the product build, one worked around PULSE-side (io.print/printf); retention 5x better on `/serialize/big` (1.14 MB -> 225 KB/req) but still ~60 KB/req; lane-local package home; `PULSE_WS_AUTH` landed). Prior: 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-26 (v0.65.1 adoption -- owned-Vec reclamation):
-compiler **v0.65.1** (windows `69de1e27…`) + **stdlib-v0.65.1**
+compiler **v0.65.1** (windows `69de1e27...`) + **stdlib-v0.65.1**
 (`0db38ae4`) adopted after checksum verification; `dev-env` prefers
 `xiom.new-v0.65.1` + `stdlib-tag-v0.65.1`, all workflows re-pinned.
 The shipping fix reclaims transient Vecs: `probe_alloc_aggregate vec`
@@ -23,7 +23,10 @@ contract-evaluator field mismatch (`load i64, i64* %p` where `%p` is
 `REL-20261024-1101-pulse` stays open, so arm64 legs remain witnesses and
 arm64 packaging stays held. (The first CI attempt `40393045589` failed in
 setup because the dl mirror had not synced v0.65.1 yet; a retry after the
-sweep verified the mirror hash.)
+sweep verified the mirror hash.) Final config: CI **`40395588843`
+success** (arm64 witness legs tolerated) and release dry-run
+**`40395595767` success** (linux-x64, windows-x64, macOS x64; publish
+skipped).
 
 _Delta 2026-10-24 (v0.65.0 adoption + StreamHandler registry):
 compiler **v0.65.0** (Windows archive `ff4abb4a...`, checksum-verified) and
