@@ -114,8 +114,11 @@ request-path floor is only slightly better (product `GET /health`
 **50 KB/req**; bttger `/insert` 78 KB; `/serialize/big` **219 KB**/req)
 and Map/Str/JSON rates are unchanged -- retention is still red. The
 product no longer instantiates `io.print`'s fixed-arity printf, so the
-v0.65.1 arm IR has no bad 2-arg `@printf`; arm64 legs are gating again
-for the CI verdict. Core suites green on the new pin.
+v0.65.1 arm IR has no bad 2-arg `@printf`; **arm64 is still blocked**
+though -- CI `40394381569` has x64 green but both arm64 legs fail at the
+contract-evaluator field mismatch (`load i64, i64* %p`, IR line 18915),
+so they stay witnesses and arm64 packaging stays held. Core suites green
+on the new pin.
 
 **2026-10-22 (session 25 -- HTTP request-path retention isolated):**
 The remaining growth is **per request** and **compiler-owned**; it is not

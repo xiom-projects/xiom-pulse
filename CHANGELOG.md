@@ -15,8 +15,9 @@ GitHub release body.
   the fixed-arity `printf` call. The request-path floor improves only
   slightly (product `GET /health` ~50 KB/req; `POST /insert` 78 KB;
   `/serialize/big` **219 KB**/req) and Map/Str/JSON rates are unchanged,
-  so the sustained-load gate remains. arm64 legs are gating again for the
-  CI verdict.
+  so the sustained-load gate remains. arm64 legs are **witnesses again**:
+  v0.65.1 still fails the contract-evaluator IR check on both arm64
+  targets (`REL-20261024-1101-pulse`), so arm64 packaging stays held.
 - **Stream authentication (`PULSE_WS_AUTH=off|jwt|session`):** opt-in
   credentials for `/api/sse`, `/api/ws` and any registered stream route,
   enforced after the protocol/Origin checks and before the 101 or the

@@ -29,7 +29,11 @@ jobs:
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # v0.65.1 reclamation pin: every leg gates (x64 + linux/macOS arm64).
+    # arm64 is a witness again on v0.65.1: the contract-evaluator defect from
+    # REL-20261024-1101-pulse persists (both arm64 legs fail at
+    # `load i64, i64* %p` where %p is i8**; the printf trigger is avoided
+    # PULSE-side). x64 legs gate normally.
+    continue-on-error: ${{ matrix.os == 'macos-14' || matrix.os == 'ubuntu-22.04-arm' }}
     strategy:
       fail-fast: false
       matrix:

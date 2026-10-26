@@ -16,7 +16,14 @@ product `GET /health` **50 KB/req** (was 60.6), bttger `/serialize`
 red. The product no longer instantiates `io.print`'s fixed-arity printf,
 so the v0.65.1 arm IR has no 2-arg `@printf`; the contract-evaluator
 witness is left to CI. Core suites (http/app/smoke/stream/migrations)
-are green on the new pin; arm64 legs are gating again for the CI verdict.
+are green on the new pin. CI **`40394381569`**: x64 legs green (linux,
+windows, macOS x64), **arm64 still fails** on both targets at the
+contract-evaluator field mismatch (`load i64, i64* %p` where `%p` is
+`i8**`, IR line 18915) -- the printf trigger is avoided PULSE-side, but
+`REL-20261024-1101-pulse` stays open, so arm64 legs remain witnesses and
+arm64 packaging stays held. (The first CI attempt `40393045589` failed in
+setup because the dl mirror had not synced v0.65.1 yet; a retry after the
+sweep verified the mirror hash.)
 
 _Delta 2026-10-24 (v0.65.0 adoption + StreamHandler registry):
 compiler **v0.65.0** (Windows archive `ff4abb4a...`, checksum-verified) and
