@@ -105,6 +105,16 @@ shared package store was clobbered again by a fleet repin) and
 is restored** on this pin. Windows fleet green; retention re-measured and
 still red (~60 KB/req floor).
 
+**2026-10-27 UPDATE -- v0.65.2 ADOPTED (supersedes the v0.65.1 state):**
+production is compiler **v0.65.2** (windows `0a328560...`) + stdlib
+**v0.65.2** (`7d4d48f4`), all workflows re-pinned; `dev-env` prefers the
+new pair. This includes the arm64 `Result[Str,E]` contract-payload fix,
+so **arm64 gating and packaging are re-enabled** (CI verdict pending).
+Local x64 acceptance is green: suites, smoke 135/135 x2 (jsonl+kv),
+crash 6/6 x2, SQL, rate, stream 20/20, ws-auth 11/11. Retention: Vec flat,
+Map 287 B, JSON obj 2,006 B, HTTP **44 KB/req**, parse 8.0 KB / build
+5.6 KB per cycle -- Map/JSON/HTTP still open (compiler's stated next).
+
 **2026-10-26 UPDATE -- v0.65.1 ADOPTED (supersedes the v0.65.0 state):**
 production is compiler **v0.65.1** (windows `69de1e27...`) + stdlib
 **v0.65.1** (`0db38ae4`); v0.65.0 is superseded. All workflow pins moved;

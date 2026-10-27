@@ -8,8 +8,16 @@ GitHub release body.
 
 ### Added
 
+- **v0.65.2 adopted (packed Vec slots, arm64 contracts, borrowed/aggregate
+  reclaim):** compiler **v0.65.2** (windows `0a328560â€¦`) +
+  **stdlib-v0.65.2** (`7d4d48f4`), all workflows re-pinned. This ships the
+  arm64 `Result[Str,E]` contract-payload fix, so the product build is
+  expected to gate on arm64 again (CI verdict pending). Vec churn stays
+  flat; borrowed/aggregate reclaim does not move Map/Str/JSON or the HTTP
+  floor: product `GET /health` **44 KB/req**, `http.parse_request`
+  **8.0 KB/cycle**, `build_response_full` **5.6 KB/cycle**.
 - **v0.65.1 adopted (owned-Vec reclamation):** compiler **v0.65.1**
-  (windows `69de1e27…`) + **stdlib-v0.65.1** (`0db38ae4`), all workflows
+  (windows `69de1e27â€¦`) + **stdlib-v0.65.1** (`0db38ae4`), all workflows
   re-pinned. Vec temporaries are reclaimed (`probe_alloc_aggregate` vec:
   144 B -> **0.1 B**/iteration) and the product no longer instantiates
   the fixed-arity `printf` call. The request-path floor improves only
