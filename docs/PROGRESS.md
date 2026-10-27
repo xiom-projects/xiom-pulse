@@ -23,7 +23,14 @@ contract-evaluator field mismatch (`load i64, i64* %p` where `%p` is
 `REL-20261024-1101-pulse` stays open, so arm64 legs remain witnesses and
 arm64 packaging stays held. (The first CI attempt `40393045589` failed in
 setup because the dl mirror had not synced v0.65.1 yet; a retry after the
-sweep verified the mirror hash.) Final config: CI **`40395588843`
+sweep verified the mirror hash.) Mitigation test: the request reader now
+uses `socket_recv_into` with a per-connection buffer (stdlib item
+`REL-20261022-2049-pulse`); live smokes stay 135/135, 20/20, 11/11, but
+the RSS floor is unchanged (44-50 KB/req), so the socket read is not the
+floor. New `tests/probes/probe_req_cycle.xi` (pure, no sockets) splits
+it: `http.parse_request` retains **8.3 KB/cycle**, `build_response_full`
+**5.9 KB/cycle** -- the floor is in the http package parse/build, and the
+stdlib acceptance is not met. Final config: CI **`40395588843`
 success** (arm64 witness legs tolerated) and release dry-run
 **`40395595767` success** (linux-x64, windows-x64, macOS x64; publish
 skipped).
@@ -322,7 +329,7 @@ prefix). Both use the lanes' source-level composition pattern (nested
 exist, and are excluded from the CI fleet until the packages publish.
 Trap note filed in the relays: `search(k=0)` / `create_collection(dim=0)`
 are contract traps, not Err. Relay responses with probe results + the
-§6 answers appended to both relay docs. Hard-kill / filter / hybrid
+Â§6 answers appended to both relay docs. Hard-kill / filter / hybrid
 scenarios are the next tranche. Score holds (~55.4%)._
 
 _Delta 2026-10-10 (0.2 docs refresh + release prep): **docs/public-set
@@ -356,7 +363,7 @@ it: `time.sleep_ms` is a NO-OP on v0.64.2 (both platforms; repro
 deadline). The hybrid join stays with the ORBITDB lane's `probe_hybrid`
 (green x2 on their side) until the 0.3 drivers compose it. Release prep:
 `releases.md` gained the missing **0.1.2** entry, `install.md` examples
-moved to 0.1.2, and the website relay gained **§14 -- the 0.2.0 cut
+moved to 0.1.2, and the website relay gained **Â§14 -- the 0.2.0 cut
 plan** (content deltas, four-leg artifacts, macOS button auto, ops
 actions) for the website lane to relay to ops. The release pipeline was
 **validated GREEN on main** by a manual dry run (run 38062166534:
@@ -713,7 +720,7 @@ pin-era m296 smoke fix with the tag move, and pin-PR CI rounds) and each
 time the gates caught it pre-publish. Next session: toolchain wave-2
 (install, deps, pin cache, helper re-land, sweeps, CI pins, dry run)
 then cut 0.2.1 per RELEASE-CHECKLIST + the ops redeploy ping -- full
-recipe in SESSION.md §3 (wrap 16). Score holds (~55.4%)._
+recipe in SESSION.md Â§3 (wrap 16). Score holds (~55.4%)._
 
 _Delta 2026-10-15 (wrap-16 addendum -- new release risk): xvector filed
 `REL-20261015-2142-xvector` (high, compiler acked): **v0.64.5 linux-x64
@@ -721,7 +728,7 @@ miscompiles their HTTP service routing** (/search -> 404/400; 6 gates
 red on WSL; v0.64.4-linux and v0.64.5-windows green; bundled-stdlib
 repro). Since PULSE is an HTTP server and the demo is Linux, the wave-2
 Linux legs and the 0.2.1 cut now carry an explicit routing-anomaly
-stop-and-file gate (SESSION digest + §3 step 8 updated); if our Linux
+stop-and-file gate (SESSION digest + Â§3 step 8 updated); if our Linux
 legs are green, ops still validates routing before switching traffic
 with 0.1.0 rollback armed. Score holds (~55.4%)._
 
@@ -736,7 +743,7 @@ highlights; dl mirror at the next :17 sweep) -- the v0.64.5 rebuild
 with the SIGILL fix; ops pinged (`REL-20261015-2125-pulse`) to move the
 demo 0.1.0 -> 0.2.1. Bus: SQL co-verify items closed (1718/1901);
 bindings reply + compiler/stdlib INFOs filed. NEXT: the post-release
-queue in SESSION.md §3 (keep-alive -> durability -> middleware/jobs ->
+queue in SESSION.md Â§3 (keep-alive -> durability -> middleware/jobs ->
 SQL runner -> bench -> SSE/WS -> macOS v0.64.6). Score holds (~55.4%)._
 
 _Delta 2026-10-15 (top-tier directive): owner escalated the goal to

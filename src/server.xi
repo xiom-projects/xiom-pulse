@@ -638,12 +638,14 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
 /// recv_bounded receives up to 65536 bytes under the remaining request
 /// budget: the per-call deadline shrinks as the request is read
 /// (PULSE_READ_TIMEOUT semantics, fasthttp model). budget_ms <= 0 means
-/// no deadline. Complexity: O(1) syscalls.
-fn recv_bounded(client: Int, budget_ms: Int, t0: Int) -> Result[Vec[UInt8], Str] {
-  if budget_ms <= 0 { return socket.socket_recv(client, 65536); }
+/// no deadline. `buf` is the per-connection reuse slot (socket_recv_into),
+/// so the read path allocates no Vec per request; the byte count is
+/// returned and the caller copies from `buf`. Complexity: O(1) syscalls.
+fn recv_bounded(client: Int, budget_ms: Int, t0: Int, buf: &mut Vec[UInt8]) -> Result[Int, Str] {
+  if budget_ms <= 0 { return socket.socket_recv_into(client, buf, 65536); }
   let remaining = budget_ms - (time.monotonic_ms() - t0);
   if remaining <= 0 { return Err("read deadline exceeded"); }
-  return socket.socket_recv_timeout(client, 65536, remaining);
+  return socket.socket_recv_timeout_into(client, buf, 65536, remaining);
 }
 
 /// request_complete mirrors the read_request framing checks: true when
@@ -675,7 +677,7 @@ fn request_complete(raw: &Vec[UInt8]) -> Bool {
 /// clean EOF mid-message (close with no response, h11 rule 6), idle = 1
 /// the idle deadline expired before any byte (silent close, fasthttp
 /// model). Complexity: O(n) syscalls.
-fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int, cycling: Bool) -> (Vec[UInt8], Int, Int) {
+fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int, cycling: Bool, recv_buf: &mut Vec[UInt8]) -> (Vec[UInt8], Int, Int) {
   var raw: Vec[UInt8] = Vec[UInt8].new();
   var i0: Int = 0;
   while i0 < initial.len() {
@@ -697,7 +699,7 @@ fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int
   while !done && rounds < 1024 {
     var bud: Int = budget_ms;
     if !started { bud = first_ms; }
-    let rr = recv_bounded(client, bud, t0);
+    let rr = recv_bounded(client, bud, t0, recv_buf);
     if rr.is_err {
       if !started && cycling {
         idle = 1;
@@ -706,8 +708,8 @@ fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int
       }
       done = true;
     } else {
-      let chunk = rr.value;
-      if chunk.len() == 0 {
+      let nchunk: Int = rr.value;
+      if nchunk == 0 {
         // EOF: a clean close only BETWEEN requests; mid-message it is a
         // protocol error with no answer (h11 rule 6).
         if raw.len() > 0 { err = 2; }
@@ -718,8 +720,8 @@ fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int
           t0 = time.monotonic_ms();
         }
         var i: Int = 0;
-        while i < chunk.len() {
-          raw.push(chunk[i]);
+        while i < nchunk {
+          raw.push(recv_buf[i]);
           i = i + 1;
         }
         let he = find_header_end(&raw);
@@ -1377,12 +1379,15 @@ pub fn main() -> Int {
     var conn_open: Bool = true;
     var keep: Bool = config.cfg_keepalive();
     var buf: Vec[UInt8] = Vec[UInt8].new();
+    // Per-connection read slot: socket_recv_into clears and refills it, so
+    // the request loop allocates no recv Vec (the v0.64.x 64 KiB/req leak).
+    var recv_buf: Vec[UInt8] = Vec[UInt8].new();
     var cycle: Int = 0;
     while conn_open && running {
       let t0_ms = time.monotonic_ms();
       var first_ms: Int = config.cfg_read_timeout();
       if cycle > 0 { first_ms = config.cfg_idle_timeout(); }
-      let rreq = read_request(client, config.cfg_read_timeout(), &buf, first_ms, cycle > 0);
+      let rreq = read_request(client, config.cfg_read_timeout(), &buf, first_ms, cycle > 0, &mut recv_buf);
       let raw = rreq.0;
       let read_err = rreq.1;
       let idle_out = rreq.2;

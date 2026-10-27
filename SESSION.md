@@ -120,7 +120,11 @@ contract-evaluator field mismatch (`load i64, i64* %p`, IR line 18915),
 so they stay witnesses and arm64 packaging stays held. Core suites green
 on the new pin. Final config: CI **`40395588843` success**; release
 dry-run **`40395595767` success** (linux-x64, windows-x64, macOS x64;
-publish skipped).
+publish skipped). `socket_recv_into` is now used with a per-connection
+buffer (no recv Vec): live smokes stay 135/135, 20/20, 11/11 but the floor
+is unchanged (44-50 KB/req), and `probe_req_cycle` localizes it to
+`http.parse_request` (8.3 KB/cycle) + `build_response_full` (5.9 KB/cycle)
+-- the stdlib acceptance is not met.
 
 **2026-10-22 (session 25 -- HTTP request-path retention isolated):**
 The remaining growth is **per request** and **compiler-owned**; it is not
