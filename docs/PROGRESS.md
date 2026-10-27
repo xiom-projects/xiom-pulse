@@ -5,7 +5,7 @@
 **Last updated:** 2026-10-24 (v0.65.0 + stdlib-v0.65.0 adopted, SHA-pinned; StreamHandler registry restored; x64 fleet green -- suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 83/83, stream smoke 20/20, ws-auth 11/11; arm64 remains a witness: two compiler defects (`REL-20261024-1101-pulse`) block the product build, one worked around PULSE-side (io.print/printf); retention 5x better on `/serialize/big` (1.14 MB -> 225 KB/req) but still ~60 KB/req; lane-local package home; `PULSE_WS_AUTH` landed). Prior: 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-27 (v0.65.2 adoption -- arm64 contracts + reclaim):
-compiler **v0.65.2** (windows `0a328560â€¦`) + **stdlib-v0.65.2**
+compiler **v0.65.2** (windows `0a328560...`) + **stdlib-v0.65.2**
 (`7d4d48f4`) adopted after checksum verification; `dev-env` prefers
 `xiom.new-v0.65.2` + `stdlib-tag-v0.65.2`, all workflows re-pinned.
 v0.65.2 ships the arm64 `Result[Str,E]` contract-payload fix
