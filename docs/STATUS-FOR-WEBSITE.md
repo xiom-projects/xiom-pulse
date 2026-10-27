@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Last updated:** 2026-10-27 (PULSE lane). **Source of truth:** this file for
+**Last updated:** 2026-10-27 20:55Z (PULSE lane). **Source of truth:** this file for
 website copy; `docs/PROGRESS.md` for the full tracker; `SESSION.md` for the
 session handoff. README's status block predates the v0.65.1 adoption -- use
 this file, not README, for the site until README is refreshed.
@@ -23,8 +23,9 @@ by a front proxy; PULSE serves plaintext on loopback.
 ## Current release
 
 - **Product:** PULSE **0.2.2** (tag `pulse-v0.2.2`), ops-accepted.
-- **Toolchain pin:** compiler **v0.65.1** + **stdlib-v0.65.1**
-  (`0db38ae4`). The v0.64.9 compiler is withdrawn; v0.65.0 is superseded.
+- **Toolchain pin:** compiler **v0.65.2** + **stdlib-v0.65.2**
+  (`7d4d48f4`). The v0.64.9 compiler is withdrawn; v0.65.0/0.65.1 are
+  superseded.
 - **Release cadence:** 0.3.0 is prepared but **not tagged** -- it waits on
   the owner's SQL-serving decision and on the memory work below.
 
@@ -35,12 +36,13 @@ by a front proxy; PULSE serves plaintext on loopback.
 | linux-x64 | **supported** | gating CI leg |
 | windows-x64 | **supported** | gating CI leg |
 | macOS x64 | **supported** | gating CI leg |
-| linux-arm64 | **preview / not shipped** | build blocked by a compiler defect (`REL-20261024-1101-pulse`); CI leg runs as a witness, packaging held |
-| macOS arm64 | **preview / not shipped** | same compiler defect; witness + packaging held |
+| linux-arm64 | **preview / not shipped** | build blocked by an `xiom.http` libc-FFI type defect (`REL-20261027-2041-pulse`; the compiler defects are cleared); CI leg is a witness, packaging held |
+| macOS arm64 | **preview / not shipped** | same package defect; witness + packaging held |
 
-Do **not** advertise arm64 as supported yet. The fix is on compiler main
-(`3e775908a`); a patch archive (v0.65.2) is requested. PULSE re-enables
-arm64 gating and packaging when that archive lands.
+Do **not** advertise arm64 as supported yet. The remaining blocker is a
+wrong-width libc declaration in `xiom.http` 0.1.8
+(`fclose`/`fseek`/`remove`); a 0.1.9 package release is requested. PULSE
+re-enables arm64 gating and packaging when it lands.
 
 ## Feature set (Station)
 
@@ -71,8 +73,9 @@ arm64 gating and packaging when that archive lands.
 - Crash/durability: **6/6**, twice. Migrations **21/21**. SQL **53/53**.
 - Streams: **83/83** unit, **20/20** live, **11/11** auth.
 - Rate-limiter smoke green; gate-order **11/11**.
-- CI **`40395588843` success** on linux-x64, windows-x64, macOS x64;
-  release dry-run **`40395595767` success** (same three; publish skipped).
+- CI **`40580461352` success** on linux-x64, windows-x64, macOS x64
+  (arm64 witnesses are non-gating); release dry-run **`40580466893`
+  success** (same three; publish skipped).
 
 ## Known limitations (state these honestly)
 
@@ -97,9 +100,11 @@ arm64 gating and packaging when that archive lands.
 
 ## What's next (public roadmap wording)
 
-- v0.65.2 toolchain cut -> re-enable **arm64** CI gating and packaging.
-- Memory: drive the per-request retention down (http package + compiler
-  reclamation), then run the capped bttger 5k/1M benchmarks.
+- **xiom.http 0.1.9** (libc FFI widths) -> re-enable **arm64** CI gating
+  and packaging.
+- Memory: the response builder is fixed; the remaining floor is the HTTP
+  parser plus app-path allocations, then the capped bttger 5k/1M
+  benchmarks.
 - **0.3.0**: SQL serving decision, version bump, CHANGELOG, tag, fleet
   watch.
 - Realtime: permessage-deflate, subprotocol negotiation.

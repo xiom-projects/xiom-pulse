@@ -54,3 +54,16 @@ points at the package root.)
 Filed to the packages lane (`REL-20261027-*`, see the bus) for a Beacon
 0.3.2 publish. Until then PULSE builds here see the patch; CI builds do
 not, so CI retention numbers remain the unpatched ones.
+## xiom-http-0.1.8-ffi.diff
+
+Target: xiom.http 0.1.8, file src/http.xi, applied locally at
+%LOCALAPPDATA%\xiom-pulse-home\packages\xiom-http-0.1.8\xiom-http\src\http.xi
+(backup http.xi.orig).
+
+Narrows the libc file-I/O externs to their C widths (close/seek/
+emove return Int32). With it the arm IR declares and calls close
+as i32 consistently; the next mismatch is the seek call site passing
+an i32 offset to the i64 parameter. This is a **diagnostic** patch: the
+real fix is a coherent FFI pass in the package
+(REL-20261027-2041-pulse), which also needs 0.1.9 before CI can build
+arm64. Do not ship this alone.

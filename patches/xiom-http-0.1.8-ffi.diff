@@ -1,0 +1,20 @@
+diff --git a/src/http.xi b/src/http.xi
+index 5449b26..50010dc 100644
+--- a/src/http.xi
++++ b/src/http.xi
+@@ -38,12 +38,12 @@ extern "C" {
+ 
+ extern "C" {
+   fn fopen(path: *UInt8, mode: *UInt8) -> *UInt8;
+-  fn fclose(file: *UInt8) -> Int;
++  fn fclose(file: *UInt8) -> Int32;
+   fn fread(buf: *UInt8, size: Int, count: Int, file: *UInt8) -> Int;
+   fn fwrite(buf: *UInt8, size: Int, count: Int, file: *UInt8) -> Int;
+-  fn fseek(file: *UInt8, offset: Int, whence: Int) -> Int;
++  fn fseek(file: *UInt8, offset: Int, whence: Int) -> Int32;
+   fn ftell(file: *UInt8) -> Int;
+-  fn remove(path: *UInt8) -> Int;
++  fn remove(path: *UInt8) -> Int32;
+ }
+ 
+ // --- Types ------------------------------------------------------------------
