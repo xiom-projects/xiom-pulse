@@ -109,7 +109,12 @@ still red (~60 KB/req floor).
 production is compiler **v0.65.2** (windows `0a328560...`) + stdlib
 **v0.65.2** (`7d4d48f4`), all workflows re-pinned; `dev-env` prefers the
 new pair. This includes the arm64 `Result[Str,E]` contract-payload fix,
-so **arm64 gating and packaging are re-enabled** (CI verdict pending).
+which clears both compiler defects; the arm64 build now fails **later**
+in `xiom.http` 0.1.8 libc FFI widths (`REL-20261027-2041-pulse`:
+`fclose`/`fseek`/`remove` declared `Int`), so arm64 stays a witness and
+packaging stays held. CI `40577914298`: x64 green, arm64 legs fail at the
+package FFI (witnesses); release dry-run `40577920554`: x64 green, arm64
+packaging held.
 Local x64 acceptance is green: suites, smoke 135/135 x2 (jsonl+kv),
 crash 6/6 x2, SQL, rate, stream 20/20, ws-auth 11/11. Retention: Vec flat,
 Map 287 B, JSON obj 2,006 B, HTTP **44 KB/req**, parse 8.0 KB / build

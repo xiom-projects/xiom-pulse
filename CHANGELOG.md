@@ -11,8 +11,10 @@ GitHub release body.
 - **v0.65.2 adopted (packed Vec slots, arm64 contracts, borrowed/aggregate
   reclaim):** compiler **v0.65.2** (windows `0a328560...`) +
   **stdlib-v0.65.2** (`7d4d48f4`), all workflows re-pinned. This ships the
-  arm64 `Result[Str,E]` contract-payload fix, so the product build is
-  expected to gate on arm64 again (CI verdict pending). Vec churn stays
+  arm64 `Result[Str,E]` contract-payload fix, which clears both compiler
+  defects; the arm64 build now fails later in `xiom.http` 0.1.8 libc FFI
+  widths (`REL-20261027-2041-pulse`), so arm64 remains a witness and its
+  packaging stays held. Vec churn stays
   flat; borrowed/aggregate reclaim does not move Map/Str/JSON or the HTTP
   floor: product `GET /health` **44 KB/req**, `http.parse_request`
   **8.0 KB/cycle**, `build_response_full` **5.6 KB/cycle**. A local

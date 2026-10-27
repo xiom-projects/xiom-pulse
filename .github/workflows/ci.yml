@@ -29,8 +29,11 @@ jobs:
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # v0.65.2 ships the arm64 contract-payload fix (8ec0904a5); every leg
-    # gates again (x64 + linux/macOS arm64).
+    # arm64 is a witness again: v0.65.2 clears the compiler defects, but the
+    # arm64 build now fails later in xiom.http 0.1.8's libc FFI types
+    # (`fclose`/`fseek`/`remove` widths; packages item REL-20261027-2041-pulse).
+    # x64 gates normally.
+    continue-on-error: ${{ matrix.os == 'macos-14' || matrix.os == 'ubuntu-22.04-arm' }}
     strategy:
       fail-fast: false
       matrix:
