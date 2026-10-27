@@ -15,7 +15,10 @@ GitHub release body.
   expected to gate on arm64 again (CI verdict pending). Vec churn stays
   flat; borrowed/aggregate reclaim does not move Map/Str/JSON or the HTTP
   floor: product `GET /health` **44 KB/req**, `http.parse_request`
-  **8.0 KB/cycle**, `build_response_full` **5.6 KB/cycle**.
+  **8.0 KB/cycle**, `build_response_full` **5.6 KB/cycle**. A local
+  Beacon 0.3.1 patch (upstream 0.3.2 requested) removes the per-line head
+  allocations: `build` is now **60 B/cycle** and the product keep-alive
+  floor **29.9 KB/req**; the parser is the next item (~8 KB, stdlib-owned).
 - **v0.65.1 adopted (owned-Vec reclamation):** compiler **v0.65.1**
   (windows `69de1e27...`) + **stdlib-v0.65.1** (`0db38ae4`), all workflows
   re-pinned. Vec temporaries are reclaimed (`probe_alloc_aggregate` vec:

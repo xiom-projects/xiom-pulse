@@ -114,6 +114,13 @@ Local x64 acceptance is green: suites, smoke 135/135 x2 (jsonl+kv),
 crash 6/6 x2, SQL, rate, stream 20/20, ws-auth 11/11. Retention: Vec flat,
 Map 287 B, JSON obj 2,006 B, HTTP **44 KB/req**, parse 8.0 KB / build
 5.6 KB per cycle -- Map/JSON/HTTP still open (compiler's stated next).
+**Response-path unit (19:55Z):** the build cost was Beacon's per-line head
+allocations. A local `xiom.pulse` 0.3.1 patch
+(`patches/beacon-0.3.1-http-alloc.diff`) takes `build` to **60 B/iter**
+and the product keep-alive floor to **29.9 KB/req**; parse is
+**7,963 B/iter** in stdlib `server_parse_request` (filed
+`REL-20261027-1955-pulse-2`; 0.3.2 publish requested in
+`REL-20261027-1955-pulse`). CI does not see the patch until 0.3.2 ships.
 
 **2026-10-26 UPDATE -- v0.65.1 ADOPTED (supersedes the v0.65.0 state):**
 production is compiler **v0.65.1** (windows `69de1e27...`) + stdlib

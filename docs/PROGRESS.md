@@ -17,6 +17,17 @@ stream 20/20, ws-auth 11/11. Retention: Vec stays flat (0.1 B/iter),
 Map 287 B, JSON obj 2,006 B / type 1,959 B, HTTP product **44 KB/req**;
 `probe_req_cycle` parse **8.0 KB**, build **5.6 KB** per cycle -- the
 Map/JSON/HTTP class remains (the compiler lists it as next).
+**Response-path unit:** the build cost was Beacon's per-line head
+allocations. A local `xiom.pulse` 0.3.1 patch
+(`patches/beacon-0.3.1-http-alloc.diff`: literal security block, direct
+pre-sized response buffer, allocation-free header insert, adapter
+pre-size/trim) takes `probe_req_cycle build` from 5,590 to **60 B/iter**
+and the product keep-alive floor from 40.9 to **29.9 KB/req**;
+`test_http`, smoke 135/135, stream 20/20 and ws-auth 11/11 stay green.
+`parse` is now **7,963 B/iter**, almost all in stdlib
+`server_parse_request` -- filed to stdlib (`REL-20261027-1955-pulse-2`);
+upstream Beacon publish requested (`REL-20261027-1955-pulse`). CI builds do
+not see the patch until 0.3.2 ships.
 
 _Delta 2026-10-26 (v0.65.1 adoption -- owned-Vec reclamation):
 compiler **v0.65.1** (windows `69de1e27...`) + **stdlib-v0.65.1**
