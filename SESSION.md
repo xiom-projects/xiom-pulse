@@ -105,6 +105,17 @@ shared package store was clobbered again by a fleet repin) and
 is restored** on this pin. Windows fleet green; retention re-measured and
 still red (~60 KB/req floor).
 
+**2026-10-27 22:05Z UPDATE -- v0.65.2 WITHDRAWN (reverted to v0.65.1):**
+the compiler reports a durable-lane regression in v0.65.2
+(`REL-20261027-2128-compiler`): a by-value `Struct{Vec}` pushed into a
+container frees the source Vec at scope exit, corrupting `Vec[Struct]`
+elements (WAL recovery, station double-free). PULSE uses that shape
+(headers, routes, store events), so pins/workflows/`dev-env` are back on
+**v0.65.1** + stdlib `0db38ae4`; v0.65.2 stays installed but is never
+selected. Rebuild + `test_http` + crash 6/6 green. Arm64 waits on
+**v0.65.3** (owner GO) + **xiom.http 0.1.9**. The v0.65.2 block below is
+history.
+
 **2026-10-27 UPDATE -- v0.65.2 ADOPTED (supersedes the v0.65.1 state):**
 production is compiler **v0.65.2** (windows `0a328560...`) + stdlib
 **v0.65.2** (`7d4d48f4`), all workflows re-pinned; `dev-env` prefers the

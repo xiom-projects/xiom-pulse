@@ -43,35 +43,32 @@ if (-not $env:XIOM_HOME -or $env:XIOM_HOME -eq $sharedHome) {
 # An explicit XIOM_COMPILER wins (compiler A/B sweeps, e.g. a lane release
 # build); the installed toolchain is only the default. Mirrors dev-env.sh.
 if (-not $env:XIOM_COMPILER) {
-    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.2\bin\xiom.exe"
-    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.1\bin\xiom.exe"
-    $prev2 = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.0\bin\xiom.exe"
-    $prev3 = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.8\bin\xiom.exe"
+    # v0.65.2 is NOT the default: durable-lane regression
+    # (REL-20261027-2128-compiler) corrupts Vec[Struct]/Str pushes; stay on
+    # v0.65.1 until v0.65.3 is cut and accepted.
+    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.1\bin\xiom.exe"
+    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.0\bin\xiom.exe"
+    $prev2 = Join-Path $env:LOCALAPPDATA "xiom.new-v0.64.8\bin\xiom.exe"
     if (Test-Path -LiteralPath $latest) {
         $env:XIOM_COMPILER = $latest
     } elseif (Test-Path -LiteralPath $prev) {
         $env:XIOM_COMPILER = $prev
     } elseif (Test-Path -LiteralPath $prev2) {
         $env:XIOM_COMPILER = $prev2
-    } elseif (Test-Path -LiteralPath $prev3) {
-        $env:XIOM_COMPILER = $prev3
     } else {
         $env:XIOM_COMPILER = Join-Path $env:LOCALAPPDATA "xiom.new\bin\xiom.exe"
     }
 }
 if (-not $env:XIOM_STDLIB) {
-    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.2"
-    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.1"
-    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.0"
-    $prev3Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.9"
+    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.1"
+    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.0"
+    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.64.9"
     if (Test-Path -LiteralPath $tagStdlib) {
         $env:XIOM_STDLIB = $tagStdlib
     } elseif (Test-Path -LiteralPath $prevStdlib) {
         $env:XIOM_STDLIB = $prevStdlib
     } elseif (Test-Path -LiteralPath $prev2Stdlib) {
         $env:XIOM_STDLIB = $prev2Stdlib
-    } elseif (Test-Path -LiteralPath $prev3Stdlib) {
-        $env:XIOM_STDLIB = $prev3Stdlib
     } else {
         $env:XIOM_STDLIB = "E:\xiom-lang\stdlib"
     }

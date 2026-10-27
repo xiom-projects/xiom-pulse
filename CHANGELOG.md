@@ -8,6 +8,13 @@ GitHub release body.
 
 ### Added
 
+- **v0.65.2 WITHDRAWN for PULSE (durable-lane regression):** the compiler
+  reports a `Vec[Struct]`/`Str` push ownership bug
+  (`REL-20261027-2128-compiler`: `var r = R{...}; rs.push(r)` frees r's
+  Vec at scope exit; station double-free class). PULSE's headers, routes
+  and store events use that shape, so the pin is reverted to **v0.65.1** +
+  stdlib `0db38ae4` until **v0.65.3**. The v0.65.2 entry below is kept as
+  history; its arm64 verdict is superseded.
 - **v0.65.2 adopted (packed Vec slots, arm64 contracts, borrowed/aggregate
   reclaim):** compiler **v0.65.2** (windows `0a328560...`) +
   **stdlib-v0.65.2** (`7d4d48f4`), all workflows re-pinned. This ships the
