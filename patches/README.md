@@ -1,7 +1,9 @@
-# Local patches (applied in the lane package home, pending upstream)
+# Local patches (both now published upstream -- kept for reference)
 
-These are **not** applied by the repository build. They live here so the
-experiment is reproducible and can be handed to the owning lane.
+These are **not** applied by the repository build. Both were published
+upstream (`xiom.pulse` 0.3.2, `xiom.http` 0.1.11) and the lane home now
+uses those versions; the diffs stay as provenance. The per-file "Upstream"
+sections below describe the state at the time of the hand-off.
 
 ## beacon-0.3.1-http-alloc.diff
 

@@ -105,6 +105,17 @@ shared package store was clobbered again by a fleet repin) and
 is restored** on this pin. Windows fleet green; retention re-measured and
 still red (~60 KB/req floor).
 
+**2026-10-29 (published fixes pinned + candidate re-measure):**
+`xiom.pulse` **0.3.2** (response-path allocations) and `xiom.http`
+**0.1.11** (libc FFI widths) are pinned in `xiom.toml`; the local patches
+are upstream and retired from the build path. Pinned v0.65.1 + 0.3.2
+product `GET /health`: **46.0 KB/req** steady. Candidate **ab97014d9**
+(stdlib main) re-measured: parse **1,636 B/iter**, build **1,446 B/iter**,
+product **21.9 KB/req** keep-alive / 25.2 close; smoke 135/135, stream
+20/20, ws-auth 11/11, crash 6/6. Candidate is not a pin; v0.65.1 stays
+production until v0.65.3. Residual: router/header lookups, Map/JSON
+(~2.0 KB obj, 287 B map), parser ~1.6 KB, builder ~1.4 KB.
+
 **2026-10-27 22:05Z UPDATE -- v0.65.2 WITHDRAWN (reverted to v0.65.1):**
 the compiler reports a durable-lane regression in v0.65.2
 (`REL-20261027-2128-compiler`): a by-value `Struct{Vec}` pushed into a

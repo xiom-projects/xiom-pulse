@@ -4,6 +4,21 @@
 
 **Last updated:** 2026-10-24 (v0.65.0 + stdlib-v0.65.0 adopted, SHA-pinned; StreamHandler registry restored; x64 fleet green -- suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 83/83, stream smoke 20/20, ws-auth 11/11; arm64 remains a witness: two compiler defects (`REL-20261024-1101-pulse`) block the product build, one worked around PULSE-side (io.print/printf); retention 5x better on `/serialize/big` (1.14 MB -> 225 KB/req) but still ~60 KB/req; lane-local package home; `PULSE_WS_AUTH` landed). Prior: 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
 
+_Delta 2026-10-29 (published fixes pinned + candidate re-measure):
+`xiom.pulse` **0.3.2** and `xiom.http` **0.1.11** are pinned in
+`xiom.toml` and installed in the lane home; both local patches are now
+upstream and retired from the build path (`patches/` keeps them for
+reference). Pinned v0.65.1 + 0.3.2 product `GET /health` floor: 46.0
+KB/req steady (keep-alive). The compiler's source candidate
+**ab97014d9** (with `E:\xiom-lang\stdlib`) was re-measured as asked:
+`probe_req_cycle parse` 8,294 -> **1,636 B/iter**, `build` 9,092 ->
+**1,446 B/iter**, product **21.9 KB/req** keep-alive / 25.2
+connection-per-request (latency 4-7 ms -> 1-3 ms). Candidate correctness:
+smoke 135/135, stream 20/20, ws-auth 11/11, crash 6/6. This is a candidate,
+not a pin; v0.65.1 stays production until v0.65.3. Residual: app-path
+router/header lookups + Map/JSON (~2.0 KB obj, 287 B map), parser ~1.6 KB,
+builder ~1.4 KB.
+
 _Delta 2026-10-27 22:05Z (v0.65.2 WITHDRAWN -- reverted to v0.65.1):
 the compiler reports a durable-lane regression in v0.65.2
 (`REL-20261027-2128-compiler`): a by-value `Struct{Vec}` pushed into a

@@ -8,6 +8,13 @@ GitHub release body.
 
 ### Added
 
+- **Dependencies: `xiom.pulse` 0.3.2 + `xiom.http` 0.1.11 pinned.**
+  Beacon 0.3.2 carries the response-path allocation fix (the local patch,
+  now upstream: `build` 9,092 -> **1,446 B/iter** on the candidate build)
+  and `xiom.http` 0.1.11 the coherent libc FFI widths
+  (`fclose`/`fseek`/`remove`). The local copies in `patches/` are kept for
+  reference only; the build path uses the published versions. On the
+  current v0.65.1 pin the product `GET /health` floor is 46.0 KB/req.
 - **v0.65.2 WITHDRAWN for PULSE (durable-lane regression):** the compiler
   reports a `Vec[Struct]`/`Str` push ownership bug
   (`REL-20261027-2128-compiler`: `var r = R{...}; rs.push(r)` frees r's
