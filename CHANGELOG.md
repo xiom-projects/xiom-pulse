@@ -8,6 +8,14 @@ GitHub release body.
 
 ### Added
 
+- **v0.65.3 adopted (the arm64 chain clears):** compiler **v0.65.3**
+  (published windows `8383aa5b…`) + **stdlib-v0.65.3** (`26ede85`), all
+  workflows re-pinned with the published hashes. This carries the durable
+  fix, the arm64 contract fix and the span parser; with `xiom.http` 0.1.11
+  the arm64 build is unblocked, so `ubuntu-22.04-arm` / `macos-14` gate
+  again and arm64 packaging is re-enabled (CI verdict pending). Request
+  path: `parse` **1,648 B/iter**, `build` **1,446 B/iter**, product
+  `GET /health` **22.3 KB/req** steady (was 46.0 on v0.65.1).
 - **Dependencies: `xiom.pulse` 0.3.2 + `xiom.http` 0.1.11 pinned.**
   Beacon 0.3.2 carries the response-path allocation fix (the local patch,
   now upstream: `build` 9,092 -> **1,446 B/iter** on the candidate build)

@@ -4,6 +4,20 @@
 
 **Last updated:** 2026-10-24 (v0.65.0 + stdlib-v0.65.0 adopted, SHA-pinned; StreamHandler registry restored; x64 fleet green -- suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 83/83, stream smoke 20/20, ws-auth 11/11; arm64 remains a witness: two compiler defects (`REL-20261024-1101-pulse`) block the product build, one worked around PULSE-side (io.print/printf); retention 5x better on `/serialize/big` (1.14 MB -> 225 KB/req) but still ~60 KB/req; lane-local package home; `PULSE_WS_AUTH` landed). Prior: 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
 
+_Delta 2026-10-30 (v0.65.3 adopted -- arm64 chain cleared):
+compiler **v0.65.3** (published, windows `8383aa5b…`) + **stdlib-v0.65.3**
+(`26ede85`) adopted after checksum verification; all workflow pins moved
+to the published hashes; `dev-env` prefers `xiom.new-v0.65.3` +
+`stdlib-tag-v0.65.3` (v0.65.2 stays skipped). The release carries the
+durable-lane fix, the arm64 contract fix and the span parser; with
+`xiom.http` 0.1.11 the arm64 build is unblocked, so `ubuntu-22.04-arm` /
+`macos-14` gate again and arm64 packaging is re-enabled (CI verdict
+pending). Published-set acceptance on Windows: suites
+(http/app/smoke/stream/migrations/sql), smoke **135/135 x2** (jsonl+kv),
+crash **6/6 x2**, stream 20/20, ws-auth 11/11, rate green; retention
+`parse` **1,648 B/iter**, `build` **1,446 B/iter**, product `GET /health`
+**22.3 KB/req** (v0.65.1 was 46.0).
+
 _Delta 2026-10-29 (published fixes pinned + candidate re-measure):
 `xiom.pulse` **0.3.2** and `xiom.http` **0.1.11** are pinned in
 `xiom.toml` and installed in the lane home; both local patches are now

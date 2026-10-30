@@ -27,12 +27,12 @@ permissions:
   contents: write
 
 env:
-  XIOM_TOOLCHAIN_VERSION: "v0.65.1"
-  XIOM_LINUX_SHA256: "5785320f0b43bdd9d1ac09fa51eb97a249df411c9420cbac7b1669eb88c604bb"
-  XIOM_LINUX_ARM64_SHA256: "c4ecb3ac3226f27ded3beb9728742e8e607a34652308c502f4a5b4995c408006"
-  XIOM_WINDOWS_SHA256: "69de1e27c9c11074c34d9b06c2dec22b4137bda399f7e2ea65846a069393c3fc"
-  XIOM_MACOS_X64_SHA256: "37d7974eace0f21da54d656463d5a15572abe8fb3c1d16400aba87d6b3c69557"
-  XIOM_MACOS_ARM64_SHA256: "bfc2e6562923bd348ca4f24a823424cfb185cd8a1e9efc946b0d7122917a259b"
+  XIOM_TOOLCHAIN_VERSION: "v0.65.3"
+  XIOM_LINUX_SHA256: "987752c4bc55a24ec58f50721941ade38da580a7186c3df22f7af44fb6d614d7"
+  XIOM_LINUX_ARM64_SHA256: "e5acda25248c54af719af0e6cac3850db21a478da844d0d0b5b6e63693ac8061"
+  XIOM_WINDOWS_SHA256: "8383aa5bc5671c4bbbd906dfd3403cc30c8b75f34b865fe6502b36904fee23a5"
+  XIOM_MACOS_X64_SHA256: "0d99f4bcd0d03a8b292743a5fea130ae86f083033916854c13050deeb1430d81"
+  XIOM_MACOS_ARM64_SHA256: "54cf5ac35228509d5d1307389efc2640439fcacd43f5cc883e69f12c2b353ea7"
 
 jobs:
   guard:
@@ -90,8 +90,8 @@ jobs:
         include:
           - platform: linux-x64
             os: ubuntu-latest
-          # linux-arm64 packaging held: xiom.http 0.1.8 libc FFI types fail
-          # arm64 IR verification (REL-20261027-2010-pulse-2).
+          - platform: linux-arm64
+            os: ubuntu-22.04-arm
           - platform: windows-x64
             os: windows-latest
     steps:
@@ -174,7 +174,7 @@ jobs:
         with:
           subject-path: "dist/pulse-*.zip"
 
-  # macOS x64 packaging only: arm64 is held by the xiom.http FFI defect.
+  # macOS packaging runs both legs on v0.65.3 (x64 + arm64).
   build-macos:
     name: package ${{ matrix.platform }}
     needs: [guard]
@@ -189,6 +189,8 @@ jobs:
         include:
           - platform: macos-x64
             os: macos-15-intel
+          - platform: macos-arm64
+            os: macos-14
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
