@@ -108,9 +108,10 @@ still red (~60 KB/req floor).
 **2026-10-30 (v0.65.3 adopted -- arm64 chain cleared):** compiler
 **v0.65.3** (published, windows `8383aa5b...`) + **stdlib-v0.65.3**
 (`26ede85`) are pinned; workflows use the published hashes; `dev-env`
-prefers the new pair (v0.65.2 stays skipped). arm64 gating and packaging
-are re-enabled after `xiom.http` 0.1.11 removed the FFI blocker (CI
-verdict pending). Published-set acceptance on Windows is green: suites,
+prefers the new pair (v0.65.2 stays skipped). arm64 now fails **later** in
+stdlib-v0.65.3's socket FFI (`xiom_socket_close`/`create`/`accept` declared
+`Int` vs C `int`; `REL-20261030-1628-pulse`), so it stays a witness and
+packaging stays held. Published-set acceptance on Windows is green: suites,
 smoke 135/135 x2, crash 6/6 x2, stream 20/20, ws-auth 11/11, rate;
 retention parse 1,648 / build 1,446 B/iter, product 22.3 KB/req (was 46.0).
 

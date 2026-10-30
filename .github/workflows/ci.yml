@@ -29,8 +29,10 @@ jobs:
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # v0.65.3 clears the compiler chain and xiom.http 0.1.11 fixes the libc
-    # FFI widths; every leg gates (x64 + linux/macOS arm64).
+    # arm64 is a witness again: v0.65.3 clears the compiler chain, but the
+    # arm64 build now fails in stdlib-v0.65.3's socket FFI (xiom_socket_close/
+    # create/accept declared Int vs C int; REL-20261030-1628-pulse).
+    continue-on-error: ${{ matrix.os == 'macos-14' || matrix.os == 'ubuntu-22.04-arm' }}
     strategy:
       fail-fast: false
       matrix:

@@ -10,9 +10,10 @@ compiler **v0.65.3** (published, windows `8383aa5b…`) + **stdlib-v0.65.3**
 to the published hashes; `dev-env` prefers `xiom.new-v0.65.3` +
 `stdlib-tag-v0.65.3` (v0.65.2 stays skipped). The release carries the
 durable-lane fix, the arm64 contract fix and the span parser; with
-`xiom.http` 0.1.11 the arm64 build is unblocked, so `ubuntu-22.04-arm` /
-`macos-14` gate again and arm64 packaging is re-enabled (CI verdict
-pending). Published-set acceptance on Windows: suites
+`xiom.http` 0.1.11 the arm64 build now fails later in **stdlib-v0.65.3's
+socket FFI** (`xiom_socket_close`/`create`/`accept` declared `Int` vs C
+`int`; `REL-20261030-1628-pulse`), so arm64 stays a witness and packaging
+stays held. Published-set acceptance on Windows: suites
 (http/app/smoke/stream/migrations/sql), smoke **135/135 x2** (jsonl+kv),
 crash **6/6 x2**, stream 20/20, ws-auth 11/11, rate green; retention
 `parse` **1,648 B/iter**, `build` **1,446 B/iter**, product `GET /health`
