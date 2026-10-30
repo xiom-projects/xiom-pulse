@@ -5,7 +5,7 @@
 **Last updated:** 2026-10-24 (v0.65.0 + stdlib-v0.65.0 adopted, SHA-pinned; StreamHandler registry restored; x64 fleet green -- suites x2, smoke 135/135 x2, crash x2, migrations 21/21, SQL 53/53, stream 83/83, stream smoke 20/20, ws-auth 11/11; arm64 remains a witness: two compiler defects (`REL-20261024-1101-pulse`) block the product build, one worked around PULSE-side (io.print/printf); retention 5x better on `/serialize/big` (1.14 MB -> 225 KB/req) but still ~60 KB/req; lane-local package home; `PULSE_WS_AUTH` landed). Prior: 2026-10-22 (session 25: per-request retention isolated as compiler-owned -- product `GET /health` 55-60 KB/req, bttger `/serialize/big` 1.14 MB/req; new stdlib `socket_recv_into` ask; local package store restored; v0.64.9 compiler WITHDRAWN, production v0.64.8 + stdlib-v0.64.9; v0.65.0 gate open; macOS x64 gating; linux-arm64 native CI + release dry-run; SSE/WebSocket units, Origin policy + fragmentation + startup stream registry; PULSE 0.2.2 released + ops-accepted)
 
 _Delta 2026-10-30 (v0.65.3 adopted -- arm64 chain cleared):
-compiler **v0.65.3** (published, windows `8383aa5b…`) + **stdlib-v0.65.3**
+compiler **v0.65.3** (published, windows `8383aa5bâ€¦`) + **stdlib-v0.65.3**
 (`26ede85`) adopted after checksum verification; all workflow pins moved
 to the published hashes; `dev-env` prefers `xiom.new-v0.65.3` +
 `stdlib-tag-v0.65.3` (v0.65.2 stays skipped). The release carries the
@@ -17,7 +17,7 @@ stays held. Published-set acceptance on Windows: suites
 (http/app/smoke/stream/migrations/sql), smoke **135/135 x2** (jsonl+kv),
 crash **6/6 x2**, stream 20/20, ws-auth 11/11, rate green; retention
 `parse` **1,648 B/iter**, `build` **1,446 B/iter**, product `GET /health`
-**22.3 KB/req** (v0.65.1 was 46.0).
+**22.3 KB/req** (v0.65.1 was 46.0). x64 fleet: CI **41090319492 success** (arm64 witness at the stdlib socket FFI) and release dry-run **41090326798 success**; verdict `release-checks/pulse-compiler-v0.65.3.md`.
 
 _Delta 2026-10-29 (published fixes pinned + candidate re-measure):
 `xiom.pulse` **0.3.2** and `xiom.http` **0.1.11** are pinned in
@@ -399,7 +399,7 @@ prefix). Both use the lanes' source-level composition pattern (nested
 exist, and are excluded from the CI fleet until the packages publish.
 Trap note filed in the relays: `search(k=0)` / `create_collection(dim=0)`
 are contract traps, not Err. Relay responses with probe results + the
-ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§6 answers appended to both relay docs. Hard-kill / filter / hybrid
+ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§6 answers appended to both relay docs. Hard-kill / filter / hybrid
 scenarios are the next tranche. Score holds (~55.4%)._
 
 _Delta 2026-10-10 (0.2 docs refresh + release prep): **docs/public-set
@@ -433,7 +433,7 @@ it: `time.sleep_ms` is a NO-OP on v0.64.2 (both platforms; repro
 deadline). The hybrid join stays with the ORBITDB lane's `probe_hybrid`
 (green x2 on their side) until the 0.3 drivers compose it. Release prep:
 `releases.md` gained the missing **0.1.2** entry, `install.md` examples
-moved to 0.1.2, and the website relay gained **ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§14 -- the 0.2.0 cut
+moved to 0.1.2, and the website relay gained **ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§14 -- the 0.2.0 cut
 plan** (content deltas, four-leg artifacts, macOS button auto, ops
 actions) for the website lane to relay to ops. The release pipeline was
 **validated GREEN on main** by a manual dry run (run 38062166534:
@@ -790,7 +790,7 @@ pin-era m296 smoke fix with the tag move, and pin-PR CI rounds) and each
 time the gates caught it pre-publish. Next session: toolchain wave-2
 (install, deps, pin cache, helper re-land, sweeps, CI pins, dry run)
 then cut 0.2.1 per RELEASE-CHECKLIST + the ops redeploy ping -- full
-recipe in SESSION.md ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 (wrap 16). Score holds (~55.4%)._
+recipe in SESSION.md ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 (wrap 16). Score holds (~55.4%)._
 
 _Delta 2026-10-15 (wrap-16 addendum -- new release risk): xvector filed
 `REL-20261015-2142-xvector` (high, compiler acked): **v0.64.5 linux-x64
@@ -798,7 +798,7 @@ miscompiles their HTTP service routing** (/search -> 404/400; 6 gates
 red on WSL; v0.64.4-linux and v0.64.5-windows green; bundled-stdlib
 repro). Since PULSE is an HTTP server and the demo is Linux, the wave-2
 Linux legs and the 0.2.1 cut now carry an explicit routing-anomaly
-stop-and-file gate (SESSION digest + ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 step 8 updated); if our Linux
+stop-and-file gate (SESSION digest + ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 step 8 updated); if our Linux
 legs are green, ops still validates routing before switching traffic
 with 0.1.0 rollback armed. Score holds (~55.4%)._
 
@@ -813,7 +813,7 @@ highlights; dl mirror at the next :17 sweep) -- the v0.64.5 rebuild
 with the SIGILL fix; ops pinged (`REL-20261015-2125-pulse`) to move the
 demo 0.1.0 -> 0.2.1. Bus: SQL co-verify items closed (1718/1901);
 bindings reply + compiler/stdlib INFOs filed. NEXT: the post-release
-queue in SESSION.md ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 (keep-alive -> durability -> middleware/jobs ->
+queue in SESSION.md ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 (keep-alive -> durability -> middleware/jobs ->
 SQL runner -> bench -> SSE/WS -> macOS v0.64.6). Score holds (~55.4%)._
 
 _Delta 2026-10-15 (top-tier directive): owner escalated the goal to
