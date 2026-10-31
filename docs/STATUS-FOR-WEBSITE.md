@@ -36,12 +36,13 @@ by a front proxy; PULSE serves plaintext on loopback.
 | linux-x64 | **supported** | gating CI leg |
 | windows-x64 | **supported** | gating CI leg |
 | macOS x64 | **supported** | gating CI leg |
-| linux-arm64 | **preview / not shipped** | compiler chain + socket ABI are clear; blocked by the compiler lowering an **Int64 extern argument as i32** (`@fseek`; `REL-20261031-1619-pulse`). Witness leg, packaging held |
-| macOS arm64 | **preview / not shipped** | same compiler arg-width bug; witness + packaging held |
+| linux-arm64 | **preview / not shipped** | blocked only on linux-arm64 (LLVM 14) by the compiler lowering an **Int64 extern argument as i32** (`@fseek`; `REL-20261031-1619-pulse`). Witness leg, packaging held |
+| macOS arm64 | **supported** | builds and passes the full fleet on `macos-15`; packaged in the release dry-run |
 
-Do **not** advertise arm64 as supported yet. The remaining gate is a
-compiler fix for Int64 extern-argument width (`REL-20261031-1619-pulse`);
-PULSE re-enables arm64 gating and packaging when it lands.
+**linux-arm64** is the only unshipped platform (the `macos-14` runner was
+retired, so the macOS arm64 leg moved to `macos-15` and is now green). The
+remaining gate is a compiler fix for Int64 extern-argument width; PULSE
+re-enables linux-arm64 gating and packaging when it lands.
 
 ## Feature set (Station)
 
@@ -72,9 +73,10 @@ PULSE re-enables arm64 gating and packaging when it lands.
 - Crash/durability: **6/6**, twice. Migrations **21/21**. SQL **53/53**.
 - Streams: **83/83** unit, **20/20** live, **11/11** auth.
 - Rate-limiter smoke green; gate-order **11/11**.
-- CI x64 legs green on linux-x64, windows-x64, macOS x64
-  (arm64 witnesses non-gating); release dry-run **`41219227263` success**
-  (same three; publish skipped).
+- CI **`41221981745` success** on linux-x64, windows-x64, macOS x64 and
+  **macOS arm64** (linux-arm64 is a non-gating witness); release dry-run
+  **`41221986476` success** (linux-x64, windows-x64, macOS x64, macOS
+  arm64; publish skipped).
 
 ## Known limitations (state these honestly)
 
@@ -98,10 +100,9 @@ PULSE re-enables arm64 gating and packaging when it lands.
 
 ## What's next (public roadmap wording)
 
-- **stdlib patch tag** for the socket FFI widths
-  (`REL-20261030-1628-pulse`) -> re-enable **arm64** CI gating and
-  packaging. The compiler (v0.65.3) and `xiom.http` 0.1.11 are already
-  clear.
+- **Compiler fix** for Int64 extern-argument width
+  (`REL-20261031-1619-pulse`) -> re-enable **linux-arm64** CI gating and
+  packaging. macOS arm64 is already supported on v0.65.4.
 - Memory: the response builder is fixed; the remaining floor is the HTTP
   parser plus app-path allocations, then the capped bttger 5k/1M
   benchmarks.
