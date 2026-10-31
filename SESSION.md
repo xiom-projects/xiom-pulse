@@ -105,6 +105,8 @@ shared package store was clobbered again by a fleet repin) and
 is restored** on this pin. Windows fleet green; retention re-measured and
 still red (~60 KB/req floor).
 
+**2026-10-31 16:25Z (v0.65.4 adopted on x64):** published v0.65.4 (windows 49e02478) + stdlib 407c92d pinned; x64 fleet green (dry-run 41219227263). The native arm gate still fails: an Int64 extern argument is lowered as i32 (`@fseek`; REL-20261031-1619-pulse), so arm64 is a witness and packaging is held. Retention 22.3 KB/req. Verified/closed: REL-20261023-1854 (probe_wsauth on v0.65.4), mirror rows. 1628 is ABI-correct but waits on the arg-width fix, as do 1529/1101.
+
 **2026-10-30 23:15Z (v0.65.4 corrected RC):** hashes match (win 1e763d0f); x64 PASS (retention 22.3 KB/req, smoke 135/135, crash 6/6, stream 20/20, ws-auth 11/11); arm IR consistent (i64 create/accept/close) and both arm archives are AArch64/arm64 with the fixed net.xi. Native arm64 PULSE build still needs a runner: asked for the corrected set on dl (pre-release) so CI can gate before the tag. v0.65.3 remains production.
 
 **2026-10-30 22:45Z (v0.65.4 RC check):** x64 PASS on the RC (sha efe7af95; smoke 135/135, crash 6/6, stream 20/20, ws-auth 11/11, retention 22.3 KB/req). arm64 **still fails** because `lib/xiom/net/net.xi:27` declares `xiom_socket_close -> Int32` while the runtime/socket.xi use Int (i64); a one-line change to `-> Int` makes the arm IR consistent. Reported on REL-20261030-2212/2037/1628; tag should be held until stdlib re-cuts. v0.65.3 remains production.
@@ -352,7 +354,7 @@ paragraph below is superseded on the compiler/registry claims.
   Windows `%LOCALAPPDATA%\xiom.new-20261015-2240`, WSL
   `~/.local/share/xiom-v0645`, stdlib `092dfa0c` both). **v0.64.6 RELEASED
   2026-10-16T20:33Z** (darwin stream + stdlib `b81430ba`) -- adoption +
-  darwin/pin suites queued as ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 item 7. Historical v0.64.3 bullet: (2026-10-10 dry run
+  darwin/pin suites queued as ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 item 7. Historical v0.64.3 bullet: (2026-10-10 dry run
   `38075327683` green on linux-x64 + windows-x64 with the pinned stdlib
   `48850df`; dl synced; pins in `docs/OPS-REQUEST.md` D.1 and every
   workflow; macOS shas pinned for the gated legs). **Local Windows/WSL
@@ -689,7 +691,7 @@ paragraph below is superseded on the compiler/registry claims.
   stdlib pin from the compiler tag (`v0.64.5:STDLIB_VERSION`) =
   **`092dfa0c`** (the moved stdlib-v0.64.5); the dl mirror lands at the
   next :17 sweep. **NEXT SESSION = toolchain wave-2, then cut 0.2.1** --
-  full recipe is the ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 paste prompt (wrap 16). Demo stays on 0.1.0
+  full recipe is the ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 paste prompt (wrap 16). Demo stays on 0.1.0
   until the ops redeploy ping.
 - **NEW GATE -- v0.64.5 linux-x64 miscompile (xvector,
   `REL-20261015-2142-xvector`, compiler `acked` high):** on Linux,
@@ -744,7 +746,7 @@ paragraph below is superseded on the compiler/registry claims.
   add to an app) / **PULSE Station** (hosted edition: the full product,
   docker/k8s); one protocol core, two editions, never a fork (the
   orbitdb satellite/station pattern; the product is PULSE on both).
-  Roadmap ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§9 (`docs/ROADMAP-TOP-TIER.md`); publish ask
+  Roadmap ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§9 (`docs/ROADMAP-TOP-TIER.md`); publish ask
   `REL-20261016-1108-pulse` (packages acked -- `xiom.pulse` slot free,
   porter-flow scoping agreed at the keep-alive A+B freeze); codenames
   note `REL-20261016-1121-pulse`. Sequence: keep-alive A/B -> core
@@ -766,7 +768,7 @@ paragraph below is superseded on the compiler/registry claims.
   A+B check set is the Beacon core's frozen semantics.
 - **Packages deliveries on the top-tier asks (2026-10-16):**
   `xiom.template 0.2.0` LIVE (blocks/loops/auto-escape -- top-tier
-  item 1; consumer-verify queued ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 1c); `xiom.ssl` BUILDING (the
+  item 1; consumer-verify queued ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§3 1c); `xiom.ssl` BUILDING (the
   TLS ceiling item); `xiom.otel 0.1.0` built green (held on the ops
   scope); `xiom.zstd 0.3.0` real (vendored 1.5.7); real brotli in
   flight at bindings; `xiom.pulse` slot reserved + porter SPEC
@@ -1207,7 +1209,7 @@ paragraph below is superseded on the compiler/registry claims.
   "Unknown"), `scripts/release.{ps1,sh}` (dist artifacts per the ops
   naming, zip + sha256 verified on both platforms) and
   `scripts/backup.{ps1,sh}` (timestamped store+audit snapshots with
-  sha256 manifest + prune; tested; restore runbook in DEPLOYMENT ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§9).
+  sha256 manifest + prune; tested; restore runbook in DEPLOYMENT ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§9).
   Compiler check: dl still v0.64.0; **m215/m216/m217 (C-PULSE-08/10/11
   fixes) are in the lane source, not in an archive** -- v0.64.1 is the
   next adoption gate; C-PULSE-09 was triaged not-reproducible from
@@ -1364,7 +1366,7 @@ to the packages lane (`docs/PACKAGE-WISHLIST-PULSE.md`).
 | Storage | pending (Step 3) | -- |
 
 **Test-infra learning:** chatty servers must never be started with undrained
-PowerShell pipes (4 KiB buffer) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â `concurrent.ps1` and `soak_http.ps1` both
+PowerShell pipes (4 KiB buffer) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â `concurrent.ps1` and `soak_http.ps1` both
 redirect the server to a file via `cmd /c` now. The first Step 2 concurrent
 run deadlocked on exactly this (64 JSON log lines > 4 KiB), which is why
 the driver was fixed before the green run.
@@ -1851,7 +1853,7 @@ STATE AT WRAP 19 (2026-10-17, session 19 closed at context limit):
   0.1.0 (11/11 x2 both), otel 0.1.0 (consumer-verify still queued),
   zstd 0.3.0 real.
 - **REFERENCE-STUDY PROTOCOL is BINDING** (`docs/REFERENCE-STUDY-PROTOCOL.md`;
-  ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§0 standing rule). Plan reordered + reference-annotated (NEXT below).
+  ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§0 standing rule). Plan reordered + reference-annotated (NEXT below).
 - **Station-consumes path PROVEN rename-first** (`docs/DESIGN-STATION-CONSUMES.md`):
   declaring the dep silently binds duplicate module names to the PACKAGE
   (W001 warning only), so `app`/`config`/`router` must become
@@ -2174,7 +2176,7 @@ stays PRIVATE; do not push to origin without owner approval. Identity
 
 Track the LATEST toolchain: Windows compiler v0.64.0
 (%LOCALAPPDATA%\xiom.new\bin\xiom.exe); Linux/WSL compiler v0.64.0
-(~/.local/share/xiom) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â the Linux lane is verified and every script has a
+(~/.local/share/xiom) ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â the Linux lane is verified and every script has a
 verified .sh twin (scripts/*.sh + scripts/lib.sh). XIOM_RUNTIME_DIR
 retired. Registry consumption still needs xiom.toml source-roots
 (C-PULSE-02).

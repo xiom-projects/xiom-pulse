@@ -8,8 +8,9 @@ GitHub release body.
 
 ### Added
 
+- **v0.65.4 adopted (x64):** compiler **v0.65.4** (windows `49e02478...`) + **stdlib 407c92d**; pins/workflows/`dev-env` moved, x64 fleet green (release dry-run `41219227263`). The compiler chain and the socket ABI are cleared, but arm64 still fails the native gate because an **Int64 extern argument is lowered as i32** (`@fseek`; `REL-20261031-1619-pulse`), so arm64 stays a witness and packaging is held. Retention unchanged (**22.3 KB/req**).
 - **v0.65.3 adopted (the arm64 chain clears):** compiler **v0.65.3**
-  (published windows `8383aa5bâ€¦`) + **stdlib-v0.65.3** (`26ede85`), all
+  (published windows `8383aa5bÃ¢â‚¬Â¦`) + **stdlib-v0.65.3** (`26ede85`), all
   workflows re-pinned with the published hashes. This carries the durable
   fix, the arm64 contract fix and the span parser; with `xiom.http` 0.1.11
   the arm64 build now fails later in stdlib-v0.65.3's socket FFI

@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Last updated:** 2026-10-30 16:35Z (PULSE lane). **Source of truth:** this file for
+**Last updated:** 2026-10-31 16:25Z (PULSE lane). **Source of truth:** this file for
 website copy; `docs/PROGRESS.md` for the full tracker; `SESSION.md` for the
 session handoff. README's status block predates the v0.65.1 adoption -- use
 this file, not README, for the site until README is refreshed.
@@ -23,8 +23,8 @@ by a front proxy; PULSE serves plaintext on loopback.
 ## Current release
 
 - **Product:** PULSE **0.2.2** (tag `pulse-v0.2.2`), ops-accepted.
-- **Toolchain pin:** compiler **v0.65.3** + **stdlib-v0.65.3**
-  (`26ede85`). v0.64.9 is withdrawn; v0.65.0-0.65.2 are superseded
+- **Toolchain pin:** compiler **v0.65.4** + **stdlib-v0.65.4**
+  (`407c92d`). v0.64.9 is withdrawn; v0.65.0-0.65.2 are superseded
   (v0.65.2 had a durable-lane push regression and is not used).
 - **Release cadence:** 0.3.0 is prepared but **not tagged** -- it waits on
   the owner's SQL-serving decision and on the memory work below.
@@ -36,13 +36,12 @@ by a front proxy; PULSE serves plaintext on loopback.
 | linux-x64 | **supported** | gating CI leg |
 | windows-x64 | **supported** | gating CI leg |
 | macOS x64 | **supported** | gating CI leg |
-| linux-arm64 | **preview / not shipped** | compiler v0.65.3 and `xiom.http` 0.1.11 are clear; blocked by **stdlib-v0.65.3's socket FFI** (`xiom_socket_close`/`create`/`accept` vs C `int`; `REL-20261030-1628-pulse`). Witness leg, packaging held |
-| macOS arm64 | **preview / not shipped** | same stdlib socket FFI; witness + packaging held |
+| linux-arm64 | **preview / not shipped** | compiler chain + socket ABI are clear; blocked by the compiler lowering an **Int64 extern argument as i32** (`@fseek`; `REL-20261031-1619-pulse`). Witness leg, packaging held |
+| macOS arm64 | **preview / not shipped** | same compiler arg-width bug; witness + packaging held |
 
-Do **not** advertise arm64 as supported yet. The compiler chain and the
-HTTP package are clear on this pin; the remaining gate is a **stdlib patch**
-for the socket FFI widths (`REL-20261030-1628-pulse`). PULSE re-enables
-arm64 gating and packaging when that tag lands.
+Do **not** advertise arm64 as supported yet. The remaining gate is a
+compiler fix for Int64 extern-argument width (`REL-20261031-1619-pulse`);
+PULSE re-enables arm64 gating and packaging when it lands.
 
 ## Feature set (Station)
 
@@ -73,8 +72,8 @@ arm64 gating and packaging when that tag lands.
 - Crash/durability: **6/6**, twice. Migrations **21/21**. SQL **53/53**.
 - Streams: **83/83** unit, **20/20** live, **11/11** auth.
 - Rate-limiter smoke green; gate-order **11/11**.
-- CI **`41090319492` success** on linux-x64, windows-x64, macOS x64
-  (arm64 witnesses non-gating); release dry-run **`41090326798` success**
+- CI x64 legs green on linux-x64, windows-x64, macOS x64
+  (arm64 witnesses non-gating); release dry-run **`41219227263` success**
   (same three; publish skipped).
 
 ## Known limitations (state these honestly)
