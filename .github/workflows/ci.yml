@@ -30,8 +30,9 @@ jobs:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     # arm64 is a witness on v0.65.4: the compiler lowers an Int64 extern arg
-    # as i32 (@fseek; REL-20261031-1619-pulse). x64 gates normally.
-    continue-on-error: ${{ matrix.os == 'macos-14' || matrix.os == 'ubuntu-22.04-arm' }}
+    # as i32 (@fseek; REL-20261031-1619-pulse). The macOS arm64 leg moved to
+    # macos-15 because macos-14 is being retired (brownout 2026-10-31).
+    continue-on-error: ${{ matrix.os == 'macos-15' || matrix.os == 'ubuntu-22.04-arm' }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +40,7 @@ jobs:
           - os: ubuntu-latest
           - os: ubuntu-22.04-arm
           - os: windows-latest
-          - os: macos-14
+          - os: macos-15
           - os: macos-15-intel
     steps:
       - name: Checkout PULSE
