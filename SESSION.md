@@ -105,7 +105,7 @@ shared package store was clobbered again by a fleet repin) and
 is restored** on this pin. Windows fleet green; retention re-measured and
 still red (~60 KB/req floor).
 
-**2026-10-31 16:25Z (v0.65.4 adopted on x64):** published v0.65.4 (windows 49e02478) + stdlib 407c92d pinned; x64 fleet green (dry-run 41219227263). The native arm gate still fails: an Int64 extern argument is lowered as i32 (`@fseek`; REL-20261031-1619-pulse), so **macOS arm64 is supported and packaged** (macos-15; CI 41221981745, dry-run 41221986476) while **linux-arm64 is a witness** with packaging held. Retention 22.3 KB/req. Verified/closed: REL-20261023-1854 (probe_wsauth on v0.65.4), mirror rows. 1628 is ABI-correct but waits on the arg-width fix, as do 1529/1101.
+**2026-10-31 16:25Z (v0.65.4 adopted):** published v0.65.4 (windows 49e02478) + stdlib 407c92d pinned. CI `41221981745` success and dry-run `41221986476` success -- **macOS arm64 is supported and packaged** (macos-15). **linux-arm64** still fails at `@fseek` (Int64 extern arg lowered as i32; `REL-20261031-1619-pulse`), so it stays a witness with packaging held. Retention 22.3 KB/req. Verified/closed on this pin: `REL-20261023-1854` (probe_wsauth), `REL-20261022-1529`, `REL-20261030-1628`, mirror rows; `REL-20261024-1101` waits on the arg-width fix.
 
 **2026-10-30 23:15Z (v0.65.4 corrected RC):** hashes match (win 1e763d0f); x64 PASS (retention 22.3 KB/req, smoke 135/135, crash 6/6, stream 20/20, ws-auth 11/11); arm IR consistent (i64 create/accept/close) and both arm archives are AArch64/arm64 with the fixed net.xi. Native arm64 PULSE build still needs a runner: asked for the corrected set on dl (pre-release) so CI can gate before the tag. v0.65.3 remains production.
 
