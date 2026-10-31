@@ -29,10 +29,10 @@ jobs:
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # arm64 is a witness on v0.65.4: the compiler lowers an Int64 extern arg
-    # as i32 (@fseek; REL-20261031-1619-pulse). The macOS arm64 leg moved to
-    # macos-15 because macos-14 is being retired (brownout 2026-10-31).
-    continue-on-error: ${{ matrix.os == 'macos-15' || matrix.os == 'ubuntu-22.04-arm' }}
+    # macOS arm64 (macos-15) gates: it builds and passes the full fleet on
+    # v0.65.4. linux-arm64 (ubuntu-22.04, LLVM 14) stays a witness until the
+    # Int64 extern arg width is fixed (@fseek; REL-20261031-1619-pulse).
+    continue-on-error: ${{ matrix.os == 'ubuntu-22.04-arm' }}
     strategy:
       fail-fast: false
       matrix:

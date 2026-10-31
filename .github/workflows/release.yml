@@ -174,7 +174,7 @@ jobs:
         with:
           subject-path: "dist/pulse-*.zip"
 
-  # macOS x64 packaging only: arm64 is held by the extern arg-width bug.
+  # macOS packaging runs both legs on v0.65.4 (x64 + arm64 on macos-15).
   build-macos:
     name: package ${{ matrix.platform }}
     needs: [guard]
@@ -189,6 +189,8 @@ jobs:
         include:
           - platform: macos-x64
             os: macos-15-intel
+          - platform: macos-arm64
+            os: macos-15
     steps:
       - name: Checkout PULSE
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
