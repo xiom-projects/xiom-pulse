@@ -45,9 +45,9 @@ if (-not $env:XIOM_HOME -or $env:XIOM_HOME -eq $sharedHome) {
 if (-not $env:XIOM_COMPILER) {
     # v0.65.2 is skipped on purpose: durable-lane regression
     # (REL-20261027-2128-compiler). v0.65.3 clears it and the arm64 chain.
-    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.3\bin\xiom.exe"
-    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.1\bin\xiom.exe"
-    $prev2 = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.0\bin\xiom.exe"
+    $latest = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.4\bin\xiom.exe"
+    $prev = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.3\bin\xiom.exe"
+    $prev2 = Join-Path $env:LOCALAPPDATA "xiom.new-v0.65.1\bin\xiom.exe"
     if (Test-Path -LiteralPath $latest) {
         $env:XIOM_COMPILER = $latest
     } elseif (Test-Path -LiteralPath $prev) {
@@ -59,9 +59,9 @@ if (-not $env:XIOM_COMPILER) {
     }
 }
 if (-not $env:XIOM_STDLIB) {
-    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.3"
-    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.1"
-    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.0"
+    $tagStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.4"
+    $prevStdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.3"
+    $prev2Stdlib = Join-Path $env:LOCALAPPDATA "xiom-pins\stdlib-tag-v0.65.1"
     if (Test-Path -LiteralPath $tagStdlib) {
         $env:XIOM_STDLIB = $tagStdlib
     } elseif (Test-Path -LiteralPath $prevStdlib) {
