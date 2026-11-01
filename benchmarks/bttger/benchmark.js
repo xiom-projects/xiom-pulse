@@ -21,6 +21,7 @@ const autocannon = require("autocannon");
 const TITLE = process.argv[2] || "xiom-pulse";
 const CONNECTIONS = Number(process.env.BENCH_CONNECTIONS || 10);
 const AMOUNT = Number(process.env.BENCH_AMOUNT || 1000000);
+const DURATION = Number(process.env.BENCH_DURATION || 0);
 const WARMUP_DURATION = Number(process.env.BENCH_WARMUP || 30);
 const PORT = Number(process.env.BENCH_PORT || 8080);
 const HOST = process.env.BENCH_HOST || "127.0.0.1";
@@ -31,8 +32,8 @@ const RESULTS_DIR = path.join(__dirname, "results");
 const INSERT_BODY = JSON.stringify({
   name: "Sightseeing",
   addresses: [
-    { street: "Breite Straße", number: 89, city: "Lübeck" },
-    { street: "Breite Straße", number: 89, city: "Lübeck" }
+    { street: "Breite StraÃŸe", number: 89, city: "LÃ¼beck" },
+    { street: "Breite StraÃŸe", number: 89, city: "LÃ¼beck" }
   ],
   oldTown: true
 });
@@ -67,9 +68,9 @@ async function runOne(ep) {
   const opts = {
     title: `${TITLE} - ${ep.name}`,
     url: BASE + ep.path,
-    connections: CONNECTIONS,
-    amount
+    connections: CONNECTIONS
   };
+  if (DURATION > 0) { opts.duration = DURATION; } else { opts.amount = amount; }
   if (ep.method) opts.method = ep.method;
   if (ep.headers) opts.headers = ep.headers;
   if (ep.body) opts.body = ep.body;
@@ -110,7 +111,8 @@ async function main() {
     autocannon: require("autocannon/package.json").version,
     port: PORT,
     connections: CONNECTIONS,
-    amount: AMOUNT,
+    amount: DURATION > 0 ? null : AMOUNT,
+    durationSeconds: DURATION > 0 ? DURATION : null,
     warmupSeconds: WARMUP_DURATION,
     results
   };

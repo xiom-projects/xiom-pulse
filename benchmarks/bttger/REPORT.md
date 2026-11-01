@@ -2,6 +2,9 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # PULSE benchmark baseline -- bttger six-endpoint contract
 
+> **Current numbers:** see REPORT-2026-11-01.md (toolchain v0.65.4).**
+> This file is the 2026-10-19 v0.64.8 baseline and is kept for comparison.
+
 **Date:** 2026-10-19 (session 22). **Commit:** `9b97eb7`. **CI:**
 `39335266242` (both platforms green, including the benchmark-app build
 gate). **Status:** baseline only, not a cross-framework ranking. Raw
