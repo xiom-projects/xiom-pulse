@@ -18,21 +18,19 @@ permissions:
   contents: read
 
 env:
-  XIOM_TOOLCHAIN_VERSION: "v0.65.4"
-  XIOM_LINUX_SHA256: "0e8a7418b91fa4014dc8474a29a99b77ce57682546f15804889e0910825e3723"
-  XIOM_LINUX_ARM64_SHA256: "f90e6620e7f5c186e6255ecbbcc4fa662cbe047b69187c5816cefa693b8e9374"
-  XIOM_WINDOWS_SHA256: "49e024781550362d1362d0bd633b747800bdd235d1cc3552f1b192c83450ee6a"
-  XIOM_MACOS_X64_SHA256: "604d82a77682ba3209655293eccc5299f7dfdf970baf5ca43118cbdcb318c259"
-  XIOM_MACOS_ARM64_SHA256: "4aaba6756c26e32fe1be324d312a795e1914bfaa263f8e933fab9f39d002257f"
+  XIOM_TOOLCHAIN_VERSION: "v0.65.5"
+  XIOM_LINUX_SHA256: "cae744410aed92ad101787d05619a9c2fa65029dab7a19f608a77fc15bb1a491"
+  XIOM_LINUX_ARM64_SHA256: "01652f04eee0f16c04eb7e91d008175b5ef98b23e6fcfee62a0380494b845659"
+  XIOM_WINDOWS_SHA256: "86a253a531aeaf0af1192f68de255f25bddce9a15abe29312ebf0a5717513093"
+  XIOM_MACOS_X64_SHA256: "b6042810a2f0ad9ca4de3ab5b3e86a3f800ea256d70a0e3f874580a6cb694754"
+  XIOM_MACOS_ARM64_SHA256: "fe4cc054a0dee23e94b9c023d5c264f0e4cbb722dbef73fee97ccdd7f82d026d"
 
 jobs:
   build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # macOS arm64 (macos-15) gates: it builds and passes the full fleet on
-    # v0.65.4. linux-arm64 (ubuntu-22.04, LLVM 14) stays a witness until the
-    # Int64 extern arg width is fixed (@fseek; REL-20261031-1619-pulse).
-    continue-on-error: ${{ matrix.os == 'ubuntu-22.04-arm' }}
+    # v0.65.5 clears the Int64 extern-arg width (@fseek) and the socket ABI;
+    # every leg gates, including linux-arm64 and macOS arm64.
     strategy:
       fail-fast: false
       matrix:
