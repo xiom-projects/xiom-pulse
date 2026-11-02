@@ -53,6 +53,11 @@ shared store.
 
 ## 2. Standing today (0.2.1, 2026-10-15)
 
+> **Updated 2026-11-02:** current release is **0.2.2** on compiler **v0.65.5**
+> + stdlib 88f3c12; all five platforms (linux-x64/arm64, windows-x64,
+> macOS x64/arm64) gate and package; the per-request floor is **16.5 KB**.
+> The plan derived from the Restack application is in **section 10**.
+
 - **0.2.1 shipped** on the v0.64.5 toolchain + stdlib pin `092dfa0c`
   (SIGILL fix included): HTTP/1.1 core with smuggling hardening, chunked
   decoding, multipart uploads, static + site mode, OpenAPI 3.1 +
@@ -316,3 +321,55 @@ protocol hardening -- the light path must never be the unsafe path.
 Bus: publish/coordination ask `REL-20261016-1108-pulse` (packages;
 acked -- `xiom.pulse` slot free, porter-flow scoping agreed at the
 keep-alive A+B freeze); codename decision `REL-20261016-1121-pulse`.
+## 10. PULSE 1.0 plan (derived from the Restack application, 2026-11-02)
+
+The Restack application lives outside the repository and is not edited from
+here. This section is the in-repo execution plan: the same work packages,
+milestones and acceptance criteria, with the current status. It is scoped to
+**PULSE 1.0** (the product), not to the whole XIOM stack.
+
+**Shape:** 12 months, 760 hours, four bounded outcomes plus project
+management. The 1.0 release is a finishing plan on the shipped 0.2.x line,
+not a rewrite.
+
+| Work package | Hours | Deliverable and acceptance | Status 2026-11-02 |
+|---|---:|---|---|
+| WP1 -- memory and sustained-load reliability | 220 | Upstream reclamation fixes with repros + app-path allocation cuts; CI retention gate; **24 h at 100 req/s on the bttger mix with RSS <= 256 MB**, published baseline; 72 h confirmation | Partial: floor is **16.5 KB/req** (from 46); response builder flat, per-connection buffer in place; 24 h/1M gate still open |
+| WP2 -- security and release integrity | 160 | Fixed-scope review in month 7 (€3,000), months 8-10 remediation; parser/multipart fuzzing; SBOM (CycloneDX/SPDX); SHA-pinned artifacts + provenance; reproducible-build recipe; disclosure policy + CVE process | Partial: SHA256SUMS + provenance exist; no external audit, fuzzing, SBOM or CVE process yet |
+| WP3 -- external adoption and operational proof | 180 | One external public-interest pilot (bounded, not a migration); operator guide, migration guide, one-command scaffold; benchmark report; 72 h soak; final public report (CC BY 4.0) | Partial: internal dogfooding only (pulse.xiom-lang.org); benchmark report published 2026-11-01; guides partial; no external pilot |
+| WP4 -- scale-out foundation | 160 | Process supervisor + --workers N; SO_REUSEPORT (Linux), N ports (Windows); graceful drain; zero-downtime reload; proxy-trust unit; 1/2-worker scaling curve; rollback procedure | Not started: the single-accept loop is the measured ceiling (10 connections add no throughput) |
+| WP5 -- project management and dissemination | 40 | Monthly public notes; issue triage; release coordination; final report; one remote community presentation | Ongoing: changelog, relay, progress and benchmark reports |
+
+### Milestones
+
+- **M1 (month 3):** memory harness + CI gate; 24 h soak baseline published;
+  compiler/stdlib fixes with repros; security review scope fixed; pilot
+  candidate identified.
+- **M2 (month 6):** memory budget met in CI; supervisor/drain prototype;
+  edge-TLS deployment template; benchmark harness; pilot integration plan.
+- **M3 (month 9):** security review complete; remediation underway; 2-worker
+  scaling curve; external pilot deployed; 72 h soak at the WP1 workload.
+- **M4 (month 12):** PULSE 1.0 release; SBOM + reproducible artifacts;
+  benchmark report; operator and migration guides; final public report.
+
+### Scope boundary
+
+**1.0:** memory budget + retention gate; review + remediation + fuzzing +
+SBOM + reproducible release + disclosure policy; one external pilot;
+supervisor/drain/reload + 1/2-worker curve; all five release platforms
+(linux-x64, linux-arm64, windows-x64, macOS x64, macOS arm64).
+
+**Post-1.0:** native TLS (xiom.ssl) and certificate reload; HTTP/2 and
+HTTP/3 at the edge; response/WebSocket compression; shared-state stateless
+mode; 4+ workers; richer SQL drivers; OIDC/OAuth; distributed tracing.
+
+### How it maps to the rest of this roadmap
+
+- WP1 closes the production blocker in section 6/7 and is the gate for the
+  capped bttger 5k/1M run.
+- WP2 is the proof-discipline item in section 8.
+- WP4 is the W1 scale-out gap; until it lands, throughput claims are bounded
+  by the single-accept loop.
+- The parity program (docs/PARITY-VISION.md, docs/PARITY-MATRIX.md) is
+  the capability scorecard; the 1.0 scope targets its P0 gaps.
+- Release 0.3.0 is the next product tag; 1.0 follows the four outcomes above.
