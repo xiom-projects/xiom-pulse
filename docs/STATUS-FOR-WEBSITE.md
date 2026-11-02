@@ -3,8 +3,8 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Last updated:** 2026-11-02 16:00Z (PULSE lane). **Source of truth:** this file for
-website copy; `docs/PROGRESS.md` for the full tracker; `SESSION.md` for the
+**Last updated:** 2026-11-02 16:00Z (PULSE lane). **Source of truth:** this file for website copy; **forward plan:**
+docs/ROADMAP-FOR-WEBSITE.md (phases 0-4, production-grade 1.0); `docs/PROGRESS.md` for the full tracker; `SESSION.md` for the
 session handoff. README's status block predates the v0.65.1 adoption -- use
 this file, not README, for the site until README is refreshed.
 
