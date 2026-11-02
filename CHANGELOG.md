@@ -8,9 +8,10 @@ GitHub release body.
 
 ### Added
 
+- **v0.65.5 adopted -- full platform matrix:** compiler **v0.65.5** (windows `86a253a5...`) + **stdlib 88f3c12**; all five CI legs green (linux-x64, linux-arm64, windows-x64, macOS x64, macOS arm64) and all five packaged (CI `41478271328`, dry-run `41478278268`). Clears the `@fseek` Int64 arg-width defect and closes the arm64 chain. Retention improves to **16.5 KB/req** (from 22.3); the 24h/1M gate remains.
 - **v0.65.4 adopted:** compiler **v0.65.4** (windows `49e02478...`) + **stdlib 407c92d**; pins/workflows/`dev-env` moved, fleet green (release dry-run `41221986476`). The compiler chain and the socket ABI are cleared. **macOS arm64 is supported and packaged** (macos-15; CI `41221981745`); **linux-arm64 stays a witness** because linux-arm64 (LLVM 14) still hits an **Int64 extern argument lowered as i32** (`@fseek`; `REL-20261031-1619-pulse`), so its packaging is held. Retention unchanged (**22.3 KB/req**).
 - **v0.65.3 adopted (the arm64 chain clears):** compiler **v0.65.3**
-  (published windows `8383aa5bÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`) + **stdlib-v0.65.3** (`26ede85`), all
+  (published windows `8383aa5bÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦`) + **stdlib-v0.65.3** (`26ede85`), all
   workflows re-pinned with the published hashes. This carries the durable
   fix, the arm64 contract fix and the span parser; with `xiom.http` 0.1.11
   the arm64 build now fails later in stdlib-v0.65.3's socket FFI
