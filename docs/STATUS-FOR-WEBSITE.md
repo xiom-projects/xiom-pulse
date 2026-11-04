@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Last updated:** 2026-11-02 16:00Z (PULSE lane). **Source of truth:** this file for website copy; **forward plan:**
+**Last updated:** 2026-11-04 18:10Z (PULSE lane). **Source of truth:** this file for website copy; **forward plan:**
 docs/ROADMAP-FOR-WEBSITE.md (phases 0-4, production-grade 1.0); `docs/PROGRESS.md` for the full tracker; `SESSION.md` for the
 session handoff. README's status block predates the v0.65.1 adoption -- use
 this file, not README, for the site until README is refreshed.
@@ -23,8 +23,8 @@ by a front proxy; PULSE serves plaintext on loopback.
 ## Current release
 
 - **Product:** PULSE **0.2.2** (tag `pulse-v0.2.2`), ops-accepted.
-- **Toolchain pin:** compiler **v0.65.5** + **stdlib-v0.65.5**
-  (`88f3c12`). v0.64.9 is withdrawn; v0.65.0-0.65.2 are superseded
+- **Toolchain pin:** compiler **v0.65.6** + **stdlib-v0.65.6**
+  (`6fdde4ee`). v0.64.9 is withdrawn; v0.65.0-0.65.2 are superseded
   (v0.65.2 had a durable-lane push regression and is not used).
 - **Release cadence:** 0.3.0 is prepared but **not tagged** -- it waits on
   the owner's SQL-serving decision and on the memory work below.
@@ -72,21 +72,23 @@ all five are packaged in the release dry-run.
 - Crash/durability: **6/6**, twice. Migrations **21/21**. SQL **53/53**.
 - Streams: **83/83** unit, **20/20** live, **11/11** auth.
 - Rate-limiter smoke green; gate-order **11/11**.
-- CI **`41478271328` success** on all five platforms (linux-x64,
-  linux-arm64, windows-x64, macOS x64, macOS arm64); release dry-run
-  **`41478278268` success** (all five packaged; publish skipped).
+- CI **`41885904766` success** on all five platforms (linux-x64,
+  linux-arm64, windows-x64, macOS x64, macOS arm64). Release dry-run
+  **`41885910214`**: 5/6 jobs green; macos-arm64 packaging is
+  capacity-blocked on the hosted runner (the CI macos-15 leg is green).
 
 ## Known limitations (state these honestly)
 
-1. **Sustained-load memory (the main blocker).** On the v0.65.3 pin the
-   server retains roughly **16.5 KB per request** (down from 22.3 on v0.65.4 and 44-50 on
-   v0.65.1; measured with a keep-alive probe). The residual is app-path
-   router/header lookups plus Map/JSON values; the HTTP parser is now
-   ~1.6 KB and the response builder ~1.4 KB per cycle. Short demos and
+1. **Sustained-load memory (the main blocker).** On v0.65.6 the server
+   retains roughly **17.6 KB per request** (down from 22.3 on v0.65.4 and
+   44-50 on v0.65.1; keep-alive probe). The JSON memory class is **fixed**
+   (builder/parse are flat); the residual is app-path router/header
+   lookups and Map values, plus the deferred ~0.9 KB Option[ServerRequest]
+   aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. Short demos and
    bounded runs are fine; **do not describe the current build as suitable
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
-2. **arm64 not shipped** (see the matrix).
+2. **No external security audit or fuzzing yet** (Phase 3).
 3. **TLS is edge-only by design** (Caddy/nginx terminates; PULSE speaks
    plaintext HTTP/1.1 on loopback). Do not claim in-process TLS.
 4. **HTTP/2 is not implemented** -- HTTP/1.1 is deliberate.
@@ -98,9 +100,9 @@ all five are packaged in the release dry-run.
 
 ## What's next (public roadmap wording)
 
-- Memory: the response builder is fixed and the floor is down to
-  16.5 KB/req on v0.65.5; the remaining work is app-path/Map/JSON
-  reclamation and the 24h/1M soak gate.
+- Memory: the JSON class is fixed; the floor is **17.6 KB/req** on
+  v0.65.6. The remaining work is the HTTP/app path plus the deferred
+  Option aggregate, then the 24h/1M soak gate.
 - **0.3.0**: SQL serving decision, version bump, CHANGELOG, tag, fleet
   watch.
 - Realtime: permessage-deflate, subprotocol negotiation.
