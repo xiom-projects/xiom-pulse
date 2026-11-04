@@ -2,6 +2,10 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Positioning: PULSE as a game backend / control plane (2026-10-13)
 
+> **Update 2026-11-04:** WebSocket (text+binary), SSE, stream auth and the
+> /api/game/* control plane are shipped; the agreed backlog is in
+> docs/ROADMAP-TOP-TIER.md section 11. The tick path remains engine-owned.
+
 Owner question: can PULSE support multiplayer networking for XIOM Engine
 games? This note fixes the intended split so both lanes build the right
 half. Short version: **PULSE is the game's HTTP/WS backend and control

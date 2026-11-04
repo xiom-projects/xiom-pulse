@@ -335,7 +335,7 @@ not a rewrite.
 | Work package | Hours | Deliverable and acceptance | Status 2026-11-02 |
 |---|---:|---|---|
 | WP1 -- memory and sustained-load reliability | 220 | Upstream reclamation fixes with repros + app-path allocation cuts; CI retention gate; **24 h at 100 req/s on the bttger mix with RSS <= 256 MB**, published baseline; 72 h confirmation | Partial: floor is **16.5 KB/req** (from 46); response builder flat, per-connection buffer in place; 24 h/1M gate still open |
-| WP2 -- security and release integrity | 160 | Fixed-scope review in month 7 (€3,000), months 8-10 remediation; parser/multipart fuzzing; SBOM (CycloneDX/SPDX); SHA-pinned artifacts + provenance; reproducible-build recipe; disclosure policy + CVE process | Partial: SHA256SUMS + provenance exist; no external audit, fuzzing, SBOM or CVE process yet |
+| WP2 -- security and release integrity | 160 | Fixed-scope review in month 7 (â‚¬3,000), months 8-10 remediation; parser/multipart fuzzing; SBOM (CycloneDX/SPDX); SHA-pinned artifacts + provenance; reproducible-build recipe; disclosure policy + CVE process | Partial: SHA256SUMS + provenance exist; no external audit, fuzzing, SBOM or CVE process yet |
 | WP3 -- external adoption and operational proof | 180 | One external public-interest pilot (bounded, not a migration); operator guide, migration guide, one-command scaffold; benchmark report; 72 h soak; final public report (CC BY 4.0) | Partial: internal dogfooding only (pulse.xiom-lang.org); benchmark report published 2026-11-01; guides partial; no external pilot |
 | WP4 -- scale-out foundation | 160 | Process supervisor + --workers N; SO_REUSEPORT (Linux), N ports (Windows); graceful drain; zero-downtime reload; proxy-trust unit; 1/2-worker scaling curve; rollback procedure | Not started: the single-accept loop is the measured ceiling (10 connections add no throughput) |
 | WP5 -- project management and dissemination | 40 | Monthly public notes; issue triage; release coordination; final report; one remote community presentation | Ongoing: changelog, relay, progress and benchmark reports |
@@ -373,3 +373,47 @@ mode; 4+ workers; richer SQL drivers; OIDC/OAuth; distributed tracing.
 - The parity program (docs/PARITY-VISION.md, docs/PARITY-MATRIX.md) is
   the capability scorecard; the 1.0 scope targets its P0 gaps.
 - Release 0.3.0 is the next product tag; 1.0 follows the four outcomes above.
+## 11. Backlog: game backend profile (agreed 2026-11-04)
+
+The owner's question ("can PULSE host XIOM Engine multiplayer games?") has a
+clear split, recorded in docs/GAME-BACKEND-POSITIONING.md: **PULSE is the
+game backend and dedicated-server control plane; XIOM Engine owns the tick
+path.** This is the same split Nakama/PlayFab/GameLift use. The backlog below
+turns that into a product profile without turning PULSE into a game server.
+
+**Shipped today (do not rebuild):** /api/game/* (server register with
+build/protocol/map/mode/capacity/region, per-server bearer, config revision,
+heartbeat with drain/shutdown commands, config feed by revision/ETag, compat,
+match report, telemetry, ops-gated admin state), sessions/JWT/CSRF/CORS/rate/
+idempotency/event store/audit/metrics/OpenAPI, WebSocket text+binary with
+fragmentation and stream auth, SSE, and the five-platform binary.
+
+**Backlog, in priority order:**
+
+1. **GAME-BACKEND v2 positioning note** -- refresh the 2026-10-13 note with
+   the shipped WS/SSE/control-plane state and this backlog. Documentation
+   only; no code.
+2. **Game backend profile** -- a pulse game scaffold/template set covering
+   lobby metadata, matchmaking queues (metadata), leaderboards, telemetry
+   ingest and receipts, built on PULSE 1.0. Acceptance: one turn-based/lobby
+   pilot, a 24 h soak at its real rate, and an operator guide page.
+3. **Jobs/queues** -- matchmaking pools, retry/backoff for webhook and match
+   report delivery, pruning. Blocked on the jobs layer (designed, not
+   shipped); Phase 3.
+4. **Workers + shared lobby state** -- supervisor/drain (WP4) plus sticky
+   routing or a shared store for lobby affinity. Sessions are in-process
+   today; multi-node needs one of the two.
+5. **Dedicated-server allocator** -- allocate/spawn/drain/capacity and region
+   placement. Register/heartbeat/drain exist; the allocator is a separate
+   post-1.0 service (Agones-like), not a core framework feature.
+6. **Connection hygiene** -- per-IP connection caps and a separate rate
+   policy for telemetry/auth routes (per-route rate already exists).
+7. **Later, engine-side** -- UDP/QUIC/WebTransport transport and an optional
+   relay binary; WebTransport at the edge. Engine lane owns it.
+
+**Non-goals:** tick simulation, prediction/rollback, lag compensation, NAT
+traversal, voice, and a built-in load balancer. The edge (nginx/Caddy) owns
+LB; PULSE adds workers and SO_REUSEPORT, not an L4/L7 balancer. Do not claim
+"first" game backend: Nakama, PlayFab, GameLift, Agones and Steamworks exist;
+the differentiator is a small native backend + control plane for XIOM Engine
+with a verifiable supply chain.
