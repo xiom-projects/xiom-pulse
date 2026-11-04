@@ -488,7 +488,7 @@ pub fn backup(dsn: Str, out_path: Str) -> Str {
     let _ = driver.SqlDriver.close(&drv);
     return "ERR: cannot stat " + path;
   }
-  let out = out_path;
+  var out = out_path;
   if out.len() == 0 { out = path + "." + ctime.timestamp_now().to_str() + ".bak"; }
   let v = exec_ok(&drv, "VACUUM INTO " + quote_sql(out) + ";");
   let _ = driver.SqlDriver.close(&drv);
