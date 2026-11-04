@@ -74,8 +74,7 @@ all five are packaged in the release dry-run.
 - Rate-limiter smoke green; gate-order **11/11**.
 - CI **`41885904766` success** on all five platforms (linux-x64,
   linux-arm64, windows-x64, macOS x64, macOS arm64). Release dry-run
-  **`41885910214`**: 5/6 jobs green; macos-arm64 packaging is
-  capacity-blocked on the hosted runner (the CI macos-15 leg is green).
+  **`41885910214` success** (all five packaged; publish skipped).
 
 ## Known limitations (state these honestly)
 
