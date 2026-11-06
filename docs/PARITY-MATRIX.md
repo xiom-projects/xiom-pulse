@@ -131,7 +131,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | O-10 | Hot reload | P2 | M | M | -- | Phase B blocked |
 | O-11 | Container/systemd guidance | P1 | N/A | A | -- | partial docs |
 | O-12 | Reproducible release + attestations | P0 | N/A | E | -- | SHA pins, dry-run, same-host double-build gate |
-| O-13 | Flat memory under soak | P0 | M | M | WB | 16.1 KB/req (router cache 2026-11-06); no CI retention gate; 24h/1M open |
+| O-13 | Flat memory under soak | P0 | M | M | WB | 15.5 KB/req (router cache + gate cut 2026-11-06); no CI retention gate; 24h/1M open |
 | O-14 | Published c1/c10 benchmark | P1 | N/A | A | WB | bttger c1; c10 ceiling |
 | O-15 | Published 1M soak | P1 | N/A | M | WB | blocked |
 | O-16 | Fuzzing harness | P1 | A | A | -- | fuzz_parsers + fuzz_cookie in CI; OpenAPI/stream/release inputs open |

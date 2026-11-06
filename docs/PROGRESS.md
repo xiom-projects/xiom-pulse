@@ -2,7 +2,9 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-11-06 (WP2 fuzz gate + policy + SBOM/repro/audit scope; dynamic site first slice; v0.65.6 adopted; **1704 JSON memory class closed** -- builder/parse flat at 14-15 B/iter, capped bttger 5k completes at 511.6 MB; HTTP floor ~16.1 KB/req after the router cache (24h gate open); five CI legs green `41885904766`; one `let`->`var` source fix; macos-arm64 packaging retry pending on runner capacity; v0.65.5 full platform matrix; 0.2.2 released; parity program + public roadmap; `PULSE_WS_AUTH`)
+**Last updated:** 2026-11-06 (WP2 fuzz gate + policy + SBOM/repro/audit scope; dynamic site first slice; v0.65.6 adopted; **1704 JSON memory class closed** -- builder/parse flat at 14-15 B/iter, capped bttger 5k completes at 511.6 MB; HTTP floor ~15.5 KB/req after the router cache + gate route-match cut (24h gate open); five CI legs green `41885904766`; one `let`->`var` source fix; macos-arm64 packaging retry pending on runner capacity; v0.65.5 full platform matrix; 0.2.2 released; parity program + public roadmap; `PULSE_WS_AUTH`)
+
+_Delta 2026-11-06 (WP1 gate route-match cut + memory report): added `docs/MEMORY-FLOOR-2026-11-06.md` (parse 1.1, build 1.44, route 1.21, metrics 1.0-1.1, true keep-alive 15.77 KB/req; five cuts). Applied cut #2: `gate_request` skips the per-route `route_match`/`route_defs` and the stream policy lookup when `route_rates` is disabled; `dispatch_one` keeps one match. Two 60 s probes: **15,597.6 / 15,499.6 B/req** (15.2-15.6 KB), down from 16.9-17.4; `test_app` + live `http_smoke` (135) GREEN. Cut #1 (HandlerOut/response assembly) is next; the metrics Map remains compiler-blocked; 24h/1M open.
 
 _Delta 2026-11-06 (parity corrections from FEATURE-TESTS): W-06 Station M->A (Range reaches `static_serve`; `probe_pkg_static` proves 206), O-09 Station M->A (N-port workers + reuseport slice), S-08 ?->M (login is user-only; no password field/hash), O-13 evidence refreshed to 16.1 KB/req with no CI retention gate. Re-run **Beacon 60.3% (assessed 91.1%) / Station 71.7% (100%)**. The audit's top-10 missing tests remain the roadmap.
 

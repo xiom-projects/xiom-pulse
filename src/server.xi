@@ -1025,29 +1025,33 @@ fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, c
   if !ratelimit.limiter_allow(limiter, now_ms) {
     return rate_limited_response(req, reuse, ratelimit.limiter_retry_after_ms(limiter, now_ms));
   }
-  // Per-route policy runs after the global bucket. HEAD dispatches as GET
-  // (Beacon sends headers only), so policy matching uses the GET method;
-  // `/v1` targets resolve to the canonical route template first.
-  var eff_method: Str = req.method;
-  if eff_method == "HEAD" { eff_method = "GET"; }
-  let rm = router.route_match(eff_method, router.v1_path(req.target));
-  if rm.kind == 1 && rm.route_id > 0 {
-    let defs = router.route_defs();
-    if rm.route_id <= defs.len() {
-      let pattern = defs[rm.route_id - 1].1;
-      if !ratelimit.route_rates_allow(route_rates, eff_method, pattern, now_ms) {
-        return rate_limited_response(req, reuse, ratelimit.route_rates_retry_after_ms(route_rates, eff_method, pattern));
+  // Per-route policy runs after the global bucket, and only when a policy is
+  // configured: the default path skips the extra route match (the dispatch
+  // matches once). HEAD dispatches as GET (Beacon sends headers only), so
+  // policy matching uses the GET method; `/v1` targets resolve to the
+  // canonical route template first.
+  if route_rates.enabled {
+    var eff_method: Str = req.method;
+    if eff_method == "HEAD" { eff_method = "GET"; }
+    let rm = router.route_match(eff_method, router.v1_path(req.target));
+    if rm.kind == 1 && rm.route_id > 0 {
+      let defs = router.route_defs();
+      if rm.route_id <= defs.len() {
+        let pattern = defs[rm.route_id - 1].1;
+        if !ratelimit.route_rates_allow(route_rates, eff_method, pattern, now_ms) {
+          return rate_limited_response(req, reuse, ratelimit.route_rates_retry_after_ms(route_rates, eff_method, pattern));
+        }
       }
     }
-  }
-  // Stream routes live in their own registry (not the router), so apply the
-  // same per-route policy to their literal path after the global bucket.
-  let s_target = router.v1_path(req.target);
-  if stream.stream_kind(req.method, s_target) != 0 {
-    let sp = stream.route_path(req.method, s_target);
-    if sp.len() > 0 {
-      if !ratelimit.route_rates_allow(route_rates, req.method, sp, now_ms) {
-        return rate_limited_response(req, reuse, ratelimit.route_rates_retry_after_ms(route_rates, req.method, sp));
+    // Stream routes live in their own registry (not the router), so apply the
+    // same per-route policy to their literal path after the global bucket.
+    let s_target = router.v1_path(req.target);
+    if stream.stream_kind(req.method, s_target) != 0 {
+      let sp = stream.route_path(req.method, s_target);
+      if sp.len() > 0 {
+        if !ratelimit.route_rates_allow(route_rates, req.method, sp, now_ms) {
+          return rate_limited_response(req, reuse, ratelimit.route_rates_retry_after_ms(route_rates, req.method, sp));
+        }
       }
     }
   }
