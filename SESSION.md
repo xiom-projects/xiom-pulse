@@ -46,6 +46,11 @@ STATE AT 2026-11-06:
 - Backlog: game backend profile in ROADMAP section 11; multi-page site
   server in section 12. Public phase roadmap in
   `docs/ROADMAP-FOR-WEBSITE.md`; status brief in `STATUS-FOR-WEBSITE.md`.
+- **Dynamic site first slice** (session 29): `xiom.pulse.urlenc` +
+  `xiom.pulse.html` + `examples/site/` + `scripts/site_smoke.*`;
+  `xiom.template` 0.2.0 is a declared dependency. Static site mode is
+  unchanged; compression/caching/i18n remain. Parity: Beacon 58.9% /
+  Station 69.9%.
 - Environment: lane-local package home `%LOCALAPPDATA%\xiom-pulse-home`;
   `dev-env` prefers v0.65.6 + `stdlib-tag-v0.65.6` (v0.65.2 skipped).
   The shared `%LOCALAPPDATA%\xiom\packages` is clobbered by fleet repins;
@@ -64,10 +69,11 @@ NEXT (dependency order):
    reproducible-build recipe, disclosure/CVE policy.
 4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
    drain/zero-downtime reload, 1/2-worker curve.
-5. **Multi-page site server** (ROADMAP section 12): static site mode is
-   already shipped; dynamic pages need a templating/SSR surface + urlencoded
-   form parsing + HTML escaping, then compression/caching; add a site profile
-   doc/template.
+5. **Multi-page site server** (ROADMAP section 12): the dynamic first slice
+   is shipped (`examples/site`, `xiom.pulse.urlenc`, `xiom.pulse.html`,
+   `xiom.template` 0.2.0, `docs/SITE-SERVER.md`, site smoke on CI). Next:
+   cache templates at startup, add dynamic cached pages (TTL/ETag), then
+   compression; keep the 24 h site soak with the WP1 memory gate.
 6. **Game backend profile** (ROADMAP section 11): only after the 1.0 memory/
    scale work; PULSE is the backend/control plane, the engine owns the tick
    path. No built-in LB.
@@ -77,6 +83,38 @@ DISCIPLINE: signed conventional commits; commit/push per unit; update
 SESSION + docs/PROGRESS at every wrap; report blockers on the relay first;
 verify on published archives, not release notes; do not claim production
 grade for sustained load until the memory gate is met.
+
+## WRAP 2026-11-06 (session 29) -- dynamic site first slice
+
+**Landed on main** (see the commit that follows this wrap):
+- `src/urlenc.xi` (`xiom.pulse.urlenc`): `url_decode`, `parse_pairs`,
+  `parse_form`, `form_is_urlencoded`, `form_value`; `xiom.pulse.station.router`
+  now delegates `url_decode`/`parse_query` to it (one decoder for query +
+  form).
+- `src/html.xi` (`xiom.pulse.html`): `html_escape` (`& < > " '`).
+- `examples/site/`: a runnable 6-page Beacon site with a shared layout,
+  nav/footer partials (fragment composition), loops/inverted sections,
+  a urlencoded contact form with validation, an `xiom.static` asset fallback
+  and a custom 404.
+- `scripts/site_smoke.ps1` / `.sh`: end-to-end pages, form success/failure,
+  wrong content type, asset MIME, 404 and traversal.
+- `xiom.template` **0.2.0** (signed; sha256 `bedd03a9...c80580`) declared in
+  `xiom.toml`/`package.xi` and installed by `.github/actions/setup-xiom`;
+  the site smoke runs on every CI leg. `docs/SITE-SERVER.md` is the operator
+  and developer reference; ROADMAP section 12 and the parity matrix are
+  updated.
+
+**Evidence:** `tests/test_app.xi` +15 checks GREEN (`pulse-app: GREEN`);
+`site_smoke` GREEN (13 checks); `examples/site` builds on v0.65.6. Parity
+re-run: **Beacon 58.9%**, **Station 69.9%** (was 58.4/69.1).
+
+**Relay:** `REL-20261104-1441-compiler-4`, `REL-20261103-1807-stdlib` and
+`REL-20261031-1911-compiler-3` moved to fixed with evidence; relay commit
+`c660d70`.
+
+**Next site unit:** cache template strings at startup, add dynamic cached
+pages (TTL/ETag), then compression; the 24 h site-workload soak belongs with
+the WP1 memory gate, not before it.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

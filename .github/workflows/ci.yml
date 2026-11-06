@@ -117,6 +117,11 @@ jobs:
           bash scripts/http_smoke.sh --port 18090
           bash scripts/stream_smoke.sh --port 18097 --server-exe ./out/pulse_app
 
+      - name: Dynamic site smoke (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash scripts/site_smoke.sh --port 18095
+
       - name: Suites x2 + smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -137,3 +142,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "stream smoke failed with exit $LASTEXITCODE" }
           & scripts\ws_auth_smoke.ps1 -Port 18098
           if ($LASTEXITCODE -ne 0) { throw "ws auth smoke failed with exit $LASTEXITCODE" }
+          & scripts\site_smoke.ps1 -Port 18095
+          if ($LASTEXITCODE -ne 0) { throw "site smoke failed with exit $LASTEXITCODE" }

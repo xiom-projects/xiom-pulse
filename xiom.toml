@@ -28,6 +28,7 @@ root = "src"
 "xiom.http.middleware" = "0.1.0"
 "xiom.session" = "0.1.0"
 "xiom.static" = "0.1.0"
+"xiom.template" = "0.2.0"
 "xiom.kv" = "0.1.0"
 "xiom.sqlite" = "0.4.1"
 

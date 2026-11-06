@@ -1,0 +1,4 @@
+<h1>About this site</h1>
+<p>{{site_name}} is a scaffold for a dynamic multi-page site on the PULSE Beacon core. It uses <code>xiom.template</code> 0.2.0 for layouts, loops, conditionals and auto-escaping, and PULSE's urlencoded parser for HTML forms.</p>
+<p>The static tree under <code>public/</code> is served through the Beacon fallback hook with the same traversal guard and validators as the Station site mode. Registered routes always take precedence over the fallback.</p>
+<p>This is an example, not the product server. A production site should cache the template strings at startup and put a TLS-terminating proxy in front of PULSE.</p>

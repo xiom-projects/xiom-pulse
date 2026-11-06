@@ -27,6 +27,8 @@ use xiom.pulse.reqctx;
 use xiom.pulse.outbound;
 use xiom.pulse.openapi;
 use xiom.pulse.station.core;
+use xiom.pulse.html;
+use xiom.pulse.urlenc;
 
 fn check(name: Str, ok: Bool) -> Int {
   if ok {
@@ -742,6 +744,23 @@ pub fn main() -> Int {
   let _rgg = io.remove_file("pulse-game-test.jsonl");
   env.remove_var("PULSE_GAME_PATH");
   env.remove_var("PULSE_GAME_CONFIG_PATH");
+
+  // --- site primitives: HTML escaping + urlencoded forms (0.3 site) --------
+  f = f + check("html escape amp", html.html_escape("a & b") == "a &amp; b");
+  f = f + check("html escape tags", html.html_escape("<b>x</b>") == "&lt;b&gt;x&lt;/b&gt;");
+  f = f + check("html escape quotes", html.html_escape("\"q\" 'x'") == "&quot;q&quot; &#39;x&#39;");
+  f = f + check("html escape plain utf8", html.html_escape("café 123") == "café 123");
+  f = f + check("form ct exact", urlenc.form_is_urlencoded("application/x-www-form-urlencoded"));
+  f = f + check("form ct params", urlenc.form_is_urlencoded("Application/X-WWW-Form-Urlencoded; charset=UTF-8"));
+  f = f + check("form ct json false", !urlenc.form_is_urlencoded("application/json"));
+  f = f + check("form ct empty false", !urlenc.form_is_urlencoded(""));
+  let fm = urlenc.parse_form("name=Ada+Lovelace&city=Athens&x=%3Cscript%3E&name=second");
+  f = f + check("form name decoded plus", fm.0.len() == 4 && fm.0[0] == "name" && fm.1[0] == "Ada Lovelace");
+  f = f + check("form percent decoded", fm.1[2] == "<script>");
+  f = f + check("form repeated preserved", fm.1[3] == "second");
+  f = f + check("form empty body", urlenc.parse_form("").0.len() == 0);
+  f = f + check("form first value", urlenc.form_value(&fm.0, &fm.1, "name") == "Ada Lovelace");
+  f = f + check("form missing value", urlenc.form_value(&fm.0, &fm.1, "nope") == "");
 
   if f == 0 {
     io.println("pulse-app: GREEN");

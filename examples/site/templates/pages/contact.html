@@ -1,0 +1,11 @@
+<h1>Contact</h1>
+<p>Send a message. The server validates it and escapes every value it reflects.</p>
+{{#error}}<p class="error" role="alert">{{error}}</p>{{/error}}
+<form method="post" action="/contact">
+  <label for="name">Name</label>
+  <input id="name" name="name" value="{{name}}" maxlength="64" autocomplete="name" required>
+  <label for="message">Message</label>
+  <textarea id="message" name="message" rows="5" maxlength="2000" required>{{message}}</textarea>
+  <button type="submit">Send message</button>
+  <p class="hint">Both fields are required. Sent as <code>application/x-www-form-urlencoded</code>.</p>
+</form>

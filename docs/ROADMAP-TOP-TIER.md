@@ -421,39 +421,54 @@ with a verifiable supply chain.
 
 **What is already shipped (static multi-page):** PULSE_SITE_DIR site mode
 serves a directory tree with / -> index.html, clean URLs
-(/about -> bout.html), directory index (/sub/ -> sub/index.html),
+(/about -> about.html), directory index (/sub/ -> sub/index.html),
 a 301 from /sub to /sub/ (query preserved), a custom 404.html, asset
 MIME types (JS/WASM), ETag/304, Cache-Control, a traversal guard and a single
-Content-Length. A static multi-page site works today; 	ests/test_app.xi
+Content-Length. A static multi-page site works today; 	tests/test_app.xi
 covers it.
 
-**What is missing for a dynamic multi-page site server:**
+**Dynamic site status (2026-11-06):**
 
 1. **Templating / SSR** (P1, parity row W-13): layouts, partials, loops,
-   conditionals, auto-escaping. No in-process engine today; handlers emit
-   HTML strings manually. The templates package is a wishlist.
-2. **pplication/x-www-form-urlencoded parsing** (P1, R-09): HTML forms.
-   JSON and multipart exist; verify/extend the urlencoded path.
-3. **HTML escaping helpers** (P0 for safety): one shared escape function for
-   templates and handlers.
+   conditionals, auto-escaping. `xiom.template` 0.2.0 (signed registry
+   package) is delivered and consumer-verified; it has sections, loops,
+   inverted sections, dotted paths and auto-escaping, but no partials.
+   `examples/site/` composes a shared layout and partials by fragment
+   injection. **First slice shipped**; see `docs/SITE-SERVER.md`.
+2. **`application/x-www-form-urlencoded` parsing** (P1, R-09): HTML forms.
+   `xiom.pulse.urlenc` is the shared decoder (query + form) with
+   `form_is_urlencoded`, `parse_form`, `parse_pairs` and `form_value`;
+   covered by `tests/test_app.xi` and the site smoke. **Shipped.**
+3. **HTML escaping helpers** (P0 for safety): `xiom.pulse.html.html_escape`
+   (`& < > " '`) for handlers; templates auto-escape the same set. **Shipped.**
 4. **Compression** (P1, P-15): gzip/brotli for HTML/CSS/JS; large pages and
-   assets benefit most.
+   assets benefit most. **Not implemented in-process** (the edge `encode`
+   covers deployments today).
 5. **Dynamic caching/revalidation** (P1, D-10): cache keys, TTL, ETag for
-   rendered pages.
+   rendered pages. **Not implemented.**
 6. **Site ergonomics** (P2): redirects, canonical URLs, robots/sitemap, i18n,
-   a dev reload loop (O-10).
-7. **Edge story**: TLS and HTTP/2 stay at nginx/Caddy; document the template.
+   a dev reload loop (O-10). **Not implemented.**
+7. **Edge story**: TLS and HTTP/2 stay at nginx/Caddy; the template is in
+   `docs/DEPLOYMENT.md`, and `docs/SITE-SERVER.md` adds the site shape.
+   **Documented.**
 
-**Phased path:**
+**Phased path and status:**
 
-- **A. Static site profile (today):** document site mode and ship a
-  pulse site scaffold with a 5-10 page example (shared head, assets, 404).
-  No core code; acceptance is the scaffold + docs + a deploy template.
-- **B. Dynamic site (next):** templating surface + urlencoded forms + escaping.
-  Acceptance: a 5-10 page site with a shared layout, one POST form, a 404
-  page and static assets, covered by a suite and a smoke; docs.
-- **C. Production site:** compression, dynamic caching, i18n/redirects; then
-  the 24 h memory/soak gate on the site workload. HTTP/2/3 at the edge.
+- **A. Static site profile (done):** site mode is documented (README,
+  `docs/DEPLOYMENT.md`, `docs/SITE-SERVER.md`) and `examples/site/` is the
+  runnable scaffold with a shared layout, assets and a custom 404. The
+  static half is covered by `tests/test_app.xi`.
+- **B. Dynamic site (first slice shipped):** `xiom.template` for
+  layouts/loops/conditionals/auto-escaping, `xiom.pulse.urlenc` for forms,
+  `xiom.pulse.html` for handler escaping, and a 6-page Beacon scaffold
+  (`examples/site/`) with one POST form, a 404, assets and a smoke
+  (`scripts/site_smoke.ps1`/`.sh`). The unit tests are in
+  `tests/test_app.xi`. Remaining polish: template caching at startup,
+  richer form helpers, and a Station-native template route if the product
+  needs one.
+- **C. Production site (next):** compression, dynamic caching,
+  i18n/redirects; then the 24 h memory/soak gate on the site workload.
+  HTTP/2/3 at the edge.
 
 **Non-goals:** a full CMS, admin panel, WYSIWYG editor, e-commerce. Those are
 ecosystem packages on top of the site profile, not framework core.

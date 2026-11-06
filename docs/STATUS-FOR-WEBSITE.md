@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-**Last updated:** 2026-11-04 18:10Z (PULSE lane). **Source of truth:** this file for website copy; **forward plan:**
+**Last updated:** 2026-11-06 (PULSE lane). **Source of truth:** this file for website copy; **forward plan:**
 docs/ROADMAP-FOR-WEBSITE.md (phases 0-4, production-grade 1.0); `docs/PROGRESS.md` for the full tracker; `SESSION.md` for the
 session handoff. README's status block predates the v0.65.1 adoption -- use
 this file, not README, for the site until README is refreshed.
@@ -105,6 +105,11 @@ all five are packaged in the release dry-run.
 - **0.3.0**: SQL serving decision, version bump, CHANGELOG, tag, fleet
   watch.
 - Realtime: permessage-deflate, subprotocol negotiation.
+- **Dynamic site profile (in-tree, not in the 0.2.2 tag):** static site mode
+  ships; `examples/site/` is a Beacon-based server-rendered scaffold with a
+  shared layout, partials, a urlencoded form, shared HTML escaping and a
+  custom 404, covered by a smoke. Compression, dynamic page caching and i18n
+  are next; see `docs/SITE-SERVER.md`.
 
 ## Suggested site treatment
 

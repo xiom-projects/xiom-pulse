@@ -45,7 +45,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | R-06 | Path normalisation / redirects | P2 | ? | A | G,FF | slash handling |
 | R-07 | 404/405 + Allow | P0 | P | P | G | smoke |
 | R-08 | Query parsing (multi-value) | P0 | P | P | F,G | tests |
-| R-09 | `application/x-www-form-urlencoded` | P1 | ? | A | G,FF | verify |
+| R-09 | `application/x-www-form-urlencoded` | P1 | A | P | G,FF | urlenc decoder + tests/test_app.xi; examples/site form |
 | R-10 | JSON body parsing + caps | P0 | P | P | G,FF | smoke |
 | R-11 | Multipart uploads | P0 | ? | P | G,FF | smoke 415/caps |
 | R-12 | Cookie parse/set | P0 | P | P | G,FF | tests |
@@ -70,7 +70,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-10 | WS permessage-deflate | P1 | M | M | FF | not implemented |
 | W-11 | WS subprotocol negotiation | P2 | M | M | FF | not implemented |
 | W-12 | SSE event IDs + reconnect semantics | P1 | A | A | FF | verify |
-| W-13 | Templating / server-side rendering | P1 | N/A | M | G,FA | not implemented |
+| W-13 | Templating / server-side rendering | P1 | N/A | A | G,FA | `xiom.template` 0.2.0 + `examples/site`; docs/SITE-SERVER.md |
 | W-14 | OpenAPI generation | P1 | M | A | FA,FF | document only, not schema-driven |
 | W-15 | CORS responses + preflight | P0 | ? | P | G,FF | smoke preflight |
 
