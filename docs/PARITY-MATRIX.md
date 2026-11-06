@@ -143,7 +143,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | E-01 | Concept/reference/deployment docs | P0 | A | P | all | ~6k docs lines |
 | E-02 | Tutorials and examples | P1 | A | A | G,FF,FA | partial |
 | E-03 | Third-party middleware/plugins | P2 | M | M | FF,FA | none |
-| E-04 | Package registry + supply-chain verification | P0 | N/A | E | -- | signed, pinned, attested, SBOM hashes |
+| E-04 | Package registry + supply-chain verification | P0 | N/A | E | -- | signed, pinned, attested, SBOM hashes+graph |
 | E-05 | Test harness + multi-OS CI | P0 | E | E | -- | suites/smokes/CI fleet |
 | E-06 | Versioning, release cadence, LTS | P1 | A | A | all | 0.2.2, no LTS |
 | E-07 | Admin panel | P2 | N/A | M | -- | not implemented |

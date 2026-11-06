@@ -58,8 +58,9 @@ STATE AT 2026-11-06:
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
 - **WP2 release integrity** (session 31): `scripts/sbom.py` (CycloneDX 1.5,
   19 components on 0.2.2, `--fetch-hashes` adds registry SHA-256/signature/
-  public-key metadata) + `toolchain-pins.json` drift check + CI/release
-  wiring (linux-x64 build generates, publish attaches); `docs/SBOM.md`,
+  public-key metadata and the resolved dependency graph) +
+  `toolchain-pins.json` drift check + CI/release wiring (linux-x64 build
+  generates, publish attaches); `docs/SBOM.md`,
   `docs/REPRODUCIBLE-BUILD.md`, `docs/SECURITY-AUDIT-SCOPE.md`. The fuzz gate
   also covers static path traversal and HS256 JWT (~70k iterations), and the
   same-host double-build payload gate runs on Linux x64 + Windows.
@@ -81,9 +82,9 @@ NEXT (dependency order):
    SBOM generator + release attach, reproducible recipe and audit scope are
    shipped; a NUL-in-head parser differential is open upstream
    (`REL-20261106-1716-pulse`, Station has an empty-shape guard). Remaining:
-   the external review (owner engagement/spend), the resolved SBOM transitive
-   closure (lockfile), cross-host/zip reproducible builds, fuzzing
-   session/cookie parsing and release inputs, CVE history.
+   the external review (owner engagement/spend), a general lockfile/resolver
+   for future non-stdlib transitive deps, cross-host/zip reproducible builds,
+   fuzzing session/cookie parsing and release inputs, CVE history.
 4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
    drain/zero-downtime reload, 1/2-worker curve.
 5. **Multi-page site server** (ROADMAP section 12): the dynamic first slice
@@ -175,10 +176,11 @@ recipe, broader fuzzing (auth/session/static/release inputs), CVE history.
   SHA-256 compare, in CI on Linux x64 + Windows. Windows v0.65.6 is
   identical (`6a896cef...204184`, 5,195,776 bytes); cross-host/zip
   bit-identity remains open.
-- SBOM now carries exact registry package hashes/signatures/public keys
-  (`--fetch-hashes`, 13 packages, ~16 s); the linux-x64 release build
-  generates it and the publish job attaches it. Offline generation remains
-  the default; the resolved transitive closure needs a lockfile.
+- SBOM now carries exact registry package hashes/signatures/public keys and
+  the resolved dependency graph (`--fetch-hashes`, 13 packages, ~16 s); all
+  13 declare only `xiom.std`, so the closure is complete for this manifest
+  (15 graph entries). The linux-x64 release build generates it and the
+  publish job attaches it; offline generation remains the default.
 
 **Next WP2:** the external review itself (owner engagement/spend), SBOM
 registry hashes + transitive closure, a double-build gate, broader fuzzing

@@ -188,6 +188,8 @@ def build_bom(version, commit, deps, pin_data, stamp, fetch_hashes, compiler):
     compiler_version = pin_data["compiler"].lstrip("v")
     short_stdlib = read_text(STDLIB_PATH).strip()[:8] if STDLIB_PATH.exists() else "unknown"
     components = []
+    dep_purls = {}
+    declared_deps = {}
 
     for name in sorted(deps):
         component = {
@@ -216,6 +218,8 @@ def build_bom(version, commit, deps, pin_data, stamp, fetch_hashes, compiler):
                 )
             if props:
                 component["properties"] = props
+            declared_deps[name] = info.get("dependencies", {})
+        dep_purls[name] = component["purl"]
         components.append(component)
 
     for platform in sorted(pin_data["platforms"]):
@@ -242,8 +246,33 @@ def build_bom(version, commit, deps, pin_data, stamp, fetch_hashes, compiler):
         }
     )
 
+    graph = []
+    if fetch_hashes:
+        stdlib_purl = purl("xiom-stdlib", short_stdlib)
+        product_purl = purl("xiom-pulse", version)
+        graph.append(
+            {
+                "ref": product_purl,
+                "dependsOn": sorted(list(dep_purls.values()) + [stdlib_purl]),
+            }
+        )
+        for name in sorted(dep_purls):
+            targets = []
+            for dep_name in sorted(declared_deps.get(name, {})):
+                if dep_name == "xiom.std":
+                    targets.append(stdlib_purl)
+                elif dep_name in dep_purls:
+                    targets.append(dep_purls[dep_name])
+                else:
+                    die(
+                        "unresolved transitive dependency {} (from {}); add it to "
+                        "xiom.toml or teach the SBOM resolver".format(dep_name, name)
+                    )
+            graph.append({"ref": dep_purls[name], "dependsOn": sorted(targets)})
+        graph.append({"ref": stdlib_purl, "dependsOn": []})
+
     serial = uuid.uuid5(uuid.NAMESPACE_URL, "xiom-pulse:{}:{}".format(version, commit))
-    return {
+    bom = {
         "bomFormat": "CycloneDX",
         "specVersion": "1.5",
         "serialNumber": "urn:uuid:{}".format(serial),
@@ -271,6 +300,9 @@ def build_bom(version, commit, deps, pin_data, stamp, fetch_hashes, compiler):
         },
         "components": components,
     }
+    if graph:
+        bom["dependencies"] = graph
+    return bom
 
 
 def main():

@@ -38,6 +38,7 @@ JSON with:
 | Product | `xiom-pulse` version from `src/version.xi`, commit, toolchain/stdlib properties, hashes mode |
 | Dependencies | every `[dependencies]` row in `xiom.toml` (13 at 0.2.2), as `library` components with `pkg:generic` purls |
 | Package metadata | with `--fetch-hashes`: exact registry `SHA-256`, `xiom:pkg:signature`, `xiom:pkg:public-key`, and `xiom:dep:<name>` version ranges |
+| Dependency graph | with `--fetch-hashes`: CycloneDX `dependencies` (product -> 13 packages + stdlib; each package -> stdlib) |
 | Toolchain | `xiom-compiler` per platform (linux-x64, linux-arm64, windows-x64, macos-x64, macos-arm64) with its SHA-256 pin |
 | Stdlib | `xiom-stdlib` git ref from `STDLIB_VERSION` |
 
@@ -98,14 +99,19 @@ generator's required fields and the CI assertions are the current gate.
   direct dependency.
 - Offline and registry modes were both generated locally; the pin drift
   check was verified (`v0.65.7` -> exit 2, `v0.65.6` -> exit 0).
+- The dependency graph has 15 entries: product -> 14 targets (13 packages +
+  stdlib), each package -> `xiom-stdlib@6fdde4ee`, stdlib -> none. Every
+  direct package declares only `xiom.std` (verified 2026-11-06), so the
+  closure is complete for the current manifest.
 
 ## Limitations (be honest)
 
-- **No resolved transitive closure.** The SBOM lists the direct manifest
-  components and records each package's declared `xiom:dep:<name>` ranges.
-  It does not resolve ranges into exact transitive components; that needs a
-  committed lockfile or a registry resolver. The common `xiom.std` range is
-  represented by the stdlib git-ref component, not a second resolved package.
+- **The closure is resolved for the current manifest, not in general.** All
+  13 direct packages declare only `xiom.std`, which is the pinned stdlib
+  component, so the emitted graph is complete. `--fetch-hashes` fails if a
+  package ever declares a non-stdlib dependency that is not in the manifest;
+  a general lockfile/resolver is still the long-term solution for a larger
+  graph.
 - **Stdlib is a git ref, not a tarball hash.** The full commit is carried in
   `xiom:stdlib:commit`; the archive is SHA-256 pinned by the toolchain
   release itself.
@@ -119,8 +125,8 @@ generator's required fields and the CI assertions are the current gate.
 
 ## Follow-ups
 
-1. Add a committed `xiom.lock` (or a resolver) and emit the exact transitive
-   closure with hashes.
+1. Add a general lockfile/resolver for future non-stdlib transitive
+   dependencies (the current manifest is fully resolved).
 2. Attach the SBOM to the build provenance attestation if the action supports
    extra subjects.
 3. Add a CI diff gate when a dependency version changes without an SBOM
