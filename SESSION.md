@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 34 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 35 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -57,6 +57,11 @@ STATE AT 2026-11-06:
   `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
+- **WP3 scaffold shipped** (2026-11-06): `scaffolds/api` +
+  `scripts/new_app.py` + `scripts/scaffold_smoke.py` + `docs/SCAFFOLD.md`;
+  smoke GREEN. README status/toolchain corrected to v0.65.6 / 6fdde4ee /
+  packages 0.3.2 / 0.1.11 / all five platforms. External pilot and full
+  operator/migration guides remain.
 - **WP4 design ready** (2026-11-06): `docs/DESIGN-WORKERS.md` +
   `docs/checklists/workers.md`; phase 1 N ports + edge + control-port drain,
   Linux reuseport optional, supervisor via `posix_spawn`; stateless-first,
@@ -240,6 +245,16 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   phase-2 shared state after the SQL/KV decision. 2-worker target >= 1.6x.
 - No code changes; release remains on hold; implementation waits for the
   next compiler/stdlib + memory gate.
+
+## WRAP 2026-11-06 (session 35) -- WP3 scaffold + README refresh
+
+- `scaffolds/api` + `scripts/new_app.py` + `scripts/scaffold_smoke.py` +
+  `docs/SCAFFOLD.md`; scaffold smoke GREEN (health/hello/root/echo/404).
+- README status/toolchain corrected to v0.65.6 + stdlib 6fdde4ee, packages
+  0.3.2/0.1.11, all five platforms; WP4 design linked.
+- Four scoped agents are running in parallel: WP4 reuseport slice, cookie/
+  session fuzz, feature-test matrix, memory-floor report. Integrate their
+  results next; no commits from them.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

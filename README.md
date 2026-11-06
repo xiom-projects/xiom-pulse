@@ -10,17 +10,15 @@ The embeddable core is packaged separately as **PULSE Beacon** (registry id
 `xiom.pulse`), and Station consumes that same package -- **one core, never a
 fork**. Tier map below.
 
-> **Status:** 0.2.2 released (linux-x64 + windows-x64, tag `pulse-v0.2.2`);
-> **stdlib-v0.64.9 is adopted; the v0.64.9 compiler is WITHDRAWN**
-> (release-mode nested-pattern/1451/1550 defects,
-> `REL-20261022-1826-compiler`); production stays on v0.64.8 and
-> v0.65.0 is the next production gate. User stream handlers stay held
-> until that pin. The
-> **linux-arm64** CI leg is gating (24.04); the **macOS witness** x64 is
-> gating and green, arm64 is non-gating pending the opaque-pointer thunk
-> fix (`REL-20261022-1529-pulse`). A live demo
-> runs at pulse.xiom-lang.org. Not top-tier complete yet -- weighted
-> tracker in `docs/PROGRESS.md`.
+> **Status:** 0.2.2 is the current product tag; `main` is 0.3.0-prep.
+> Production toolchain: **v0.65.6** + stdlib **6fdde4ee**; all five legs
+> (linux-x64, linux-arm64, windows-x64, macOS x64, macOS arm64) build, test
+> and package, and the last release dry-run (v0.65.6) was green on all five.
+> The next tag
+> waits on the owner's SQL-serving decision and the WP1 memory gate;
+> **do not claim sustained-load production** until the 24 h/1M gate passes.
+> A live demo runs at pulse.xiom-lang.org. Not top-tier complete yet --
+> weighted tracker in `docs/PROGRESS.md`.
 > **Consumer lane:** this repo never edits `E:\xiom-lang\stdlib`,
 > `E:\xiom-lang\xiom`, or `E:\xiom-packages\packages`; upstream defects are
 > reported through minimal repro bundles + findings rows in `SESSION.md`.
@@ -47,12 +45,10 @@ tiers (full plan: `docs/ROADMAP-TOP-TIER.md` section 9).
 Station consumes the same `xiom.pulse` package Beacon publishes, so
 protocol fixes land once and reach every user.
 
-**Status:** the core's connection semantics are frozen at the keep-alive
-A+B pair (`56eb9f8`; smoke 134/134 x2 both platforms); the `xiom.pulse`
-extraction (Beacon, v0.1.0) is **in flight** in the packages lane (porter
-carving the frozen pair into `packages/xiom-pulse`; bus
-`REL-20261016-1429-packages`). Until it publishes, Station carries the core
-in-tree.
+**Status:** the core is published as **`xiom.pulse` 0.3.2** (Beacon);
+Station consumes that package. The connection semantics are frozen at the
+keep-alive A+B pair (`56eb9f8`; smoke 134/134 x2 both platforms), so
+protocol fixes land once and reach every user.
 
 ## Toolchain (latest-tracking, owner decision 2026-10-05)
 
@@ -62,10 +58,10 @@ lane hashes are recorded in `SESSION.md` at every wrap.
 
 | Component | Current |
 |---|---|
-| Compiler | **v0.64.8** production (v0.64.9 **WITHDRAWN** per `REL-20261022-1826-compiler`; v0.65.0 gate open) |
-| Stdlib | pin **`aa8b656`** (tag `stdlib-v0.64.9`; extracted release tag) |
-| Packages | registry (`%LOCALAPPDATA%\xiom\packages`): the 13 deps -- xiom.pulse 0.3.1, xiom.http 0.1.8, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.kv 0.1.0, xiom.sqlite 0.4.1 (+ the SQL store layer's `xiom.sqlite` optional build) |
-| Platforms | linux-x64, **linux-arm64** (gating on ubuntu-24.04; 22.04 floor waits on `REL-20261022-1529-pulse`), windows-x64, **macOS x64 gating** (`macos-15-intel`), **macOS arm64 non-gating** (same 1529 opaque-pointer finding). The next tag ships linux-x64, linux-arm64 and windows-x64; macOS release assets remain gated |
+| Compiler | **v0.65.6** production (v0.65.2 remains WITHDRAWN; never select it) |
+| Stdlib | pin **`6fdde4ee`** (tag `stdlib-tag-v0.65.6`) |
+| Packages | registry (lane home `%LOCALAPPDATA%\xiom-pulse-home`): the 13 deps -- xiom.pulse 0.3.2, xiom.http 0.1.11, xiom.cookie 0.1.2, xiom.jwt 0.2.1, xiom.router 0.1.0, xiom.rate 0.2.0, xiom.metrics 0.2.0, xiom.http.middleware 0.1.0, xiom.session 0.1.0, xiom.static 0.1.0, xiom.template 0.2.0, xiom.kv 0.1.0, xiom.sqlite 0.4.1 |
+| Platforms | linux-x64, linux-arm64, windows-x64, macOS x64, macOS arm64 -- all five build, test and package; five-leg CI and the release dry-run are green. Do not select the shared `%LOCALAPPDATA%\xiom\packages` (fleet repins clobber it) |
 
 `XIOM_RUNTIME_DIR` is **retired** on v0.64.0 (release R65 links the
 installed `lib\runtime` + `lib\xiom`): PULSE verified env-free with both
@@ -88,8 +84,12 @@ adopt it the moment the toolchain grows support.
 .\scripts\run.ps1 tests\test_smoke.xi
 ```
 
+Start a new app: `python scripts/new_app.py my-app` (see `docs/SCAFFOLD.md`).
+
 - `SESSION.md` -- live state, pin, open blockers, findings rows (upstream relay).
 - `docs/PROGRESS.md` -- **weighted production-grade tracker** (what works, what is pending, % done).
+- `docs/SCAFFOLD.md` -- one-command Beacon app scaffold (`python scripts/new_app.py my-app`).
+- `docs/DESIGN-WORKERS.md` -- WP4 supervisor/workers/drain design (not implemented yet).
 - `docs/ROADMAP-TOP-TIER.md` -- the top-tier goal map: acceptance criteria T1-T9, the two editions (Beacon/Station), workstreams.
 - `docs/DEPLOYMENT.md` -- proxy-first TLS deployment (Caddy/nginx, env, supervision).
 - `SECURITY.md` -- reporting, scope, disclosure/CVE and the honest assurance status.
@@ -101,8 +101,9 @@ adopt it the moment the toolchain grows support.
 ## Design constraints (from the pinned toolchain)
 
 - No real OS threads (`xiom.thread.spawn` is an inline simulation); the
-  service accepts connections sequentially until the runtime grows real
-  threads (worker supervisor is roadmap W1).
+  service accepts connections sequentially. Multi-worker scale-out is WP4
+  (design ready: `docs/DESIGN-WORKERS.md`), implemented with separate
+  processes, not threads.
 - Connection deadlines + keep-alive landed (2026-10-16): per-request read
   deadlines (`408` from idle), non-blocking poll-gated sends (stalled
   readers dropped), HTTP/1.1 reuse with in-order pipelining, silent idle

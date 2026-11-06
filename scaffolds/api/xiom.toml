@@ -1,0 +1,8 @@
+[project]
+name = "__APP_NAME__"
+version = "0.1.0"
+root = "src"
+
+[dependencies]
+"xiom.pulse" = "0.3.2"
+"xiom.http" = "0.1.11"
