@@ -90,7 +90,7 @@ expect "custom 404 status" [ "$s" = "404" ]
 expect "custom 404 copy" grep -q "Page not found" "$tmp"
 expect "custom 404 path" grep -q "/nope" "$tmp"
 
-out=$(status_ctype "http://127.0.0.1:$PORT/assets/../main.xi")
+out=$(curl --path-as-is -s -o /dev/null -w '%{http_code} %{content_type}' "http://127.0.0.1:$PORT/assets/../main.xi")
 case "$out" in
   200*) echo "[FAIL] asset traversal blocked"; fail=$((fail + 1)) ;;
   *) echo "[PASS] asset traversal blocked" ;;

@@ -46,6 +46,13 @@ function Web-Head([string]$Path) {
     return $raw
 }
 
+function Web-HeadRaw([string]$Path) {
+    # --path-as-is keeps a literal ../ in the request target so the static
+    # engine's traversal guard is exercised (curl normalises it otherwise).
+    $raw = & curl.exe --path-as-is -s -o NUL -w "%{http_code} %{content_type}" "http://127.0.0.1:$Port$Path"
+    return $raw
+}
+
 & (Join-Path $PSScriptRoot "build.ps1") "examples/site/main.xi" -Name site_example -TimeoutSec 300 | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "site example build failed" }
 
@@ -96,7 +103,7 @@ try {
     $missing = Web-Get "/nope"
     Expect "custom 404" ($missing.status -eq 404 -and $missing.body.Contains("Page not found") -and $missing.body.Contains("/nope"))
 
-    $trav = Web-Head "/assets/../main.xi"
+    $trav = Web-HeadRaw "/assets/../main.xi"
     Expect "asset traversal blocked" (-not $trav.StartsWith("200"))
 
     if ($fail -eq 0) {
