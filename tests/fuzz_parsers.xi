@@ -8,7 +8,9 @@
 //     caps, smuggling shapes),
 //   * xiom.pulse.multipart.parse_multipart (boundary/parts/caps),
 //   * xiom.pulse.urlenc.parse_form (percent/plus/duplicates),
-//   * xiom.pulse.html.html_escape (the shared escape helper).
+//   * xiom.pulse.html.html_escape (the shared escape helper),
+//   * xiom.static.static_resolve_path (traversal/encoding guard),
+//   * xiom.jwt.jwt_verify_hs256 (alg=none, tampering, random tokens).
 //
 // Invariants: a parser either succeeds with a well-formed result or fails
 // with a known error code; it never traps; decoded output never exceeds its
@@ -17,7 +19,8 @@
 //
 // Tunables (env): FUZZ_SEED (default 1592594004), FUZZ_HTTP_ITERS (20000),
 // FUZZ_MULTIPART_ITERS (5000), FUZZ_URLENC_ITERS (10000),
-// FUZZ_HTML_ITERS (10000). Exit code 0 = green, 1 = failures.
+// FUZZ_HTML_ITERS (10000), FUZZ_STATIC_ITERS (20000), FUZZ_JWT_ITERS (5000).
+// Exit code 0 = green, 1 = failures.
 //
 // Run: scripts\fuzz_parsers.ps1   (or build + out\fuzz_parsers.exe)
 
@@ -33,6 +36,8 @@ use xiom.pulse.http;
 use xiom.pulse.multipart;
 use xiom.pulse.urlenc;
 use xiom.pulse.html;
+use xiom.static;
+use xiom.jwt;
 
 // Cap printed findings so a broad failure does not flood the log.
 var logged: Int = 0;
@@ -402,6 +407,178 @@ fn fuzz_html(r: &mut pcg.Pcg, n: Int) -> Int {
   return f;
 }
 
+fn has_parent_segment(p: Str) -> Bool {
+  let parts = string.str_split(p, "/");
+  var i: Int = 0;
+  while i < parts.len() {
+    if parts[i] == ".." { return true; }
+    i = i + 1;
+  }
+  return false;
+}
+
+fn random_path(r: &mut pcg.Pcg) -> Str {
+  var out: Vec[UInt8] = Vec[UInt8].new();
+  let n = rint(r, 0, 128);
+  let alphabet = "./\\%2e5c0ab?#:";
+  let alen = alphabet.len();
+  var i: Int = 0;
+  while i < n {
+    out.push(alphabet.byte_at(rint(r, 0, alen)));
+    i = i + 1;
+  }
+  return Str::from_utf8(out);
+}
+
+/// fuzz_static_path checks the lexical static/site guard: every Ok result
+/// must stay under the fixture root and carry no parent segment, backslash
+/// or colon. Curated traversals must be rejected before the random loop.
+fn fuzz_static_path(r: &mut pcg.Pcg, n: Int) -> Int {
+  var f: Int = 0;
+  let root = "siteroot";
+  var traversals: Vec[Str] = Vec[Str].new();
+  traversals.push("../secret");
+  traversals.push("%2e%2e/secret");
+  traversals.push("%2E%2E%2Fsecret");
+  traversals.push("a/../../secret");
+  traversals.push("..\\secret");
+  traversals.push("%5c..%5csecret");
+  traversals.push("%00");
+  traversals.push("C:secret");
+  traversals.push("/etc/passwd");
+  traversals.push("..%2fsecret");
+  traversals.push("%2e%2e%5csecret");
+  var benign: Vec[Str] = Vec[Str].new();
+  benign.push("sub/index.html");
+  benign.push("a/./b");
+  benign.push("...");
+  benign.push("%252e%252e");
+  benign.push("a//b");
+  benign.push("./x");
+  var seeds: Vec[Str] = Vec[Str].new();
+  var si: Int = 0;
+  while si < traversals.len() {
+    let tr = static.static_resolve_path(root, traversals[si]);
+    if tr.is_ok {
+      f = f + fail("static curated traversal accepted", "in=" + traversals[si] + " out=" + tr.value);
+    }
+    seeds.push(traversals[si]);
+    si = si + 1;
+  }
+  si = 0;
+  while si < benign.len() {
+    let ok = static.static_resolve_path(root, benign[si]);
+    if !ok.is_ok {
+      f = f + fail("static benign path rejected", "in=" + benign[si] + " err=" + ok.error);
+    } else {
+      if !string.str_starts_with(ok.value, "siteroot/") || has_parent_segment(ok.value) {
+        f = f + fail("static benign path resolved unsafely", "in=" + benign[si] + " out=" + ok.value);
+      }
+    }
+    seeds.push(benign[si]);
+    si = si + 1;
+  }
+  var i: Int = 0;
+  while i < n {
+    var s: Str;
+    if rint(r, 0, 3) == 0 {
+      s = random_path(r);
+    } else {
+      s = seeds[rint(r, 0, seeds.len())];
+    }
+    let res = static.static_resolve_path(root, s);
+    if res.is_ok {
+      let p = res.value;
+      if !string.str_starts_with(p, "siteroot/") {
+        f = f + fail("static resolved outside root", "in=" + s + " out=" + p);
+      }
+      if has_parent_segment(p) {
+        f = f + fail("static parent segment in resolved path", "in=" + s + " out=" + p);
+      }
+      if string.str_contains(p, "\\") || string.str_contains(p, ":") {
+        f = f + fail("static separator/colon in resolved path", "in=" + s + " out=" + p);
+      }
+    }
+    i = i + 1;
+  }
+  return f;
+}
+
+fn random_token(r: &mut pcg.Pcg) -> Str {
+  var out: Vec[UInt8] = Vec[UInt8].new();
+  let n = rint(r, 0, 256);
+  let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.";
+  let alen = alphabet.len();
+  var i: Int = 0;
+  while i < n {
+    out.push(alphabet.byte_at(rint(r, 0, alen)));
+    i = i + 1;
+  }
+  return Str::from_utf8(out);
+}
+
+/// fuzz_jwt checks the HS256 verifier: a valid token verifies, alg=none and
+/// tampered payload/signature are rejected, and no random token verifies.
+fn fuzz_jwt(r: &mut pcg.Pcg, n: Int) -> Int {
+  var f: Int = 0;
+  let secret = http.str_to_bytes("fuzz-secret");
+  let claims = "{\"sub\":\"u1\",\"exp\":2000000000}";
+  let signed = jwt.jwt_sign_hs256(claims, &secret);
+  if !signed.is_ok {
+    return fail("jwt sign failed", signed.error);
+  }
+  let token = signed.value;
+  let good = jwt.jwt_verify_hs256(token, &secret, 1700000000);
+  if !good.is_ok || !string.str_contains(good.value, "\"sub\"") {
+    f = f + fail("jwt valid token rejected", good.error);
+  }
+  let parts = string.str_split(token, ".");
+  if parts.len() == 3 {
+    let none_tok = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." + parts[1] + ".";
+    let none_res = jwt.jwt_verify_hs256(none_tok, &secret, 1700000000);
+    if none_res.is_ok {
+      f = f + fail("jwt alg=none accepted", none_tok);
+    }
+    let tampered_payload = parts[0] + "." + parts[1] + "x." + parts[2];
+    let tp = jwt.jwt_verify_hs256(tampered_payload, &secret, 1700000000);
+    if tp.is_ok {
+      f = f + fail("jwt tampered payload accepted", "");
+    }
+    let sig = parts[2];
+    if sig.len() > 0 {
+      let first = sig.byte_at(0);
+      var repl: UInt8 = 65u8;
+      if first == 65u8 { repl = 66u8; }
+      var new_sig: Vec[UInt8] = Vec[UInt8].new();
+      new_sig.push(repl);
+      var sx: Int = 1;
+      while sx < sig.len() {
+        new_sig.push(sig.byte_at(sx));
+        sx = sx + 1;
+      }
+      let tampered_sig = parts[0] + "." + parts[1] + "." + Str::from_utf8(new_sig);
+      let ts = jwt.jwt_verify_hs256(tampered_sig, &secret, 1700000000);
+      if ts.is_ok {
+        f = f + fail("jwt tampered signature accepted", "");
+      }
+    }
+  } else {
+    f = f + fail("jwt signed token shape", token);
+  }
+  var i: Int = 0;
+  while i < n {
+    let tok = random_token(r);
+    let res = jwt.jwt_verify_hs256(tok, &secret, 1700000000);
+    if res.is_ok {
+      f = f + fail("jwt random token accepted", "token=" + tok);
+    }
+    let _shaped = jwt.jwt_is_shaped(tok);
+    let _alg = jwt.jwt_alg(tok);
+    i = i + 1;
+  }
+  return f;
+}
+
 fn env_int(name: Str, fallback: Int) -> Int {
   let p = parse_int(env.var_or(name, ""));
   if p.is_ok { return p.value; }
@@ -414,6 +591,8 @@ pub fn main() -> Int {
   let n_mp = env_int("FUZZ_MULTIPART_ITERS", 5000);
   let n_url = env_int("FUZZ_URLENC_ITERS", 10000);
   let n_html = env_int("FUZZ_HTML_ITERS", 10000);
+  let n_static = env_int("FUZZ_STATIC_ITERS", 20000);
+  let n_jwt = env_int("FUZZ_JWT_ITERS", 5000);
   let strict_nul = env_int("FUZZ_STRICT_NUL", 0) != 0;
   var r = pcg.pcg_from_seed(seed as UInt64);
   let seeds = seed_corpus();
@@ -424,8 +603,10 @@ pub fn main() -> Int {
   f = f + fuzz_multipart(&mut r, n_mp);
   f = f + fuzz_urlenc(&mut r, n_url);
   f = f + fuzz_html(&mut r, n_html);
+  f = f + fuzz_static_path(&mut r, n_static);
+  f = f + fuzz_jwt(&mut r, n_jwt);
   if f == 0 {
-    io.println("fuzz: GREEN seed=" + seed.to_str() + " http=" + n_http.to_str() + " multipart=" + n_mp.to_str() + " urlenc=" + n_url.to_str() + " html=" + n_html.to_str() + " known_nul=" + known_nul.to_str());
+    io.println("fuzz: GREEN seed=" + seed.to_str() + " http=" + n_http.to_str() + " multipart=" + n_mp.to_str() + " urlenc=" + n_url.to_str() + " html=" + n_html.to_str() + " static=" + n_static.to_str() + " jwt=" + n_jwt.to_str() + " known_nul=" + known_nul.to_str());
     return 0;
   }
   io.println("fuzz: RED failures=" + f.to_str());

@@ -74,9 +74,10 @@ documented workaround and a target release.
 
 **Shipped:**
 
-- Deterministic parser fuzz gate in CI: `tests/fuzz_parsers.xi` +
+- Deterministic fuzz gate in CI: `tests/fuzz_parsers.xi` +
   `scripts/fuzz_parsers.ps1`/`.sh` (HTTP request/chunked, multipart,
-  urlencoded, html_escape; ~45k iterations per run, PCG seeded).
+  urlencoded, html_escape, static path traversal, HS256 JWT; ~70k
+  iterations per run, PCG seeded).
 - Public reporting policy (`SECURITY.md`) and this process.
 - SHA-256 pins + build provenance in the release workflow.
 - CycloneDX SBOM generator + release attachment (`scripts/sbom.py`,
@@ -90,7 +91,7 @@ documented workaround and a target release.
 - SBOM completeness: registry tarball hashes and the transitive closure.
 - A reproducible-build gate (double build) in CI; the recipe lists the known
   platform deltas.
-- Fuzzing beyond parsers (auth/JWT, session, static path, release inputs).
+- Fuzzing beyond the current gate (session/cookie parsing, release inputs).
 - A public CVE/advisory history (none yet).
 
 **Known findings:**

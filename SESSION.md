@@ -59,7 +59,8 @@ STATE AT 2026-11-06:
 - **WP2 release integrity** (session 31): `scripts/sbom.py` (CycloneDX 1.5,
   19 components on 0.2.2) + `toolchain-pins.json` drift check + CI/release
   wiring; `docs/SBOM.md`, `docs/REPRODUCIBLE-BUILD.md`,
-  `docs/SECURITY-AUDIT-SCOPE.md`.
+  `docs/SECURITY-AUDIT-SCOPE.md`. The fuzz gate now also covers static path
+  traversal and HS256 JWT (~70k iterations).
 - Environment: lane-local package home `%LOCALAPPDATA%\xiom-pulse-home`;
   `dev-env` prefers v0.65.6 + `stdlib-tag-v0.65.6` (v0.65.2 skipped).
   The shared `%LOCALAPPDATA%\xiom\packages` is clobbered by fleet repins;
@@ -163,6 +164,10 @@ recipe, broader fuzzing (auth/session/static/release inputs), CVE history.
   comparison, Windows/macOS deltas, the missing double-build gate),
   `docs/SECURITY-AUDIT-SCOPE.md` (fixed scope, deliverables, 10-15 day
   effort, owner decisions). `SECURITY.md`/`SECURITY-POLICY.md` updated.
+- Extended the fuzz gate to the static/site path guard (20k: curated
+  traversal + random path; every Ok stays under the root) and HS256 JWT
+  (5k: alg=none, tampered payload/signature, random tokens). Green, ~70k
+  iterations, ~4 s.
 
 **Next WP2:** the external review itself (owner engagement/spend), SBOM
 registry hashes + transitive closure, a double-build gate, broader fuzzing

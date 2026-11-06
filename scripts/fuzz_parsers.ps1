@@ -1,13 +1,14 @@
 #!/usr/bin/env pwsh
 # ============================================================================
-# XIOM PULSE -- deterministic parser fuzz gate.
+# XIOM PULSE -- deterministic fuzz gate.
 # ============================================================================
 # Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
 # Builds tests/fuzz_parsers.xi and runs it under a watchdog. The harness is
 # deterministic (PCG seed) and covers the HTTP request parser, multipart,
-# urlencoded forms and html_escape. Exit code 0 = green, 1 = findings, 124 =
+# urlencoded forms, html_escape, static path traversal and HS256 JWT.
+# Exit code 0 = green, 1 = findings, 124 =
 # timeout, other = crash.
 #
 # -StrictNul turns the known upstream NUL-in-head finding

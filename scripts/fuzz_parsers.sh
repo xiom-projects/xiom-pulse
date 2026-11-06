@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# XIOM PULSE -- deterministic parser fuzz gate (Unix).
+# XIOM PULSE -- deterministic fuzz gate (Unix).
 # ============================================================================
 # Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 # SPDX-License-Identifier: MIT OR Apache-2.0

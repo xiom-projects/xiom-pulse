@@ -87,8 +87,9 @@ all five are packaged in the release dry-run.
    bounded runs are fine; **do not describe the current build as suitable
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
-2. **No independent external security audit yet.** A deterministic parser
-   fuzz gate runs in CI, a public disclosure/CVE policy is published, a
+2. **No independent external security audit yet.** A deterministic fuzz
+   gate (parsers, static path, JWT) runs in CI, a public disclosure/CVE
+   policy is published, a
    CycloneDX SBOM is generated and attached to releases, and a
    reproducible-build recipe is documented; the external review, SBOM
    completeness (registry hashes/transitive closure) and a double-build gate
