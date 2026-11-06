@@ -20,7 +20,7 @@ double-charge window 04:00-13:00 Greek (cron hours 0,2,14,16,18,20,22 local).
 If the owner says pause, cancel it.
 
 STATE AT 2026-11-06:
-- `main` = `765e9cb` (clean + pushed; dynamic site slice `32fafbb`).
+- `main` = the wrap commit (clean + pushed; dynamic site slice `32fafbb`).
   Production toolchain:
   compiler **v0.65.6** (windows a52b8cf3, linux a8fc6668, linux-arm64
   dca04f07, macos-x64 c5f0eb0b, macos-arm64 0fc5c6cd) + **stdlib 6fdde4ee**;
