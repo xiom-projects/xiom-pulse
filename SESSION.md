@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 29 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 30 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -20,7 +20,8 @@ double-charge window 04:00-13:00 Greek (cron hours 0,2,14,16,18,20,22 local).
 If the owner says pause, cancel it.
 
 STATE AT 2026-11-06:
-- `main` = the wrap commit (clean + pushed; dynamic site slice `32fafbb`).
+- `main` = HEAD (clean + pushed; WP2 slice `61b3950`, dynamic site slice
+  `32fafbb`).
   Production toolchain:
   compiler **v0.65.6** (windows a52b8cf3, linux a8fc6668, linux-arm64
   dca04f07, macos-x64 c5f0eb0b, macos-arm64 0fc5c6cd) + **stdlib 6fdde4ee**;
