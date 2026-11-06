@@ -107,6 +107,6 @@ this policy.
 
 ## Contact
 
-Maintainer: Eleftherios Notas (`@lefterisnotas` on GitHub). The relay bus
-(`xiom-relays`) is for cross-lane engineering coordination, not for public
-vulnerability reports.
+Maintainer: Eleftherios Notas (repository owner; use the private advisory
+channel above). The relay bus (`xiom-relays`) is for cross-lane engineering
+coordination, not for public vulnerability reports.
