@@ -13,7 +13,10 @@
 #
 # Pins come from toolchain-pins.json; when the workflow env is present
 # (XIOM_TOOLCHAIN_VERSION / XIOM_*_SHA256) the script checks the two agree
-# and fails on drift. The serial number and timestamp are deterministic
+# and fails on drift. --fetch-hashes additionally queries the registry for
+# each direct package's exact SHA-256, signature, public key and declared
+# dependency ranges (offline generation is the default).
+# The serial number and timestamp are deterministic
 # (uuid5 of version+commit; the commit timestamp unless SOURCE_DATE_EPOCH or
 # --timestamp is given), so the same revision produces the same SBOM.
 #
@@ -29,6 +32,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import uuid
@@ -145,6 +149,34 @@ def timestamp(explicit):
         return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def compiler_path(explicit):
+    if explicit:
+        return explicit
+    env = os.environ.get("XIOM_COMPILER")
+    if env:
+        return env
+    found = shutil.which("xiom")
+    if found:
+        return found
+    die("cannot find the xiom compiler; pass --compiler or set XIOM_COMPILER")
+
+
+def registry_version(compiler, name, version):
+    cmd = [compiler, "pkg", "info", "{}@{}".format(name, version), "--json"]
+    try:
+        out = subprocess.check_output(cmd, cwd=str(ROOT), stderr=subprocess.PIPE)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        die("pkg info failed for {}@{}: {}".format(name, version, exc))
+    try:
+        data = json.loads(out.decode("utf-8"))
+    except ValueError as exc:
+        die("pkg info for {}@{} returned invalid JSON: {}".format(name, version, exc))
+    for entry in data.get("versions", []):
+        if entry.get("version") == version:
+            return entry
+    die("pkg info did not list {}@{}".format(name, version))
+
+
 def purl(name, version, platform=None):
     base = "pkg:generic/{}@{}".format(name, version)
     if platform:
@@ -152,20 +184,39 @@ def purl(name, version, platform=None):
     return base
 
 
-def build_bom(version, commit, deps, pin_data, stamp):
+def build_bom(version, commit, deps, pin_data, stamp, fetch_hashes, compiler):
     compiler_version = pin_data["compiler"].lstrip("v")
     short_stdlib = read_text(STDLIB_PATH).strip()[:8] if STDLIB_PATH.exists() else "unknown"
     components = []
 
     for name in sorted(deps):
-        components.append(
-            {
-                "type": "library",
-                "name": name,
-                "version": deps[name],
-                "purl": purl(name, deps[name]),
-            }
-        )
+        component = {
+            "type": "library",
+            "name": name,
+            "version": deps[name],
+            "purl": purl(name, deps[name]),
+        }
+        if fetch_hashes:
+            info = registry_version(compiler, name, deps[name])
+            digest = info.get("sha256", "")
+            if not digest:
+                die("registry metadata for {}@{} has no sha256".format(name, deps[name]))
+            component["hashes"] = [{"alg": "SHA-256", "content": digest.lower()}]
+            props = []
+            if info.get("publicKey"):
+                props.append({"name": "xiom:pkg:public-key", "value": info["publicKey"]})
+            if info.get("signature"):
+                props.append({"name": "xiom:pkg:signature", "value": info["signature"]})
+            for dep_name in sorted(info.get("dependencies", {})):
+                props.append(
+                    {
+                        "name": "xiom:dep:" + dep_name,
+                        "value": info["dependencies"][dep_name],
+                    }
+                )
+            if props:
+                component["properties"] = props
+        components.append(component)
 
     for platform in sorted(pin_data["platforms"]):
         digest = pin_data["platforms"][platform]
@@ -211,6 +262,10 @@ def build_bom(version, commit, deps, pin_data, stamp):
                     {"name": "xiom:pulse:commit", "value": commit},
                     {"name": "xiom:pulse:toolchain", "value": pin_data["compiler"]},
                     {"name": "xiom:pulse:stdlib", "value": short_stdlib},
+                    {
+                        "name": "xiom:pkg:hashes",
+                        "value": "registry" if fetch_hashes else "off",
+                    },
                 ],
             },
         },
@@ -223,6 +278,12 @@ def main():
     parser.add_argument("--out", required=True, help="output .cdx.json path")
     parser.add_argument("--commit", default="", help="source commit (default: git HEAD)")
     parser.add_argument("--timestamp", default="", help="ISO-8601 timestamp (default: commit date)")
+    parser.add_argument(
+        "--fetch-hashes",
+        action="store_true",
+        help="query the registry for exact package SHA-256/signature metadata",
+    )
+    parser.add_argument("--compiler", default="", help="xiom compiler path for --fetch-hashes")
     args = parser.parse_args()
 
     pin_data = pins()
@@ -230,7 +291,10 @@ def main():
     version = product_version()
     commit = git_commit(args.commit)
     stamp = timestamp(args.timestamp)
-    bom = build_bom(version, commit, dependencies(), pin_data, stamp)
+    compiler = compiler_path(args.compiler) if args.fetch_hashes else ""
+    bom = build_bom(
+        version, commit, dependencies(), pin_data, stamp, args.fetch_hashes, compiler
+    )
 
     out = Path(args.out)
     if not out.is_absolute():
@@ -241,8 +305,13 @@ def main():
         handle.write("\n")
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     print(
-        "sbom: {} components={} version={} commit={} sha256={}".format(
-            out, len(bom["components"]), version, commit[:12], digest[:16]
+        "sbom: {} components={} hashes={} version={} commit={} sha256={}".format(
+            out,
+            len(bom["components"]),
+            "registry" if args.fetch_hashes else "off",
+            version,
+            commit[:12],
+            digest[:16],
         )
     )
     return 0

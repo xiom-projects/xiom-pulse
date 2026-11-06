@@ -103,8 +103,9 @@ this policy.
   the upstream parser fix. Do not rely on NUL-containing requests being
   rejected until that fix lands.
 - Release artifacts are SHA-256 pinned with build provenance. A CycloneDX
-  SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI and the
-  release job attaches the SBOM to the next tag. A reproducible-build recipe
+  SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI with exact
+  registry package hashes/signatures; the `linux-x64` release build generates
+  it and the publish job attaches it to the next tag. A reproducible-build recipe
   is documented (`docs/REPRODUCIBLE-BUILD.md`) and a same-host double-build
   payload gate runs on Linux x64 + Windows; cross-host/zip bit-identity is
   open. An independent review is scoped

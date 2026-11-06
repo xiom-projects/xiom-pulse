@@ -132,7 +132,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/sbom.py --out sbom/xiom-pulse.cdx.json
+          python3 scripts/sbom.py --out sbom/xiom-pulse.cdx.json --fetch-hashes
           python3 - <<'PY'
           import json
           d = json.load(open("sbom/xiom-pulse.cdx.json", encoding="utf-8"))

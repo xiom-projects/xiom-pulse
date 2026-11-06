@@ -57,11 +57,12 @@ STATE AT 2026-11-06:
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
 - **WP2 release integrity** (session 31): `scripts/sbom.py` (CycloneDX 1.5,
-  19 components on 0.2.2) + `toolchain-pins.json` drift check + CI/release
-  wiring; `docs/SBOM.md`, `docs/REPRODUCIBLE-BUILD.md`,
-  `docs/SECURITY-AUDIT-SCOPE.md`. The fuzz gate also covers static path
-  traversal and HS256 JWT (~70k iterations), and the same-host double-build
-  payload gate runs on Linux x64 + Windows.
+  19 components on 0.2.2, `--fetch-hashes` adds registry SHA-256/signature/
+  public-key metadata) + `toolchain-pins.json` drift check + CI/release
+  wiring (linux-x64 build generates, publish attaches); `docs/SBOM.md`,
+  `docs/REPRODUCIBLE-BUILD.md`, `docs/SECURITY-AUDIT-SCOPE.md`. The fuzz gate
+  also covers static path traversal and HS256 JWT (~70k iterations), and the
+  same-host double-build payload gate runs on Linux x64 + Windows.
 - Environment: lane-local package home `%LOCALAPPDATA%\xiom-pulse-home`;
   `dev-env` prefers v0.65.6 + `stdlib-tag-v0.65.6` (v0.65.2 skipped).
   The shared `%LOCALAPPDATA%\xiom\packages` is clobbered by fleet repins;
@@ -80,8 +81,8 @@ NEXT (dependency order):
    SBOM generator + release attach, reproducible recipe and audit scope are
    shipped; a NUL-in-head parser differential is open upstream
    (`REL-20261106-1716-pulse`, Station has an empty-shape guard). Remaining:
-   the external review (owner engagement/spend), SBOM registry hashes +
-   transitive closure, cross-host/zip reproducible builds, fuzzing
+   the external review (owner engagement/spend), the resolved SBOM transitive
+   closure (lockfile), cross-host/zip reproducible builds, fuzzing
    session/cookie parsing and release inputs, CVE history.
 4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
    drain/zero-downtime reload, 1/2-worker curve.
@@ -174,6 +175,10 @@ recipe, broader fuzzing (auth/session/static/release inputs), CVE history.
   SHA-256 compare, in CI on Linux x64 + Windows. Windows v0.65.6 is
   identical (`6a896cef...204184`, 5,195,776 bytes); cross-host/zip
   bit-identity remains open.
+- SBOM now carries exact registry package hashes/signatures/public keys
+  (`--fetch-hashes`, 13 packages, ~16 s); the linux-x64 release build
+  generates it and the publish job attaches it. Offline generation remains
+  the default; the resolved transitive closure needs a lockfile.
 
 **Next WP2:** the external review itself (owner engagement/spend), SBOM
 registry hashes + transitive closure, a double-build gate, broader fuzzing

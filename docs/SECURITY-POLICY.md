@@ -80,8 +80,9 @@ documented workaround and a target release.
   iterations per run, PCG seeded).
 - Public reporting policy (`SECURITY.md`) and this process.
 - SHA-256 pins + build provenance in the release workflow.
-- CycloneDX SBOM generator + release attachment (`scripts/sbom.py`,
-  `docs/SBOM.md`); pin drift is checked against `toolchain-pins.json`.
+- CycloneDX SBOM generator with registry SHA-256/signature metadata +
+  release attachment (`scripts/sbom.py`, `docs/SBOM.md`); pin drift is
+  checked against `toolchain-pins.json`.
 - Reproducible-build recipe + same-host payload gate
   (`docs/REPRODUCIBLE-BUILD.md`, `scripts/repro_check.*`; Linux x64 +
   Windows) and a fixed-scope audit package
@@ -90,7 +91,8 @@ documented workaround and a target release.
 **Open:**
 
 - The independent review itself (scope ready; owner engagement/spend).
-- SBOM completeness: registry tarball hashes and the transitive closure.
+- SBOM completeness: the resolved transitive closure (direct package hashes
+  and declared ranges are included).
 - A cross-host/zip reproducible-build gate (the same-host payload gate ships
   on Linux x64 + Windows); the recipe lists the known platform deltas.
 - Fuzzing beyond the current gate (session/cookie parsing, release inputs).

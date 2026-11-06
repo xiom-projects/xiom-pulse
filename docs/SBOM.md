@@ -2,26 +2,42 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Software bill of materials (CycloneDX)
 
-**Status 2026-11-06:** generator in-tree and validated in CI; the release
-job regenerates the SBOM from the tag commit and attaches it to the GitHub
+**Status 2026-11-06:** generator in-tree and validated in CI. The
+`linux-x64` release build generates the SBOM with exact registry hashes and
+uploads it; the publish job attaches `xiom-pulse.cdx.json` to the GitHub
 Release. No SBOM is committed (it would go stale immediately); the release
 artifact is the published one.
 
 ## Generate
 
+Offline (no registry, no package hashes):
+
 ```sh
 python3 scripts/sbom.py --out sbom/xiom-pulse.cdx.json
 ```
 
-Windows: `python scripts\sbom.py --out sbom\xiom-pulse.cdx.json`.
+With registry metadata (exact tarball SHA-256, signature, public key and the
+declared transitive dependency ranges):
+
+```sh
+XIOM_COMPILER=/path/to/xiom python3 scripts/sbom.py \
+  --out sbom/xiom-pulse.cdx.json --fetch-hashes
+```
+
+Windows: `python scripts\sbom.py --out sbom\xiom-pulse.cdx.json --fetch-hashes`
+(with `XIOM_COMPILER` set). `--fetch-hashes` runs `xiom pkg info
+<name>@<version> --json` for each direct dependency; it takes ~16 s for 13
+packages. Offline generation is the default so a source archive can still
+produce an SBOM.
 
 The generator is Python 3.7+ and stdlib-only. It writes CycloneDX **1.5**
 JSON with:
 
 | Part | Contents |
 |---|---|
-| Product | `xiom-pulse` version from `src/version.xi`, commit, toolchain/stdlib properties |
+| Product | `xiom-pulse` version from `src/version.xi`, commit, toolchain/stdlib properties, hashes mode |
 | Dependencies | every `[dependencies]` row in `xiom.toml` (13 at 0.2.2), as `library` components with `pkg:generic` purls |
+| Package metadata | with `--fetch-hashes`: exact registry `SHA-256`, `xiom:pkg:signature`, `xiom:pkg:public-key`, and `xiom:dep:<name>` version ranges |
 | Toolchain | `xiom-compiler` per platform (linux-x64, linux-arm64, windows-x64, macos-x64, macos-arm64) with its SHA-256 pin |
 | Stdlib | `xiom-stdlib` git ref from `STDLIB_VERSION` |
 
@@ -42,11 +58,17 @@ when the pin moves.
 
 ## Release attachment
 
-On a `pulse-v*` tag, the release job checks out the tag, runs the generator
-with `--commit "$GITHUB_SHA"`, and adds `xiom-pulse.cdx.json` to the
-`gh release create` file list next to the zips, per-file checksums and
-`SHA256SUMS`. The SBOM therefore describes the same source revision as the
-tagged binaries.
+On a `pulse-v*` tag:
+
+1. the `linux-x64` build job (compiler and deps installed) runs
+   `scripts/sbom.py --fetch-hashes --commit "$GITHUB_SHA"` and uploads the
+   `pulse-sbom` artifact;
+2. the publish job downloads all artifacts, combines the zip checksums, and
+   adds `xiom-pulse.cdx.json` to the `gh release create` file list next to
+   the zips, per-file checksums and `SHA256SUMS`.
+
+The SBOM therefore describes the same source revision as the tagged
+binaries and carries the registry hashes of the exact package versions.
 
 ## Validate
 
@@ -54,7 +76,7 @@ tagged binaries.
 python3 -m json.tool sbom/xiom-pulse.cdx.json >/dev/null
 python3 - <<'PY'
 import json
-d = json.load(open("sbom/xiom-pulse.cdx.json"))
+d = json.load(open("sbom/xiom-pulse.cdx.json", encoding="utf-8"))
 assert d["bomFormat"] == "CycloneDX" and d["specVersion"] == "1.5"
 assert d["metadata"]["component"]["name"] == "xiom-pulse"
 assert len(d["components"]) >= 10
@@ -62,19 +84,28 @@ print("ok", len(d["components"]), "components")
 PY
 ```
 
-CI runs the same shape check on the Linux legs. `cyclonedx-cli validate` is
-not installed in CI (no extra global tool); the generator's required fields
-and the CI assertions are the current gate.
+CI runs the same shape check on the Linux legs with `--fetch-hashes`.
+`cyclonedx-cli validate` is not installed in CI (no extra global tool); the
+generator's required fields and the CI assertions are the current gate.
+
+## Evidence (0.2.2, 2026-11-06)
+
+- 19 components: 13 direct package components, 5 compiler platform
+  components, 1 stdlib component.
+- With `--fetch-hashes`, `xiom.pulse@0.3.2` carries
+  `SHA-256 6f2b6ff83402715a1588a23b0c8fed1de0c24ea56c95e51871aaeba41f11af6d`
+  plus its registry signature and public key; the same shape applies to every
+  direct dependency.
+- Offline and registry modes were both generated locally; the pin drift
+  check was verified (`v0.65.7` -> exit 2, `v0.65.6` -> exit 0).
 
 ## Limitations (be honest)
 
-- **Direct dependencies only.** The list is PULSE's manifest closure, not a
-  recursive registry dependency graph; the registry packages currently
-  depend on the stdlib, which is represented separately.
-- **No package tarball hashes.** The registry publishes SHA-256 values for
-  its tarballs; the generator does not fetch them (offline determinism).
-  Adding them is a follow-up once the registry metadata is available in the
-  build environment.
+- **No resolved transitive closure.** The SBOM lists the direct manifest
+  components and records each package's declared `xiom:dep:<name>` ranges.
+  It does not resolve ranges into exact transitive components; that needs a
+  committed lockfile or a registry resolver. The common `xiom.std` range is
+  represented by the stdlib git-ref component, not a second resolved package.
 - **Stdlib is a git ref, not a tarball hash.** The full commit is carried in
   `xiom:stdlib:commit`; the archive is SHA-256 pinned by the toolchain
   release itself.
@@ -82,12 +113,16 @@ and the CI assertions are the current gate.
   per-file checksums; the SBOM is attached, not separately signed.
 - **No SPDX output.** CycloneDX 1.5 is the chosen format; SPDX can be added
   if an auditor requires it.
+- **Offline mode omits package hashes.** A consumer must re-run
+  `--fetch-hashes` (or use the release artifact) for the verifiable package
+  digests.
 
 ## Follow-ups
 
-1. Fetch and include registry tarball SHA-256 values.
-2. Attach the SBOM to the build provenance attestation if the action
-   supports extra subjects.
+1. Add a committed `xiom.lock` (or a resolver) and emit the exact transitive
+   closure with hashes.
+2. Attach the SBOM to the build provenance attestation if the action supports
+   extra subjects.
 3. Add a CI diff gate when a dependency version changes without an SBOM
    update in the release notes.
 4. Consider a signed SBOM (Sigstore/cosign) after the release signing story
