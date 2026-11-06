@@ -335,7 +335,7 @@ not a rewrite.
 | Work package | Hours | Deliverable and acceptance | Status 2026-11-02 |
 |---|---:|---|---|
 | WP1 -- memory and sustained-load reliability | 220 | Upstream reclamation fixes with repros + app-path allocation cuts; CI retention gate; **24 h at 100 req/s on the bttger mix with RSS <= 256 MB**, published baseline; 72 h confirmation | Partial: floor is **16.5 KB/req** (from 46); response builder flat, per-connection buffer in place; 24 h/1M gate still open |
-| WP2 -- security and release integrity | 160 | Fixed-scope review in month 7 (â‚¬3,000), months 8-10 remediation; parser/multipart fuzzing; SBOM (CycloneDX/SPDX); SHA-pinned artifacts + provenance; reproducible-build recipe; disclosure policy + CVE process | Partial: SHA256SUMS + provenance exist; no external audit, fuzzing, SBOM or CVE process yet |
+| WP2 -- security and release integrity | 160 | Fixed-scope review in month 7 (Ã¢â€šÂ¬3,000), months 8-10 remediation; parser/multipart fuzzing; SBOM (CycloneDX/SPDX); SHA-pinned artifacts + provenance; reproducible-build recipe; disclosure policy + CVE process | Partial: SHA256SUMS + provenance exist; no external audit, fuzzing, SBOM or CVE process yet |
 | WP3 -- external adoption and operational proof | 180 | One external public-interest pilot (bounded, not a migration); operator guide, migration guide, one-command scaffold; benchmark report; 72 h soak; final public report (CC BY 4.0) | Partial: internal dogfooding only (pulse.xiom-lang.org); benchmark report published 2026-11-01; guides partial; no external pilot |
 | WP4 -- scale-out foundation | 160 | Process supervisor + --workers N; SO_REUSEPORT (Linux), N ports (Windows); graceful drain; zero-downtime reload; proxy-trust unit; 1/2-worker scaling curve; rollback procedure | Not started: the single-accept loop is the measured ceiling (10 connections add no throughput) |
 | WP5 -- project management and dissemination | 40 | Monthly public notes; issue triage; release coordination; final report; one remote community presentation | Ongoing: changelog, relay, progress and benchmark reports |
@@ -417,3 +417,43 @@ LB; PULSE adds workers and SO_REUSEPORT, not an L4/L7 balancer. Do not claim
 "first" game backend: Nakama, PlayFab, GameLift, Agones and Steamworks exist;
 the differentiator is a small native backend + control plane for XIOM Engine
 with a verifiable supply chain.
+## 12. Backlog: multi-page site server (2026-11-06)
+
+**What is already shipped (static multi-page):** PULSE_SITE_DIR site mode
+serves a directory tree with / -> index.html, clean URLs
+(/about -> bout.html), directory index (/sub/ -> sub/index.html),
+a 301 from /sub to /sub/ (query preserved), a custom 404.html, asset
+MIME types (JS/WASM), ETag/304, Cache-Control, a traversal guard and a single
+Content-Length. A static multi-page site works today; 	ests/test_app.xi
+covers it.
+
+**What is missing for a dynamic multi-page site server:**
+
+1. **Templating / SSR** (P1, parity row W-13): layouts, partials, loops,
+   conditionals, auto-escaping. No in-process engine today; handlers emit
+   HTML strings manually. The templates package is a wishlist.
+2. **pplication/x-www-form-urlencoded parsing** (P1, R-09): HTML forms.
+   JSON and multipart exist; verify/extend the urlencoded path.
+3. **HTML escaping helpers** (P0 for safety): one shared escape function for
+   templates and handlers.
+4. **Compression** (P1, P-15): gzip/brotli for HTML/CSS/JS; large pages and
+   assets benefit most.
+5. **Dynamic caching/revalidation** (P1, D-10): cache keys, TTL, ETag for
+   rendered pages.
+6. **Site ergonomics** (P2): redirects, canonical URLs, robots/sitemap, i18n,
+   a dev reload loop (O-10).
+7. **Edge story**: TLS and HTTP/2 stay at nginx/Caddy; document the template.
+
+**Phased path:**
+
+- **A. Static site profile (today):** document site mode and ship a
+  pulse site scaffold with a 5-10 page example (shared head, assets, 404).
+  No core code; acceptance is the scaffold + docs + a deploy template.
+- **B. Dynamic site (next):** templating surface + urlencoded forms + escaping.
+  Acceptance: a 5-10 page site with a shared layout, one POST form, a 404
+  page and static assets, covered by a suite and a smoke; docs.
+- **C. Production site:** compression, dynamic caching, i18n/redirects; then
+  the 24 h memory/soak gate on the site workload. HTTP/2/3 at the edge.
+
+**Non-goals:** a full CMS, admin panel, WYSIWYG editor, e-commerce. Those are
+ecosystem packages on top of the site profile, not framework core.

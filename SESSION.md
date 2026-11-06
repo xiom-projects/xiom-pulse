@@ -3,7 +3,82 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-10-22, session 24 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 28 close)
+
+You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
+backend / multipurpose framework). This session is closing near the context
+limit. Read this prompt first, then: docs\PROGRESS.md,
+docs\ROADMAP-TOP-TIER.md (sections 10-12), docs\PARITY-VISION.md,
+docs\PARITY-MATRIX.md, docs\STATUS-FOR-WEBSITE.md,
+docs\ROADMAP-FOR-WEBSITE.md, docs\GAME-BACKEND-POSITIONING.md,
+benchmarks\bttger\REPORT-2026-11-01.md. Relays: E:\xiom-lang\xiom-relays.
+Reference shelf: E:\repos.
+
+DOORBELL: re-arm the 2h sweep (git fetch + merge --ff-only, NEVER `git pull`;
+relay.py view --lane pulse; process items; wrap on change). Skip the owner's
+double-charge window 04:00-13:00 Greek (cron hours 0,2,14,16,18,20,22 local).
+If the owner says pause, cancel it.
+
+STATE AT 2026-11-06:
+- `main` = the handoff commit (clean + pushed). Production toolchain:
+  compiler **v0.65.6** (windows a52b8cf3, linux a8fc6668, linux-arm64
+  dca04f07, macos-x64 c5f0eb0b, macos-arm64 0fc5c6cd) + **stdlib 6fdde4ee**;
+  packages `xiom.pulse` 0.3.2 and `xiom.http` 0.1.11.
+- **All five platforms are supported**: linux-x64, linux-arm64, windows-x64,
+  macOS x64, macOS arm64. CI `41885904766` green on all five; release
+  dry-run `41885910214` **fully green, all five packaged**.
+- **Product: 0.2.2.** 0.3.0 waits on the owner's SQL-serving decision
+  (`docs/DESIGN-SQL-SERVING.md`); do not tag without it.
+- **1704 JSON memory class is CLOSED** (verified/closed): builder
+  build+stringify 2,152 -> **14.4 B/iter**, `json_parse` 2,267 ->
+  **15.1 B/iter**; capped bttger 5k completes (511.6 MB, zero errors).
+  Residual: `json_type`/`json_get` still ~2 KB/op (filed
+  `REL-20261104-1709-pulse`).
+- **HTTP request-path floor: 17.6 KB/req** (`1549-pulse-4` stays acked).
+  The 24 h @ 100 req/s (RSS <= 256 MB) and 1,000,000-request gates remain
+  open; the ~0.9 KB Option[ServerRequest] aggregate is deferred by the
+  compiler. Never run the 1M bench uncapped.
+- Compiler/socket/arm64 chain closed (`1619`, `1101`, `1628`, `1529`
+  verified); `1721` fixed (ops verifies); `1854` closed. v0.65.2 remains
+  WITHDRAWN (durable-lane regression); never select it.
+- One source fix shipped with v0.65.6: `migrations.xi` `let` -> `var`
+  (v0.65.6 enforces immutability).
+- Backlog: game backend profile in ROADMAP section 11; multi-page site
+  server in section 12. Public phase roadmap in
+  `docs/ROADMAP-FOR-WEBSITE.md`; status brief in `STATUS-FOR-WEBSITE.md`.
+- Environment: lane-local package home `%LOCALAPPDATA%\xiom-pulse-home`;
+  `dev-env` prefers v0.65.6 + `stdlib-tag-v0.65.6` (v0.65.2 skipped).
+  The shared `%LOCALAPPDATA%\xiom\packages` is clobbered by fleet repins;
+  do not delete or re-extract shared homes.
+
+NEXT (dependency order):
+1. **Next toolchain release** (v0.65.7+): verify the published archive
+   (SHA256SUMS + dl mirror), run `probe_alloc_aggregate`, `probe_req_cycle`,
+   the product `GET /health` probe, suites/smoke/crash/migrations/SQL/
+   stream/ws-auth, the five-leg CI and release dry-run; then pin and
+   update SESSION/PROGRESS + the website briefs. Re-check the arm chain.
+2. **Memory gate**: drive the HTTP floor toward flat (app-path router/header
+   + Map + the Option residual), then the 24 h @ 100 req/s soak and the
+   capped bttger 5k/1M. Update `benchmarks/bttger/REPORT-2026-11-01.md`.
+3. **Security/release (WP2)**: scoped audit, parser/multipart fuzzing, SBOM,
+   reproducible-build recipe, disclosure/CVE policy.
+4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
+   drain/zero-downtime reload, 1/2-worker curve.
+5. **Multi-page site server** (ROADMAP section 12): static site mode is
+   already shipped; dynamic pages need a templating/SSR surface + urlencoded
+   form parsing + HTML escaping, then compression/caching; add a site profile
+   doc/template.
+6. **Game backend profile** (ROADMAP section 11): only after the 1.0 memory/
+   scale work; PULSE is the backend/control plane, the engine owns the tick
+   path. No built-in LB.
+7. **0.3.0** after the owner's SQL decision.
+
+DISCIPLINE: signed conventional commits; commit/push per unit; update
+SESSION + docs/PROGRESS at every wrap; report blockers on the relay first;
+verify on published archives, not release notes; do not claim production
+grade for sustained load until the memory gate is met.
+
+## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official
 XIOM web backend / multipurpose framework). This session closed near the
