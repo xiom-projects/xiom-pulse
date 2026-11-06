@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 32 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 33 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -57,6 +57,11 @@ STATE AT 2026-11-06:
   `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
+- **WP1 metrics Map optimization blocked** (2026-11-06): direct nested
+  borrow crashed; the copy-modify-write pattern hits a v0.65.6 clang
+  `extractvalue %struct.Vec` error. `src/metrics.xi` reverted (suite GREEN);
+  `tests/probes/probe_nested_struct_copy.xi` filed with
+  `REL-20261106-1840-pulse` (compiler, medium). Re-land after v0.65.7+.
 - **Soak lane (2026-11-06):** ops prepared a 256M-capped `pulse-soak.service`
   at 127.0.0.1:3501 with a gated 24h harness; a 60 s wiring smoke on an old
   0.2.2 Linux binary was green but is **not** a gate. The 24h/1M gate has
@@ -77,10 +82,12 @@ STATE AT 2026-11-06:
 
 NEXT (dependency order):
 1. **Next toolchain release** (v0.65.7+): verify the published archive
-   (SHA256SUMS + dl mirror), run `probe_alloc_aggregate`, `probe_req_cycle`,
+   (SHA256SUMS + dl mirror), the nested-aggregate codegen probe
+   (`REL-20261106-1840-pulse`), `probe_alloc_aggregate`, `probe_req_cycle`,
    the product `GET /health` probe, suites/smoke/crash/migrations/SQL/
-   stream/ws-auth, the five-leg CI and release dry-run; then pin and
-   update SESSION/PROGRESS + the website briefs. Re-check the arm chain.
+   stream/ws-auth, the five-leg CI and release dry-run; then re-land the
+   metrics index cache, pin and update SESSION/PROGRESS + the website
+   briefs. Re-check the arm chain.
 2. **Memory gate**: the per-request router rebuild is fixed (20.6 -> 16.1
    KB/req); drive the remaining header/Map path + Option residual toward
    flat. Ops has a 256M-capped 24h lane ready; supply a Linux artifact from
@@ -204,6 +211,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - Docs: STATUS / ROADMAP-FOR-WEBSITE / PROGRESS and the bttger report
   updated. The session 29-31 site/security/SBOM work is unchanged.
 - Remaining: header/Map + Option residual; the 24 h/1M gates stay open.
+
+## WRAP 2026-11-06 (session 33) -- WP1 metrics Map blocked (compiler)
+
+- Tried to remove the per-request metrics label maps; the direct nested
+  borrow crashed, and the copy-modify-write pattern hit a v0.65.6 clang
+  `extractvalue %struct.Vec` error. Reverted `src/metrics.xi` (suite GREEN);
+  `tests/probes/probe_nested_struct_copy.xi` is the repro.
+- Filed `REL-20261106-1840-pulse` (compiler, medium). Floor stays 16.1
+  KB/req; re-land the metrics cache after v0.65.7+.
+- Release remains on hold per the owner's 2026-11-06 decision; ops is
+  gated and waiting for a verified artifact.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 
