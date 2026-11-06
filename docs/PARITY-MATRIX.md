@@ -63,7 +63,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-03 | Request IDs | P0 | P | P | FF | rid in logs/404 |
 | W-04 | Static files + ETag/304 | P0 | ? | P | G,FF | smoke 304 |
 | W-05 | Traversal guard | P0 | ? | P | G,FF | smoke traversal |
-| W-06 | Range requests | P1 | M | M | G,FF | not implemented |
+| W-06 | Range requests | P1 | M | A | G,FF | static_serve Range; probe_pkg_static 206; live route test missing |
 | W-07 | Efficient file streaming (sendfile) | P1 | M | A | G,FF | 50 MB works, copied |
 | W-08 | SSE | P0 | P | P | FF,G | live 20/20 |
 | W-09 | WebSocket handshake/frames/fragmentation | P0 | P | P | FF,G | live 20/20 |
@@ -85,7 +85,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | S-05 | JWT asymmetric algs (RS/ES/EdDSA) | P1 | M | M | J | not implemented |
 | S-06 | JWE / JWK key sets | P2 | M | M | J | not implemented |
 | S-07 | OAuth/OIDC client | P2 | N/A | M | -- | not implemented |
-| S-08 | Password hashing | P0 | ? | ? | -- | verify app login |
+| S-08 | Password hashing | P0 | M | M | -- | login is user-only; no password field/hash |
 | S-09 | Rate limiting (global + route) | P0 | P | P | FF | rate smoke |
 | S-10 | CORS allowlist | P0 | P | P | FF | smoke |
 | S-11 | Stream Origin/auth policy | P0 | P | P | -- | ws-auth 11/11 |
@@ -127,14 +127,14 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | O-06 | Graceful shutdown / drain | P1 | A | A | F,FF | quit flag, no drain |
 | O-07 | Config validation + `--check-config` | P0 | N/A | P | -- | smoke |
 | O-08 | CLI (routes/openapi/version) | P1 | N/A | P | -- | smoke |
-| O-09 | Cluster / scale-out | P1 | M | M | -- | sequential accept |
+| O-09 | Cluster / scale-out | P1 | M | A | -- | N-port workers + reuseport config/smoke; supervisor/drain/reload/curve open |
 | O-10 | Hot reload | P2 | M | M | -- | Phase B blocked |
 | O-11 | Container/systemd guidance | P1 | N/A | A | -- | partial docs |
 | O-12 | Reproducible release + attestations | P0 | N/A | E | -- | SHA pins, dry-run, same-host double-build gate |
-| O-13 | Flat memory under soak | P0 | M | M | WB | 22 KB/req residual |
+| O-13 | Flat memory under soak | P0 | M | M | WB | 16.1 KB/req (router cache 2026-11-06); no CI retention gate; 24h/1M open |
 | O-14 | Published c1/c10 benchmark | P1 | N/A | A | WB | bttger c1; c10 ceiling |
 | O-15 | Published 1M soak | P1 | N/A | M | WB | blocked |
-| O-16 | Fuzzing harness | P1 | A | A | -- | tests/fuzz_parsers.xi + CI; parsers, static path, JWT; session/release inputs open |
+| O-16 | Fuzzing harness | P1 | A | A | -- | fuzz_parsers + fuzz_cookie in CI; OpenAPI/stream/release inputs open |
 
 ## Ecosystem and developer experience
 

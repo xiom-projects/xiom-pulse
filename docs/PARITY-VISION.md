@@ -104,13 +104,17 @@ Targets:
 | **Top-tier readiness** (40% capability + 60% maturity) | **~34-38%** | the honest "comparable to the best" number |
 | **Production-capable with documented limits** | **~60-65%** | features + operability, excluding top-tier perf/audit/adoption |
 
+**Current matrix re-run (2026-11-06, after the FEATURE-TESTS corrections):**
+Beacon **60.3%** (91.1% assessed), Station **71.7%** (100%). The seeded
+baseline above is retained as the historical lower bound.
+
 The maturity gates are deliberately separate from feature rows, because a
 project can tick every feature and still not be top tier:
 
 | Gate | State | Points | Why |
 |---|---|---:|---|
-| Flat memory under a 1M soak | **missing** | 0 | 22 KB/req residual; 1M blocked |
-| Real concurrency / scale-out | **missing** | 0 | c10 adds no throughput (sequential accept) |
+| Flat memory under a 1M soak | **missing** | 0 | 16.1 KB/req after the router cache; no CI retention gate; 1M blocked |
+| Real concurrency / scale-out | **missing** | 0 | N-port/reuseport slice; supervisor/drain/1-2-worker curve missing; c10 adds no throughput |
 | TLS + HTTP/2 (or a productised edge story with numbers) | **missing** | 0 | edge-only TLS, no H2 |
 | External audit + fuzzing | **partial** | 0.5 | parser fuzz gate in CI + policy; no external audit |
 | Cross-framework benchmark (harness + peers) | **partial** | 0.5 | c1 published, no peers/1M |

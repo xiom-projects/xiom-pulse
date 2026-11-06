@@ -62,6 +62,10 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Parity (2026-11-06, after FEATURE-TESTS corrections):** **Beacon 60.3%**
+  (assessed 91.1%), **Station 71.7%** (assessed 100%). W-06/O-09 Station
+  M->A; S-08 ?->M (no password auth); O-13 evidence 16.1 KB/req with no CI
+  retention gate. The audit's top-10 missing tests are the roadmap.
 - **WP3 scaffold shipped** (2026-11-06): `scaffolds/api` +
   `scripts/new_app.py` + `scripts/scaffold_smoke.py` + `docs/SCAFFOLD.md`;
   smoke GREEN. README status/toolchain corrected to v0.65.6 / 6fdde4ee /
@@ -279,7 +283,8 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   config/validation, N-port two-worker smoke GREEN, edge template; `test_app`
   GREEN. Supervisor/drain/reload/curve remain open.
 - Feature audit `docs/FEATURE-TESTS.md`: evidence map, matrix drift (W-06,
-  S-08, O-13) and the top-10 missing tests; matrix corrections follow.
+  S-08, O-13) and the top-10 missing tests; corrections applied -- W-06/O-09
+  Station M->A, S-08 ?->M, O-13 refreshed. Beacon 60.3% / Station 71.7%.
 - Auth fuzz (session 36) and scaffold (session 35) are already on main.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)

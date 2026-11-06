@@ -17,6 +17,13 @@ Beacon  (package):    60.3%   assessed coverage  89.4%  (66/73)
 Station (standalone): 70.9%   assessed coverage  98.8%  (106/107)
 ```
 
+**Post-audit matrix corrections (2026-11-06):** W-06 Station M->A (Range
+reaches `static_serve`; `probe_pkg_static` proves 206), O-09 Station M->A
+(N-port workers + reuseport config/smoke), S-08 ?->M (login is user-only; no
+password field/hash), O-13 evidence refreshed to 16.1 KB/req with no CI
+retention gate. Re-run: **Beacon 60.3% (91.1% assessed), Station 71.7%
+(100%)**. The snapshot above is the pre-correction read.
+
 The score is capability parity, not evidence quality. A row can be `P` and
 still have no per-PR test; those rows are flagged in section 9.
 
