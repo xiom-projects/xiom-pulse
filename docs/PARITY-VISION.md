@@ -100,8 +100,8 @@ Targets:
 |---|---:|---|
 | **Beacon (package)** capability parity | **58.4%** | 88.3% of applicable rows assessed; `?` counts 0 |
 | **Station (standalone)** capability parity | **69.1%** | 98.8% assessed |
-| **Maturity gates** (below) | **~8%** | 0.5 of 6 gates |
-| **Top-tier readiness** (40% capability + 60% maturity) | **~33-37%** | the honest "comparable to the best" number |
+| **Maturity gates** (below) | **~17%** | 1.0 of 6 gates (benchmark 0.5 + audit/fuzzing 0.5) |
+| **Top-tier readiness** (40% capability + 60% maturity) | **~34-38%** | the honest "comparable to the best" number |
 | **Production-capable with documented limits** | **~60-65%** | features + operability, excluding top-tier perf/audit/adoption |
 
 The maturity gates are deliberately separate from feature rows, because a
@@ -112,7 +112,7 @@ project can tick every feature and still not be top tier:
 | Flat memory under a 1M soak | **missing** | 0 | 22 KB/req residual; 1M blocked |
 | Real concurrency / scale-out | **missing** | 0 | c10 adds no throughput (sequential accept) |
 | TLS + HTTP/2 (or a productised edge story with numbers) | **missing** | 0 | edge-only TLS, no H2 |
-| External audit + fuzzing | **missing** | 0 | none |
+| External audit + fuzzing | **partial** | 0.5 | parser fuzz gate in CI + policy; no external audit |
 | Cross-framework benchmark (harness + peers) | **partial** | 0.5 | c1 published, no peers/1M |
 | Production adoption / users | **missing** | 0 | none yet |
 

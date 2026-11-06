@@ -94,7 +94,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | S-14 | Audit log + rotation | P1 | P | P | -- | crash/audit tests |
 | S-15 | TLS termination guidance/automation | P1 | N/A | A | -- | docs only |
 | S-16 | mTLS / client certificates | P2 | M | M | -- | not implemented |
-| S-17 | External audit + fuzzing | P0 | M | M | -- | none yet |
+| S-17 | External audit + fuzzing | P0 | A | A | -- | parser fuzz gate in CI + disclosure/CVE policy; no external audit |
 
 ## Data and state
 
@@ -134,7 +134,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | O-13 | Flat memory under soak | P0 | M | M | WB | 22 KB/req residual |
 | O-14 | Published c1/c10 benchmark | P1 | N/A | A | WB | bttger c1; c10 ceiling |
 | O-15 | Published 1M soak | P1 | N/A | M | WB | blocked |
-| O-16 | Fuzzing harness | P1 | M | M | -- | none |
+| O-16 | Fuzzing harness | P1 | A | A | -- | tests/fuzz_parsers.xi + CI; parsers only, more surfaces open |
 
 ## Ecosystem and developer experience
 

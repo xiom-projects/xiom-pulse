@@ -270,6 +270,13 @@ fn dispatch_one(eff_method: Str, req: &PulseRequest, body_str: Str) -> HandlerOu
 /// handle_route dispatches a matched route to a HandlerOut.
 /// Complexity: O(body).
 pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut {
+  // Defense in depth for REL-20261106-1716-pulse: the stdlib parser can
+  // return ok=true with an empty method/target when a NUL truncates the
+  // request line. The upstream guard is the parser; reject the empty shape
+  // here so the Station never treats it as a site/404 miss.
+  if req.method.len() == 0 || req.target.len() == 0 {
+    return out_json(400, envelope.error_body("bad_request", "malformed request"));
+  }
   // Transfer-Encoding policy (chunked support since 2026-10-08):
   //   * `chunked` alone -> decoded body reaches the route;
   //   * `chunked` + Content-Length -> 400: ambiguous framing is the classic

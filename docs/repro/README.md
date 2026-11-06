@@ -19,6 +19,7 @@ Format: one directory per finding, with `probe.xi` + `README.md`
 | `crypto-link/` | stdlib SHA-256 linkability | **RESOLVED in v0.64.0 m195** -- NIST KAT env-free |
 | `socket-reuseaddr/` | Windows `xiom_socket_bind` has no `SO_REUSEADDR` | stdlib wishlist row filed (queued wave) |
 | `socket-timeout/` | `socket_set_timeout`/`socket_set_nonblocking` are documented stubs | stdlib wishlist row filed (queued wave) |
+| `nul-in-request-head/` | stdlib parser accepts a NUL in the request head and truncates method/target/headers | **OPEN** -- `REL-20261106-1716-pulse`; probe + expected/observed table |
 
 Bundles are promoted to their own directory only when PULSE has a minimal
 reproduction beyond the upstream packet; otherwise the app-context evidence

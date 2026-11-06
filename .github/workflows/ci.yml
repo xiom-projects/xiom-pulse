@@ -122,6 +122,11 @@ jobs:
         shell: bash
         run: bash scripts/site_smoke.sh --port 18095
 
+      - name: Parser fuzz gate (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash scripts/fuzz_parsers.sh --timeout 300
+
       - name: Suites x2 + smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -144,3 +149,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ws auth smoke failed with exit $LASTEXITCODE" }
           & scripts\site_smoke.ps1 -Port 18095
           if ($LASTEXITCODE -ne 0) { throw "site smoke failed with exit $LASTEXITCODE" }
+          & scripts\fuzz_parsers.ps1 -TimeoutSec 300
+          if ($LASTEXITCODE -ne 0) { throw "parser fuzz failed with exit $LASTEXITCODE" }

@@ -365,6 +365,12 @@ pub fn main() -> Int {
   f = f + check("te+cl rejected 400", tecl.status == 400 && string.str_contains(tecl.body, "ambiguous"));
   let tegz = route_req_hdr("POST", "/api/echo", "Transfer-Encoding: gzip\r\n", "x");
   f = f + check("te gzip rejected 501", tegz.status == 501 && string.str_contains(tegz.body, "unsupported_transfer_encoding"));
+  // Defense in depth for REL-20261106-1716-pulse: a NUL in the request head
+  // can leave ok=true with an empty method/target; reject it, never 404/site.
+  let badreq = PulseRequest{ method: ""; target: ""; version: "HTTP/1.1"; header_names: Vec[Str].new(); header_values: Vec[Str].new(); body: Vec[UInt8].new(); ok: true; error: "" };
+  let badm = router.route_match("", "");
+  let badout = core.handle_route(badm, &badreq, "");
+  f = f + check("empty method/target rejected 400", badout.status == 400);
   let nf = route_req("GET", "/nope", "");
   f = f + check("dispatch 404 envelope", nf.status == 404 && string.str_contains(nf.body, "\"code\":\"not_found\""));
   reqctx.set_rid("r-test");

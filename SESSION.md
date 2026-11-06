@@ -50,8 +50,11 @@ STATE AT 2026-11-06:
 - **Dynamic site first slice** (session 29): `xiom.pulse.urlenc` +
   `xiom.pulse.html` + `examples/site/` + `scripts/site_smoke.*`;
   `xiom.template` 0.2.0 is a declared dependency. Static site mode is
-  unchanged; compression/caching/i18n remain. Parity: Beacon 58.9% /
-  Station 69.9%.
+  unchanged; compression/caching/i18n remain.
+- **WP2 first slice** (session 30): deterministic parser fuzz gate in CI +
+  `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
+  `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
+  method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
 - Environment: lane-local package home `%LOCALAPPDATA%\xiom-pulse-home`;
   `dev-env` prefers v0.65.6 + `stdlib-tag-v0.65.6` (v0.65.2 skipped).
   The shared `%LOCALAPPDATA%\xiom\packages` is clobbered by fleet repins;
@@ -66,8 +69,11 @@ NEXT (dependency order):
 2. **Memory gate**: drive the HTTP floor toward flat (app-path router/header
    + Map + the Option residual), then the 24 h @ 100 req/s soak and the
    capped bttger 5k/1M. Update `benchmarks/bttger/REPORT-2026-11-01.md`.
-3. **Security/release (WP2)**: scoped audit, parser/multipart fuzzing, SBOM,
-   reproducible-build recipe, disclosure/CVE policy.
+3. **Security/release (WP2)**: the parser fuzz gate and the disclosure/CVE
+   policy are shipped; a NUL-in-head parser differential is open upstream
+   (`REL-20261106-1716-pulse`, Station has an empty-shape guard). Remaining:
+   external audit scope, SBOM, reproducible-build recipe, broader fuzzing,
+   CVE history.
 4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
    drain/zero-downtime reload, 1/2-worker curve.
 5. **Multi-page site server** (ROADMAP section 12): the dynamic first slice
@@ -116,6 +122,26 @@ re-run: **Beacon 58.9%**, **Station 69.9%** (was 58.4/69.1).
 **Next site unit:** cache template strings at startup, add dynamic cached
 pages (TTL/ETag), then compression; the 24 h site-workload soak belongs with
 the WP1 memory gate, not before it.
+
+## WRAP 2026-11-06 (session 30) -- WP2 security assurance first slice
+
+**Landed** (see the commit that follows):
+- `tests/fuzz_parsers.xi`: deterministic PCG fuzz of `parse_request`
+  (request line/headers, CL, chunked, caps, smuggling), multipart,
+  urlencoded and `html_escape`; ~45k iterations, exit 1 on a finding.
+- `scripts/fuzz_parsers.ps1`/`.sh` (watchdog, 300 s) wired into every CI leg.
+- **Finding:** a NUL in the request head truncates method/target/headers and
+  still parses ok; filed `REL-20261106-1716-pulse` (stdlib) with
+  `tests/probes/probe_fuzz_repro.xi` and `docs/repro/nul-in-request-head/`.
+  The Station dispatcher rejects an empty method/target (test green); the
+  Beacon package needs the parser fix. The harness reports `known_nul=910`
+  on the seeded run; `-StrictNul` verifies the fix when it lands.
+- `SECURITY.md` + `docs/SECURITY-POLICY.md`: public reporting/CVE policy and
+  the internal severity/SLA/release-gating process.
+- Parity: S-17/O-16 M -> A; **Beacon 60.3% / Station 70.9%** (was 58.9/69.9).
+
+**Next WP2:** external audit scope, SBOM (CycloneDX/SPDX), reproducible
+recipe, broader fuzzing (auth/session/static/release inputs), CVE history.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 
