@@ -136,11 +136,34 @@ pub fn routes_list() -> Vec[(Str, Str)] {
   return route_defs();
 }
 
-/// route_match builds the app table from route_defs(), matches
-/// (method, target) via the registry router and maps the registration
-/// index to the app route id (index + 1). The table is rebuilt per call
-/// (negligible at current load and avoids module-global mutable state).
-/// Complexity: O(routes).
+/// Cached registry router. Built once from route_defs() on the first
+/// dispatch and reused; the table is immutable after build. The previous
+/// per-call rebuild allocated a 25-pair Vec and re-added every route on
+/// every request, which was the dominant app-path retention in the WP1
+/// floor measurement (2026-11-06). The Vec holder avoids a module-scope
+/// package constructor (C-PULSE-07).
+var r_table: Vec[Router] = Vec[Router].new();
+
+/// _table returns the live cached-router index, building it on first use.
+/// Complexity: O(routes) once, then O(1).
+fn _table() -> Int {
+  if r_table.len() == 0 {
+    var t = router.router_new();
+    let defs = route_defs();
+    var i: Int = 0;
+    while i < defs.len() {
+      let d = defs[i];
+      let _r = router.router_add(&mut t, d.0, d.1);
+      i = i + 1;
+    }
+    r_table.push(t);
+  }
+  return 0;
+}
+
+/// route_match matches (method, target) against the cached app table and
+/// maps the registration index to the app route id (index + 1).
+/// Complexity: O(routes) once on first call, then O(match).
 pub fn route_match(method: Str, target: Str) -> PulseRoute {
   var m: PulseRoute = PulseRoute{
     kind: 0;
@@ -157,27 +180,19 @@ pub fn route_match(method: Str, target: Str) -> PulseRoute {
   m.query_names = qp.0;
   m.query_values = qp.1;
 
-  var t = router.router_new();
-  let defs = route_defs();
-  var di: Int = 0;
-  while di < defs.len() {
-    let d = defs[di];
-    let _r = router.router_add(&mut t, d.0, d.1);
-    di = di + 1;
-  }
-
-  let rm = router.router_match(&t, method, path);
+  let ti = _table();
+  let rm = router.router_match(&r_table[ti], method, path);
   if rm.code == 404 {
     return m;
   }
   if rm.code == 405 {
     m.kind = 2;
-    let allowed = router.router_allowed_methods(&t, path);
+    let allowed = router.router_allowed_methods(&r_table[ti], path);
     m.allow = join_methods(&allowed);
     return m;
   }
   m.kind = 1;
-  if rm.index >= 0 && rm.index < defs.len() {
+  if rm.index >= 0 && rm.index < router.router_count(&r_table[ti]) {
     m.route_id = rm.index + 1;
   }
   var i: Int = 0;

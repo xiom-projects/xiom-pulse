@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 31 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 32 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -36,10 +36,11 @@ STATE AT 2026-11-06:
   **15.1 B/iter**; capped bttger 5k completes (511.6 MB, zero errors).
   Residual: `json_type`/`json_get` still ~2 KB/op (filed
   `REL-20261104-1709-pulse`).
-- **HTTP request-path floor: 17.6 KB/req** (`1549-pulse-4` stays acked).
+- **HTTP request-path floor: ~16.1 KB/req** on a 60 s probe after the
+  router cache (2026-11-06; 17.6 reference; `1549-pulse-4` stays acked).
   The 24 h @ 100 req/s (RSS <= 256 MB) and 1,000,000-request gates remain
-  open; the ~0.9 KB Option[ServerRequest] aggregate is deferred by the
-  compiler. Never run the 1M bench uncapped.
+  open; the remaining floor is the header/Map path plus the deferred ~0.9 KB
+  Option[ServerRequest] aggregate. Never run the 1M bench uncapped.
 - Compiler/socket/arm64 chain closed (`1619`, `1101`, `1628`, `1529`
   verified); `1721` fixed (ops verifies); `1854` closed. v0.65.2 remains
   WITHDRAWN (durable-lane regression); never select it.
@@ -75,9 +76,10 @@ NEXT (dependency order):
    the product `GET /health` probe, suites/smoke/crash/migrations/SQL/
    stream/ws-auth, the five-leg CI and release dry-run; then pin and
    update SESSION/PROGRESS + the website briefs. Re-check the arm chain.
-2. **Memory gate**: drive the HTTP floor toward flat (app-path router/header
-   + Map + the Option residual), then the 24 h @ 100 req/s soak and the
-   capped bttger 5k/1M. Update `benchmarks/bttger/REPORT-2026-11-01.md`.
+2. **Memory gate**: the per-request router rebuild is fixed (20.6 -> 16.1
+   KB/req); drive the remaining header/Map path + Option residual toward
+   flat, then the 24 h @ 100 req/s soak and the capped bttger 5k/1M. Update
+   `benchmarks/bttger/REPORT-2026-11-01.md`.
 3. **Security/release (WP2)**: fuzz gate + disclosure/CVE policy, CycloneDX
    SBOM generator + release attach, reproducible recipe and audit scope are
    shipped; a NUL-in-head parser differential is open upstream
@@ -185,6 +187,17 @@ recipe, broader fuzzing (auth/session/static/release inputs), CVE history.
 **Next WP2:** the external review itself (owner engagement/spend), SBOM
 registry hashes + transitive closure, a double-build gate, broader fuzzing
 (auth/JWT, session, static, release inputs), CVE history.
+
+## WRAP 2026-11-06 (session 32) -- WP1 router cache
+
+- `src/router.xi`: `route_match` builds the registry router once from
+  `route_defs()` into a `Vec[Router]` holder and matches the cached table;
+  the per-request 25-route rebuild is gone.
+- Evidence: 60 s `/health` keep-alive probe steady **20.6 -> 16.1 KB/req**
+  (95 steady requests; v0.65.6 17.6 reference). `test_app` GREEN.
+- Docs: STATUS / ROADMAP-FOR-WEBSITE / PROGRESS and the bttger report
+  updated. The session 29-31 site/security/SBOM work is unchanged.
+- Remaining: header/Map + Option residual; the 24 h/1M gates stay open.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

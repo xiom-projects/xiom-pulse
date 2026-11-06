@@ -79,11 +79,12 @@ all five are packaged in the release dry-run.
 ## Known limitations (state these honestly)
 
 1. **Sustained-load memory (the main blocker).** On v0.65.6 the server
-   retains roughly **17.6 KB per request** (down from 22.3 on v0.65.4 and
-   44-50 on v0.65.1; keep-alive probe). The JSON memory class is **fixed**
-   (builder/parse are flat); the residual is app-path router/header
-   lookups and Map values, plus the deferred ~0.9 KB Option[ServerRequest]
-   aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. Short demos and
+   retains roughly **16.1 KB per request** on a 60 s probe (17.6 in the
+   longer reference run; down from 22.3 on v0.65.4 and 44-50 on v0.65.1;
+   keep-alive probe). The JSON memory class is **fixed** (builder/parse are
+   flat) and the per-request router rebuild is **fixed** (2026-11-06); the
+   residual is header/lookup and Map values, plus the deferred ~0.9 KB
+   Option[ServerRequest] aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. Short demos and
    bounded runs are fine; **do not describe the current build as suitable
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
@@ -104,9 +105,10 @@ all five are packaged in the release dry-run.
 
 ## What's next (public roadmap wording)
 
-- Memory: the JSON class is fixed; the floor is **17.6 KB/req** on
-  v0.65.6. The remaining work is the HTTP/app path plus the deferred
-  Option aggregate, then the 24h/1M soak gate.
+- Memory: the JSON class and the per-request router rebuild are fixed; the
+  floor is **~16.1 KB/req** on a 60 s probe (17.6 reference). The remaining
+  work is the HTTP/app path plus the deferred Option aggregate, then the
+  24h/1M soak gate.
 - **0.3.0**: SQL serving decision, version bump, CHANGELOG, tag, fleet
   watch.
 - Realtime: permessage-deflate, subprotocol negotiation.

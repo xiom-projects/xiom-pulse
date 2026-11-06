@@ -170,7 +170,8 @@ cross-framework ranking, no audit cadence, no ecosystem.
 - Benchmark baseline published (bttger six endpoints, single connection):
   1,923 / 421 / 1,670 / 928 / 1,083 / 377 req/s on v0.65.4, zero errors;
   10 connections add no throughput (the scale-out gap Phase 3 fixes).
-- Memory: **16.5 KB/request** on the current pin (from 46); not flat yet.
+- Memory: **16.1 KB/request** on a 60 s probe after the router cache
+  (17.6 reference; from 46); not flat yet.
 - Supply chain: SHA-pinned toolchain/archives, provenance attestations,
   signed-off release dry-runs.
 
