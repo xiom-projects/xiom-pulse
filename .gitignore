@@ -19,6 +19,7 @@ a.out
 /bin/
 /obj/
 /dist/
+/sbom/
 
 # Probe + soak logs (keep summaries, not raw runs)
 *.log

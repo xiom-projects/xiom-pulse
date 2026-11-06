@@ -1,0 +1,10 @@
+{
+  "compiler": "v0.65.6",
+  "platforms": {
+    "linux-x64": "a8fc6668163e5dd87d2516483d31a3a0f614c8a3ef6ecfb790e6dfc8b7e4ce5d",
+    "linux-arm64": "dca04f072414121c806701a6f989f5709c5f69e0cd4dc9158c8475142ef328d8",
+    "windows-x64": "a52b8cf3a1dd406a13d51069acfde12ac86f75e2deecfa98e6b815890bf9f886",
+    "macos-x64": "c5f0eb0b4aff9c92ae75548d566f181012cd844e1a2e9ce24f70e25ea09e47ab",
+    "macos-arm64": "0fc5c6cde3d6e115b831bfc5481a1d6067bd65c699619e78d405519ad5d2ca1c"
+  }
+}

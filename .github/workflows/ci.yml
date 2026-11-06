@@ -127,6 +127,22 @@ jobs:
         shell: bash
         run: bash scripts/fuzz_parsers.sh --timeout 300
 
+      - name: SBOM (generate + validate)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/sbom.py --out sbom/xiom-pulse.cdx.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open("sbom/xiom-pulse.cdx.json", encoding="utf-8"))
+          assert d["bomFormat"] == "CycloneDX"
+          assert d["specVersion"] == "1.5"
+          assert d["metadata"]["component"]["name"] == "xiom-pulse"
+          assert len(d["components"]) >= 10
+          print("sbom: valid", len(d["components"]), "components")
+          PY
+
       - name: Suites x2 + smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh

@@ -92,6 +92,9 @@ adopt it the moment the toolchain grows support.
 - `docs/PROGRESS.md` -- **weighted production-grade tracker** (what works, what is pending, % done).
 - `docs/ROADMAP-TOP-TIER.md` -- the top-tier goal map: acceptance criteria T1-T9, the two editions (Beacon/Station), workstreams.
 - `docs/DEPLOYMENT.md` -- proxy-first TLS deployment (Caddy/nginx, env, supervision).
+- `SECURITY.md` -- reporting, scope, disclosure/CVE and the honest assurance status.
+- `docs/SBOM.md`, `docs/REPRODUCIBLE-BUILD.md` -- CycloneDX SBOM + rebuild recipe.
+- `docs/SECURITY-AUDIT-SCOPE.md` -- the fixed-scope independent review package.
 - `docs/repro/` -- minimal upstream repro bundles.
 - `src/` -- the service; `tests/` -- suites and probes.
 

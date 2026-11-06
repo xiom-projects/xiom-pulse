@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 30 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 31 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -56,6 +56,10 @@ STATE AT 2026-11-06:
   `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
+- **WP2 release integrity** (session 31): `scripts/sbom.py` (CycloneDX 1.5,
+  19 components on 0.2.2) + `toolchain-pins.json` drift check + CI/release
+  wiring; `docs/SBOM.md`, `docs/REPRODUCIBLE-BUILD.md`,
+  `docs/SECURITY-AUDIT-SCOPE.md`.
 - Environment: lane-local package home `%LOCALAPPDATA%\xiom-pulse-home`;
   `dev-env` prefers v0.65.6 + `stdlib-tag-v0.65.6` (v0.65.2 skipped).
   The shared `%LOCALAPPDATA%\xiom\packages` is clobbered by fleet repins;
@@ -70,11 +74,12 @@ NEXT (dependency order):
 2. **Memory gate**: drive the HTTP floor toward flat (app-path router/header
    + Map + the Option residual), then the 24 h @ 100 req/s soak and the
    capped bttger 5k/1M. Update `benchmarks/bttger/REPORT-2026-11-01.md`.
-3. **Security/release (WP2)**: the parser fuzz gate and the disclosure/CVE
-   policy are shipped; a NUL-in-head parser differential is open upstream
+3. **Security/release (WP2)**: fuzz gate + disclosure/CVE policy, CycloneDX
+   SBOM generator + release attach, reproducible recipe and audit scope are
+   shipped; a NUL-in-head parser differential is open upstream
    (`REL-20261106-1716-pulse`, Station has an empty-shape guard). Remaining:
-   external audit scope, SBOM, reproducible-build recipe, broader fuzzing,
-   CVE history.
+   the external review (owner engagement/spend), SBOM registry hashes +
+   transitive closure, a double-build gate, broader fuzzing, CVE history.
 4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
    drain/zero-downtime reload, 1/2-worker curve.
 5. **Multi-page site server** (ROADMAP section 12): the dynamic first slice
@@ -143,6 +148,25 @@ the WP1 memory gate, not before it.
 
 **Next WP2:** external audit scope, SBOM (CycloneDX/SPDX), reproducible
 recipe, broader fuzzing (auth/session/static/release inputs), CVE history.
+
+## WRAP 2026-11-06 (session 31) -- WP2 release integrity
+
+**Landed** (see the commit that follows):
+- `scripts/sbom.py`: CycloneDX 1.5 SBOM, deterministic uuid5 serial and
+  commit-date timestamp; 13 `xiom.toml` deps + 5 compiler platform components
+  with SHA-256 + the stdlib git ref (19 components on 0.2.2).
+- `toolchain-pins.json` (five v0.65.6 archive hashes) with a CI drift check
+  (v0.65.7 -> exit 2; v0.65.6 -> exit 0 verified). The SBOM is generated and
+  shape-validated on the Linux CI legs; the tag release job regenerates it
+  from `GITHUB_SHA` and attaches `xiom-pulse.cdx.json` to the release.
+- `docs/SBOM.md`, `docs/REPRODUCIBLE-BUILD.md` (pins, build, payload-vs-zip
+  comparison, Windows/macOS deltas, the missing double-build gate),
+  `docs/SECURITY-AUDIT-SCOPE.md` (fixed scope, deliverables, 10-15 day
+  effort, owner decisions). `SECURITY.md`/`SECURITY-POLICY.md` updated.
+
+**Next WP2:** the external review itself (owner engagement/spend), SBOM
+registry hashes + transitive closure, a double-build gate, broader fuzzing
+(auth/JWT, session, static, release inputs), CVE history.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

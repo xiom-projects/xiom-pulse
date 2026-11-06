@@ -88,9 +88,11 @@ all five are packaged in the release dry-run.
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
 2. **No independent external security audit yet.** A deterministic parser
-   fuzz gate (HTTP/chunked, multipart, urlencoded, HTML escaping) runs in CI,
-   and a public disclosure/CVE policy is published (`SECURITY.md`); an
-   external review and an SBOM/reproducible recipe are still open.
+   fuzz gate runs in CI, a public disclosure/CVE policy is published, a
+   CycloneDX SBOM is generated and attached to releases, and a
+   reproducible-build recipe is documented; the external review, SBOM
+   completeness (registry hashes/transitive closure) and a double-build gate
+   are open.
 3. **TLS is edge-only by design** (Caddy/nginx terminates; PULSE speaks
    plaintext HTTP/1.1 on loopback). Do not claim in-process TLS.
 4. **HTTP/2 is not implemented** -- HTTP/1.1 is deliberate.

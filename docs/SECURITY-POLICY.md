@@ -79,12 +79,17 @@ documented workaround and a target release.
   urlencoded, html_escape; ~45k iterations per run, PCG seeded).
 - Public reporting policy (`SECURITY.md`) and this process.
 - SHA-256 pins + build provenance in the release workflow.
+- CycloneDX SBOM generator + release attachment (`scripts/sbom.py`,
+  `docs/SBOM.md`); pin drift is checked against `toolchain-pins.json`.
+- Reproducible-build recipe (`docs/REPRODUCIBLE-BUILD.md`) and a fixed-scope
+  audit package (`docs/SECURITY-AUDIT-SCOPE.md`).
 
 **Open:**
 
-- Independent, fixed-scope external review (WP2, month 7).
-- SBOM (CycloneDX or SPDX) generated and attached to the release.
-- Reproducible-build recipe with documented platform deltas.
+- The independent review itself (scope ready; owner engagement/spend).
+- SBOM completeness: registry tarball hashes and the transitive closure.
+- A reproducible-build gate (double build) in CI; the recipe lists the known
+  platform deltas.
 - Fuzzing beyond parsers (auth/JWT, session, static path, release inputs).
 - A public CVE/advisory history (none yet).
 

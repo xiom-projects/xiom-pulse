@@ -101,9 +101,12 @@ this policy.
   empty method/target shape as defense in depth; the Beacon package needs
   the upstream parser fix. Do not rely on NUL-containing requests being
   rejected until that fix lands.
-- Release artifacts are SHA-256 pinned with build provenance; see
-  `docs/repro/` and the release workflow. An SBOM and a reproducible-build
-  recipe are not yet published.
+- Release artifacts are SHA-256 pinned with build provenance. A CycloneDX
+  SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI and the
+  release job attaches the SBOM to the next tag. A reproducible-build recipe
+  is documented (`docs/REPRODUCIBLE-BUILD.md`); a double-build gate is not
+  yet in CI. An independent review is scoped
+  (`docs/SECURITY-AUDIT-SCOPE.md`) but not booked.
 
 ## Contact
 
