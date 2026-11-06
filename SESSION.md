@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 33 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 34 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -57,6 +57,10 @@ STATE AT 2026-11-06:
   `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
+- **WP4 design ready** (2026-11-06): `docs/DESIGN-WORKERS.md` +
+  `docs/checklists/workers.md`; phase 1 N ports + edge + control-port drain,
+  Linux reuseport optional, supervisor via `posix_spawn`; stateless-first,
+  with sticky sessions and phase-2 shared rate/store/game. Code not started.
 - **WP1 metrics Map optimization blocked** (2026-11-06): direct nested
   borrow crashed; the copy-modify-write pattern hits a v0.65.6 clang
   `extractvalue %struct.Vec` error. `src/metrics.xi` reverted (suite GREEN);
@@ -100,8 +104,11 @@ NEXT (dependency order):
    the external review (owner engagement/spend), a general lockfile/resolver
    for future non-stdlib transitive deps, cross-host/zip reproducible builds,
    fuzzing session/cookie parsing and release inputs, CVE history.
-4. **Scale-out (WP4)**: supervisor + workers (SO_REUSEPORT / N ports),
-   drain/zero-downtime reload, 1/2-worker curve.
+4. **Scale-out (WP4)**: the design + checklist are ready
+   (`docs/DESIGN-WORKERS.md`, `docs/checklists/workers.md`); implement phase 1
+   (N ports + edge + control-port drain + supervisor) after the next
+   compiler/stdlib + memory gate, then the 1/2-worker curve. Shared
+   sessions/rate/store are phase 2 after the SQL/KV decision.
 5. **Multi-page site server** (ROADMAP section 12): the dynamic first slice
    is shipped (`examples/site`, `xiom.pulse.urlenc`, `xiom.pulse.html`,
    `xiom.template` 0.2.0, `docs/SITE-SERVER.md`, site smoke on CI). Next:
@@ -222,6 +229,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   KB/req; re-land the metrics cache after v0.65.7+.
 - Release remains on hold per the owner's 2026-11-06 decision; ops is
   gated and waiting for a verified artifact.
+
+## WRAP 2026-11-06 (session 34) -- WP4 design (docs only)
+
+- Added `docs/DESIGN-WORKERS.md` + `docs/checklists/workers.md`.
+- Phase 1: N workers on distinct ports + edge (all five), optional Linux
+  SO_REUSEPORT, supervisor (`PULSE_WORKERS`, `posix_spawn`), loopback
+  control-port drain (signals still a stub), zero-downtime reload sequence.
+- Stateless-first: sessions need sticky routing; rate/store/game need a
+  phase-2 shared state after the SQL/KV decision. 2-worker target >= 1.6x.
+- No code changes; release remains on hold; implementation waits for the
+  next compiler/stdlib + memory gate.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

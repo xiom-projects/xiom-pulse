@@ -332,12 +332,12 @@ milestones and acceptance criteria, with the current status. It is scoped to
 management. The 1.0 release is a finishing plan on the shipped 0.2.x line,
 not a rewrite.
 
-| Work package | Hours | Deliverable and acceptance | Status 2026-11-02 |
+| Work package | Hours | Deliverable and acceptance | Status 2026-11-06 |
 |---|---:|---|---|
-| WP1 -- memory and sustained-load reliability | 220 | Upstream reclamation fixes with repros + app-path allocation cuts; CI retention gate; **24 h at 100 req/s on the bttger mix with RSS <= 256 MB**, published baseline; 72 h confirmation | Partial: floor is **16.5 KB/req** (from 46); response builder flat, per-connection buffer in place; 24 h/1M gate still open |
+| WP1 -- memory and sustained-load reliability | 220 | Upstream reclamation fixes with repros + app-path allocation cuts; CI retention gate; **24 h at 100 req/s on the bttger mix with RSS <= 256 MB**, published baseline; 72 h confirmation | Partial: floor is **16.1 KB/req** (from 46; router cache 2026-11-06; metrics Map blocked on compiler `REL-20261106-1840-pulse`); response builder flat, per-connection buffer in place; 24 h/1M gate still open |
 | WP2 -- security and release integrity | 160 | Fixed-scope review in month 7 (Ã¢â€šÂ¬3,000), months 8-10 remediation; parser/multipart fuzzing; SBOM (CycloneDX/SPDX); SHA-pinned artifacts + provenance; reproducible-build recipe; disclosure policy + CVE process | Partial: SHA256SUMS + provenance; fuzz gate + disclosure/CVE policy; CycloneDX SBOM with registry hashes + resolved graph + release attach; reproducible recipe + audit scope docs. Still open: the external review itself and a cross-host/zip reproducible gate |
 | WP3 -- external adoption and operational proof | 180 | One external public-interest pilot (bounded, not a migration); operator guide, migration guide, one-command scaffold; benchmark report; 72 h soak; final public report (CC BY 4.0) | Partial: internal dogfooding only (pulse.xiom-lang.org); benchmark report published 2026-11-01; guides partial; no external pilot |
-| WP4 -- scale-out foundation | 160 | Process supervisor + --workers N; SO_REUSEPORT (Linux), N ports (Windows); graceful drain; zero-downtime reload; proxy-trust unit; 1/2-worker scaling curve; rollback procedure | Not started: the single-accept loop is the measured ceiling (10 connections add no throughput) |
+| WP4 -- scale-out foundation | 160 | Process supervisor + --workers N; SO_REUSEPORT (Linux), N ports (Windows); graceful drain; zero-downtime reload; proxy-trust unit; 1/2-worker scaling curve; rollback procedure | Design ready: `docs/DESIGN-WORKERS.md` + `docs/checklists/workers.md`; code not started. The single-accept loop is the measured ceiling (10 connections add no throughput) |
 | WP5 -- project management and dissemination | 40 | Monthly public notes; issue triage; release coordination; final report; one remote community presentation | Ongoing: changelog, relay, progress and benchmark reports |
 
 ### Milestones
