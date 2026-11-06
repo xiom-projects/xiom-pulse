@@ -74,10 +74,13 @@ documented workaround and a target release.
 
 **Shipped:**
 
-- Deterministic fuzz gate in CI: `tests/fuzz_parsers.xi` +
+- Deterministic fuzz gates in CI: `tests/fuzz_parsers.xi` +
   `scripts/fuzz_parsers.ps1`/`.sh` (HTTP request/chunked, multipart,
   urlencoded, html_escape, static path traversal, HS256 JWT; ~70k
-  iterations per run, PCG seeded).
+  iterations), and `tests/fuzz_cookie.xi` +
+  `scripts/fuzz_cookie.ps1`/`.sh` (Cookie request and Set-Cookie
+  parse/serialize, session-id extraction, CSRF; 20k iterations). Both are
+  PCG seeded.
 - Public reporting policy (`SECURITY.md`) and this process.
 - SHA-256 pins + build provenance in the release workflow.
 - CycloneDX SBOM generator with registry SHA-256/signature metadata and the
@@ -103,6 +106,7 @@ documented workaround and a target release.
 | Ref | State | Note |
 |---|---|---|
 | `REL-20261106-1716-pulse` | open (stdlib) | NUL in the request head truncates method/target/headers; Station guard rejects the empty shape; Beacon needs the parser fix |
+| `xiom.cookie` 0.1.2 contract | known caveat | `cookie_parse_request` -> `cookie_serialize_request` preserves a literal CRLF if handed an unframed value. PULSE only passes a single parsed Cookie header value, so the HTTP path is not affected; the cookie fuzz gate tracks it as `known_crlf` and CI runs with `-AllowKnownCrlf`. Do not treat the package as a sanitizer. |
 
 ## 8. Roles
 

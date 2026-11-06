@@ -127,6 +127,11 @@ jobs:
         shell: bash
         run: bash scripts/fuzz_parsers.sh --timeout 300
 
+      - name: Cookie/auth fuzz gate (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash scripts/fuzz_cookie.sh --timeout 300 --allow-known-crlf
+
       - name: SBOM (generate + validate)
         if: runner.os == 'Linux'
         shell: bash
@@ -172,5 +177,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "site smoke failed with exit $LASTEXITCODE" }
           & scripts\fuzz_parsers.ps1 -TimeoutSec 300
           if ($LASTEXITCODE -ne 0) { throw "parser fuzz failed with exit $LASTEXITCODE" }
+          & scripts\fuzz_cookie.ps1 -TimeoutSec 300 -AllowKnownCrlf
+          if ($LASTEXITCODE -ne 0) { throw "cookie fuzz failed with exit $LASTEXITCODE" }
           & scripts\repro_check.ps1 -TimeoutSec 300
           if ($LASTEXITCODE -ne 0) { throw "repro check failed with exit $LASTEXITCODE" }

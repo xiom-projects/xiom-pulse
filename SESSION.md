@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 35 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 36 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -57,6 +57,11 @@ STATE AT 2026-11-06:
   `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
+- **WP2 cookie/auth fuzz** (2026-11-06): `tests/fuzz_cookie.xi` +
+  `scripts/fuzz_cookie.ps1`/`.sh`, 20k iterations, CI with
+  `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
+  cookie package's CRLF-preserving parse->serialize is a documented contract
+  caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
 - **WP3 scaffold shipped** (2026-11-06): `scaffolds/api` +
   `scripts/new_app.py` + `scripts/scaffold_smoke.py` + `docs/SCAFFOLD.md`;
   smoke GREEN. README status/toolchain corrected to v0.65.6 / 6fdde4ee /
@@ -255,6 +260,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - Four scoped agents are running in parallel: WP4 reuseport slice, cookie/
   session fuzz, feature-test matrix, memory-floor report. Integrate their
   results next; no commits from them.
+
+## WRAP 2026-11-06 (session 36) -- WP2 cookie/auth fuzz
+
+- Agent-delivered `tests/fuzz_cookie.xi` + wrappers: 20k iterations of
+  Cookie request/Set-Cookie parsing and serialization, session-id extraction
+  and CSRF. The contract-legal surface is green; the only RED is the cookie
+  package's documented no-validation caveat (unframed CRLF round-trips), not
+  reachable through PULSE's single parsed Cookie header.
+- CI runs the gate with `-AllowKnownCrlf`; the strict mode is available to
+  verify a future package fix.
+- No PULSE code change.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

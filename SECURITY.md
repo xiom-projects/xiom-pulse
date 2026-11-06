@@ -92,10 +92,13 @@ this policy.
 
 - **No independent external audit has been completed.** Do not treat PULSE
   as audited.
-- A deterministic fuzz gate runs in CI (`tests/fuzz_parsers.xi`,
-  `scripts/fuzz_parsers.ps1`/`.sh`): HTTP request parsing, chunked framing,
-  multipart, urlencoded forms, HTML escaping, static/site path resolution
-  and HS256 JWT verification.
+- Deterministic fuzz gates run in CI (`tests/fuzz_parsers.xi` and
+  `tests/fuzz_cookie.xi`): HTTP request parsing, chunked framing, multipart,
+  urlencoded forms, HTML escaping, static/site path resolution, HS256 JWT
+  verification, and Cookie/Set-Cookie/session/CSRF parsing. The cookie
+  package is not a sanitizer: PULSE only hands it a single parsed Cookie
+  header value, and the fuzz gate tracks the unframed-CRLF contract caveat
+  as `known_crlf`.
 - A **known upstream parser finding** is open: a NUL byte in the request
   head truncates the parsed method/target/headers
   (`REL-20261106-1716-pulse`, stdlib). The Station dispatcher rejects the
