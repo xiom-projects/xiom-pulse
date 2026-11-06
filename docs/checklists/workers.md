@@ -6,6 +6,20 @@ Design: `docs/DESIGN-WORKERS.md`. **Status: design only; do not tag a release
 claiming multi-worker until every phase-1 box is checked and the evidence is
 attached.** The memory gate stays single-worker until phase 3.
 
+## Phase 1 slice evidence (2026-11-06)
+
+- [x] `PULSE_REUSEPORT` is read and `socket_set_reuseport(fd, true)` is called
+      before `socket_bind`; Windows logs the documented Err and falls back to
+      the N-ports bind (manual Windows evidence).
+- [x] `PULSE_WORKER_ID` is read, validated and logged at startup; config-file
+      keys `reuseport`/`worker_id` are applied; `--check-config` reports both.
+- [x] `scripts/worker_smoke.ps1` / `.sh`: two workers on 18201/18202, both
+      `/health` 200, GREEN; `docs/N-PORT-EDGE.md` has Caddy/nginx templates.
+- [x] `tests/test_app.xi` covers the getters/defaults/warnings; suite GREEN.
+- [x] The N-port smoke is a CI step on Unix and Windows.
+- [ ] Supervisor `PULSE_WORKERS`, control-port `/drain`, reload, 1/2-worker
+      curve and the keep-alive drain test.
+
 ## 0. Prerequisites (record the pin)
 
 - [ ] Confirm on the pinned toolchain: `socket_set_reuseport(fd, on)`,

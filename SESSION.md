@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 36 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 37 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -67,10 +67,11 @@ STATE AT 2026-11-06:
   smoke GREEN. README status/toolchain corrected to v0.65.6 / 6fdde4ee /
   packages 0.3.2 / 0.1.11 / all five platforms. External pilot and full
   operator/migration guides remain.
-- **WP4 design ready** (2026-11-06): `docs/DESIGN-WORKERS.md` +
-  `docs/checklists/workers.md`; phase 1 N ports + edge + control-port drain,
-  Linux reuseport optional, supervisor via `posix_spawn`; stateless-first,
-  with sticky sessions and phase-2 shared rate/store/game. Code not started.
+- **WP4 first slice** (2026-11-06): design + `PULSE_REUSEPORT` (before bind;
+  Windows fallback) + `PULSE_WORKER_ID` + config keys/validation + N-port
+  two-worker smoke (18201/18202, GREEN) + `docs/N-PORT-EDGE.md`. Supervisor,
+  control-port drain, reload and the 1/2-worker curve are open; stateless-
+  first, sticky sessions/phase-2 shared rate/store/game.
 - **WP1 metrics Map optimization blocked** (2026-11-06): direct nested
   borrow crashed; the copy-modify-write pattern hits a v0.65.6 clang
   `extractvalue %struct.Vec` error. `src/metrics.xi` reverted (suite GREEN);
@@ -271,6 +272,15 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - CI runs the gate with `-AllowKnownCrlf`; the strict mode is available to
   verify a future package fix.
 - No PULSE code change.
+
+## WRAP 2026-11-06 (session 37) -- WP4 first slice + feature audit
+
+- WP4 slice: `PULSE_REUSEPORT` before bind (Windows fallback), worker id,
+  config/validation, N-port two-worker smoke GREEN, edge template; `test_app`
+  GREEN. Supervisor/drain/reload/curve remain open.
+- Feature audit `docs/FEATURE-TESTS.md`: evidence map, matrix drift (W-06,
+  S-08, O-13) and the top-10 missing tests; matrix corrections follow.
+- Auth fuzz (session 36) and scaffold (session 35) are already on main.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

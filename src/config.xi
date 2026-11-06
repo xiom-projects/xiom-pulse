@@ -148,6 +148,19 @@ pub fn cfg_migration_stale_secs() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_MIGRATION_STALE_SECS", "900"), 900);
 }
 
+/// cfg_reuseport is true when PULSE_REUSEPORT=1 (default off). POSIX only;
+/// Windows has no SO_REUSEPORT equivalent, so the bind falls back to the
+/// N-ports baseline. Complexity: O(1). Pure.
+pub fn cfg_reuseport() -> Bool {
+  return env.var_or("PULSE_REUSEPORT", "0") == "1";
+}
+
+/// cfg_worker_id returns the worker label (PULSE_WORKER_ID, default 0) used
+/// in startup logs and per-worker paths/metrics. Complexity: O(1). Pure.
+pub fn cfg_worker_id() -> Int {
+  return cfg_parse_uint(env.var_or("PULSE_WORKER_ID", "0"), 0);
+}
+
 /// cfg_legacy_loop: PULSE_LEGACY_LOOP (default "0") -- "1" keeps the
 /// product accept loop for the Phase B rollback window; the default uses
 /// the Beacon serve_with_ctx loop + stateful hooks.
@@ -234,6 +247,8 @@ pub fn cfg_load_file() -> Bool {
   let obj = pv.value;
   cfg_apply_str(obj, "port", "PULSE_PORT");
   cfg_apply_str(obj, "bind", "PULSE_BIND");
+  cfg_apply_str(obj, "reuseport", "PULSE_REUSEPORT");
+  cfg_apply_str(obj, "worker_id", "PULSE_WORKER_ID");
   cfg_apply_str(obj, "log", "PULSE_LOG");
   cfg_apply_str(obj, "store_path", "PULSE_STORE_PATH");
   cfg_apply_str(obj, "audit_path", "PULSE_AUDIT_PATH");
@@ -584,6 +599,14 @@ pub fn cfg_validate() -> Vec[Str] {
   let asy = env.var_or("PULSE_AUDIT_SYNC", "");
   if asy == "0" {
     w.push("PULSE_AUDIT_SYNC=0: audit appends are not fsynced before the response");
+  }
+  let rp = env.var_or("PULSE_REUSEPORT", "");
+  if rp.len() > 0 && rp != "0" && rp != "1" {
+    w.push("PULSE_REUSEPORT=\"" + rp + "\" is not 0 or 1; treating as disabled");
+  }
+  let wid = env.var_or("PULSE_WORKER_ID", "");
+  if wid.len() > 0 && cfg_digit_value(wid) < 0 {
+    w.push("PULSE_WORKER_ID=\"" + wid + "\" is not a non-negative integer; using 0");
   }
 
   return w;

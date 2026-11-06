@@ -143,6 +143,20 @@ pub fn main() -> Int {
   f = f + check("config port fallback", config.cfg_port() == 8080);
   env.remove_var("PULSE_PORT");
 
+  // WP4 phase-1: reuseport flag + worker label.
+  env.remove_var("PULSE_REUSEPORT");
+  env.remove_var("PULSE_WORKER_ID");
+  f = f + check("config reuseport default off", !config.cfg_reuseport());
+  f = f + check("config worker id default 0", config.cfg_worker_id() == 0);
+  env.set_var("PULSE_REUSEPORT", "1");
+  f = f + check("config reuseport on honored", config.cfg_reuseport());
+  env.set_var("PULSE_WORKER_ID", "3");
+  f = f + check("config worker id override", config.cfg_worker_id() == 3);
+  env.set_var("PULSE_WORKER_ID", "worker-3");
+  f = f + check("config worker id fallback", config.cfg_worker_id() == 0);
+  env.remove_var("PULSE_REUSEPORT");
+  env.remove_var("PULSE_WORKER_ID");
+
   // --- config file -----------------------------------------------------------
   let cf = "pulse-test-config.json";
   let _rmc = io.remove_file(cf);
@@ -180,6 +194,14 @@ pub fn main() -> Int {
   env.set_var("PULSE_PORT", "8080");
   let w3 = config.cfg_validate();
   f = f + check("cfg warn clean", w3.len() == 0);
+  env.set_var("PULSE_REUSEPORT", "yes");
+  let w3rp = config.cfg_validate();
+  f = f + check("cfg warn bad reuseport", w3rp.len() == 1 && string.str_contains(w3rp[0], "PULSE_REUSEPORT"));
+  env.remove_var("PULSE_REUSEPORT");
+  env.set_var("PULSE_WORKER_ID", "worker-x");
+  let w3wid = config.cfg_validate();
+  f = f + check("cfg warn bad worker id", w3wid.len() == 1 && string.str_contains(w3wid[0], "PULSE_WORKER_ID"));
+  env.remove_var("PULSE_WORKER_ID");
   // durability Phase A knobs: default-on, env-honored, warn on disable.
   f = f + check("config store_sync default on", config.cfg_store_sync());
   f = f + check("config audit_sync default on", config.cfg_audit_sync());

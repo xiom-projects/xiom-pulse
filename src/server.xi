@@ -1225,7 +1225,7 @@ pub fn main() -> Int {
     if a == "--help" || a == "-h" {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
       io.println("usage: pulse_app [--version|--help|--check-config] | routes | openapi [--check] | version | check-config");
-      io.println("env: PULSE_PORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
+      io.println("env: PULSE_PORT PULSE_WORKER_ID PULSE_REUSEPORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_RATE_ROUTES PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       io.println("     PULSE_READ_TIMEOUT PULSE_WRITE_TIMEOUT PULSE_IDLE_TIMEOUT PULSE_SITE_DIR");
@@ -1248,6 +1248,10 @@ pub fn main() -> Int {
       }
       io.println("port=" + config.cfg_port().to_str());
       io.println("bind=" + config.cfg_bind());
+      io.println("worker_id=" + config.cfg_worker_id().to_str());
+      var rp_note: Str = "off";
+      if config.cfg_reuseport() { rp_note = "on"; }
+      io.println("reuseport=" + rp_note);
       io.println("store=" + config.cfg_store_path());
       io.println("store_backend=" + config.cfg_store_backend());
       io.println("audit=" + config.cfg_audit_path());
@@ -1319,6 +1323,25 @@ pub fn main() -> Int {
   let fd = sr.value;
   let port = config.cfg_port();
   let bind_addr = config.cfg_bind();
+  let worker_id = config.cfg_worker_id();
+  let reuseport_on = config.cfg_reuseport();
+  // WP4 phase-1 slice: SO_REUSEPORT must be set BEFORE bind. It is POSIX
+  // only; on Windows the stdlib returns the documented Err, so log it and
+  // continue with the normal N-ports bind instead of failing startup.
+  var reuseport_mode: Str = "off";
+  if reuseport_on {
+    let rp = socket.socket_set_reuseport(fd, true);
+    if rp.is_err {
+      reuseport_mode = "requested-unavailable";
+      io.println("pulse: PULSE_REUSEPORT=1 unavailable: " + rp.error);
+      io.println("pulse: falling back to the N-ports bind (" + bind_addr + ":" + port.to_str() + ")");
+      io.flush_stdout();
+    } else {
+      reuseport_mode = "on";
+    }
+  }
+  io.println("pulse: worker id=" + worker_id.to_str() + " reuseport=" + reuseport_mode);
+  io.flush_stdout();
 
   let br = socket.socket_bind(fd, bind_addr, port);
   if br.is_err {
