@@ -57,6 +57,11 @@ STATE AT 2026-11-06:
   `SECURITY.md`/`docs/SECURITY-POLICY.md`; open upstream NUL-in-head item
   `REL-20261106-1716-pulse`; the Station dispatcher rejects an empty
   method/target as defense in depth. Parity: Beacon 60.3% / Station 70.9%.
+- **Soak lane (2026-11-06):** ops prepared a 256M-capped `pulse-soak.service`
+  at 127.0.0.1:3501 with a gated 24h harness; a 60 s wiring smoke on an old
+  0.2.2 Linux binary was green but is **not** a gate. The 24h/1M gate has
+  **not** run; it is blocked on a Linux artifact from `8e01eb5`+ and a PULSE
+  go/no-go (`REL-20261106-1807-pulse` verified/closed).
 - **WP2 release integrity** (session 31): `scripts/sbom.py` (CycloneDX 1.5,
   19 components on 0.2.2, `--fetch-hashes` adds registry SHA-256/signature/
   public-key metadata and the resolved dependency graph) +
@@ -78,8 +83,9 @@ NEXT (dependency order):
    update SESSION/PROGRESS + the website briefs. Re-check the arm chain.
 2. **Memory gate**: the per-request router rebuild is fixed (20.6 -> 16.1
    KB/req); drive the remaining header/Map path + Option residual toward
-   flat, then the 24 h @ 100 req/s soak and the capped bttger 5k/1M. Update
-   `benchmarks/bttger/REPORT-2026-11-01.md`.
+   flat. Ops has a 256M-capped 24h lane ready; supply a Linux artifact from
+   `8e01eb5`+ and a go/no-go before the acceptance run, then the capped
+   bttger 5k/1M. Update `benchmarks/bttger/REPORT-2026-11-01.md`.
 3. **Security/release (WP2)**: fuzz gate + disclosure/CVE policy, CycloneDX
    SBOM generator + release attach, reproducible recipe and audit scope are
    shipped; a NUL-in-head parser differential is open upstream
