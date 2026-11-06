@@ -143,6 +143,11 @@ jobs:
           print("sbom: valid", len(d["components"]), "components")
           PY
 
+      - name: Reproducible build (same-host payload)
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        shell: bash
+        run: bash scripts/repro_check.sh --timeout 300
+
       - name: Suites x2 + smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -167,3 +172,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "site smoke failed with exit $LASTEXITCODE" }
           & scripts\fuzz_parsers.ps1 -TimeoutSec 300
           if ($LASTEXITCODE -ne 0) { throw "parser fuzz failed with exit $LASTEXITCODE" }
+          & scripts\repro_check.ps1 -TimeoutSec 300
+          if ($LASTEXITCODE -ne 0) { throw "repro check failed with exit $LASTEXITCODE" }

@@ -105,8 +105,9 @@ this policy.
 - Release artifacts are SHA-256 pinned with build provenance. A CycloneDX
   SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI and the
   release job attaches the SBOM to the next tag. A reproducible-build recipe
-  is documented (`docs/REPRODUCIBLE-BUILD.md`); a double-build gate is not
-  yet in CI. An independent review is scoped
+  is documented (`docs/REPRODUCIBLE-BUILD.md`) and a same-host double-build
+  payload gate runs on Linux x64 + Windows; cross-host/zip bit-identity is
+  open. An independent review is scoped
   (`docs/SECURITY-AUDIT-SCOPE.md`) but not booked.
 
 ## Contact

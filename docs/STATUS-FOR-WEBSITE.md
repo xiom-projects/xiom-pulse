@@ -91,9 +91,9 @@ all five are packaged in the release dry-run.
    gate (parsers, static path, JWT) runs in CI, a public disclosure/CVE
    policy is published, a
    CycloneDX SBOM is generated and attached to releases, and a
-   reproducible-build recipe is documented; the external review, SBOM
-   completeness (registry hashes/transitive closure) and a double-build gate
-   are open.
+   reproducible-build recipe is documented and a same-host double-build gate
+   runs in CI; the external review, SBOM completeness (registry
+   hashes/transitive closure) and cross-host reproducibility are open.
 3. **TLS is edge-only by design** (Caddy/nginx terminates; PULSE speaks
    plaintext HTTP/1.1 on loopback). Do not claim in-process TLS.
 4. **HTTP/2 is not implemented** -- HTTP/1.1 is deliberate.

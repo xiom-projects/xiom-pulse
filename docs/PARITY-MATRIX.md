@@ -130,7 +130,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | O-09 | Cluster / scale-out | P1 | M | M | -- | sequential accept |
 | O-10 | Hot reload | P2 | M | M | -- | Phase B blocked |
 | O-11 | Container/systemd guidance | P1 | N/A | A | -- | partial docs |
-| O-12 | Reproducible release + attestations | P0 | N/A | E | -- | SHA pins, dry-run |
+| O-12 | Reproducible release + attestations | P0 | N/A | E | -- | SHA pins, dry-run, same-host double-build gate |
 | O-13 | Flat memory under soak | P0 | M | M | WB | 22 KB/req residual |
 | O-14 | Published c1/c10 benchmark | P1 | N/A | A | WB | bttger c1; c10 ceiling |
 | O-15 | Published 1M soak | P1 | N/A | M | WB | blocked |

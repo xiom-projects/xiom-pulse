@@ -2,11 +2,12 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Reproducible-build recipe
 
-**Status 2026-11-06:** recipe and comparison procedure documented; **not yet
-proven bit-for-bit across hosts** and not gated in CI. The release artifacts
-are SHA-256 pinned and carry build provenance; this recipe is how a third
-party re-derives them. Do not claim reproducible builds until the double
-build gate in section 6 exists and passes.
+**Status 2026-11-06:** recipe and comparison procedure documented; a
+**same-host payload gate** ships in CI (Linux x64 + Windows) and is green on
+Windows v0.65.6 (`6a896cef…204184`, 5,195,776 bytes). **Cross-host and zip
+bit-identity are not proven.** The release artifacts are SHA-256 pinned and
+carry build provenance; this recipe is how a third party re-derives them. Do
+not claim reproducible builds beyond the same-host payload gate.
 
 ## 1. Pins
 
@@ -96,23 +97,30 @@ The server itself does **not** embed a compile-time build date: `GET
 /api/version` reads `PULSE_BUILD_COMMIT`/`PULSE_BUILD_DATE` from the
 environment at runtime.
 
-## 6. Gate to add (not yet present)
+## 6. Gate (same-host, shipped)
 
-A reproducible-build gate should:
+`scripts/repro_check.ps1` / `.sh` build `src/server.xi` twice in the same
+workspace (`repro_a`, `repro_b`), compare the SHA-256 of the two executables,
+delete them, and fail on a mismatch. CI runs it on **Linux x64** and
+**Windows**.
 
-1. build the same commit twice in two clean jobs on the same platform;
-2. compare the payload hashes (and the zip, once mtimes are normalised);
-3. fail on a difference and publish the diff (file list + section hashes);
-4. run on linux-x64 first, then the other four legs;
-5. record the result in the release notes and the SBOM.
+This gate proves same-host payload determinism. It does **not** prove
+cross-host bit-identity or zip bit-identity. Still open:
 
-Until that gate exists, a rebuild that differs is a **finding to triage**,
-not automatically a regression. Report it with the payload comparison and
-the delta class above.
+1. run the double build on linux-arm64, macOS x64 and macOS arm64;
+2. normalise zip mtimes/ordering, then compare the archive itself;
+3. build in two clean hosts/containers and compare the payload;
+4. publish the result in the release notes and the SBOM.
+
+Until those land, a cross-host rebuild that differs is a **finding to
+triage**, not automatically a regression. Report it with the payload
+comparison and the delta class above.
 
 ## 7. Current evidence
 
 - Release dry-run `41885910214` packaged all five platforms on v0.65.6.
 - Per-file SHA-256 + `SHA256SUMS` + GitHub build provenance exist.
-- No double-build comparison has been recorded yet; the reproducible-build
-  gate is a WP2 open item.
+- Same-host double build on Windows v0.65.6: **identical** payload
+  `sha256 6a896cef391a2b0db1836ef4f766b1a4c2b9310f05ef4272107c5de2b7204184`
+  (5,195,776 bytes). The gate is in CI on Linux x64 + Windows.
+- Cross-host / zip bit-identity is still a WP2 open item.
