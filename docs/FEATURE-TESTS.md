@@ -20,8 +20,8 @@ Station (standalone): 70.9%   assessed coverage  98.8%  (106/107)
 **Post-audit matrix corrections (2026-11-06):** W-06 Station M->A (Range
 reaches `static_serve`; `probe_pkg_static` proves 206), O-09 Station M->A
 (N-port workers + reuseport config/smoke), S-08 ?->M (login is user-only; no
-password field/hash), O-13 evidence refreshed to 15.5 KB/req (after the
-gate route-match cut) with no CI retention gate. Re-run: **Beacon 60.3% (91.1% assessed), Station 71.7%
+password field/hash), O-13 evidence refreshed to 14.5 KB/req (after the
+gate cut + HandlerOut assembly) with no CI retention gate. Re-run: **Beacon 60.3% (91.1% assessed), Station 71.7%
 (100%)**. The snapshot above is the pre-correction read.
 
 The score is capability parity, not evidence quality. A row can be `P` and
@@ -314,7 +314,8 @@ leg; release-only and manual probes are called out separately.
    Unix in CI.
 9. **Matrix W-06 and S-08 contradict the code** (section 5).
 10. **Matrix O-13 still says "22 KB/req residual"** while STATUS and
-    PROGRESS say **15.5 KB/req** after the router cache + gate cut. The matrix
+    PROGRESS say **14.5 KB/req** after the router cache + gate cut + HandlerOut
+assembly. The matrix
     evidence text is stale even though the status (`M`) is unchanged.
 11. **PARITY-VISION's baseline is stale.** It records 58.4% / 69.1%
     (2026-10-30); the current script prints 60.3% / 70.9%. The vision
@@ -329,7 +330,7 @@ leg; release-only and manual probes are called out separately.
 
 | # | Risk area | Why it matters | Missing test | Rows |
 |---:|---|---|---|---|
-| 1 | **Memory / sustained load** | The 15.5 KB/req floor is the stated production blocker; a regression can ship silently because `rss_probe` is informational and weekly. | PR CI retention gate: drive `/health` (and bttger mix) for 60 s, fail if steady-state RSS slope exceeds a published KB/req budget; keep the 1M/24h out of PR CI. | O-13, WP1 |
+| 1 | **Memory / sustained load** | The 14.5 KB/req floor is the stated production blocker; a regression can ship silently because `rss_probe` is informational and weekly. | PR CI retention gate: drive `/health` (and bttger mix) for 60 s, fail if steady-state RSS slope exceeds a published KB/req budget; keep the 1M/24h out of PR CI. | O-13, WP1 |
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
 | 3 | **Parser / framing** | Smuggling is the highest-severity server bug class; fuzz only asserts "no crash/empty method", not the required status. | Raw-socket framing corpus: duplicate CL, obfuscated TE, comma TE, bare LF, NUL in head, chunk-size overflow, trailer injection -> deterministic 400/close. Run with `FUZZ_STRICT_NUL=1`. | P-03, P-07, P-08 |
 | 4 | **Static / traversal** | Lexical guard is tested, but symlink/canonical escapes are not; `%2e%2e`/backslash/NUL matter across platforms. | Create a symlink inside the static root pointing outside; assert 404/403. Add encoded/backslash/NUL traversal table for API, site, and uploads. | W-05 |

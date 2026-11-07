@@ -97,6 +97,14 @@ pub type HandlerOut = {
   body_bytes: Vec[UInt8];
 }
 
+// Shared read-only empties for the common JSON/text path: HandlerOut is
+// copied by value, so returning these instead of two fresh empty Vecs per
+// response removes the per-response empty-header/empty-body allocations.
+// Call sites only read these fields; a handler that needs headers builds
+// its own Vec.
+var EMPTY_HEADERS: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+var EMPTY_BYTES: Vec[UInt8] = Vec[UInt8].new();
+
 // error_status_body injects the HTTP status into an error envelope
 // ({"error":{"status":N,"code":...,"message":...}}) -- RFC 9457-friendly
 // without changing the stable code/message contract; non-error bodies pass
@@ -111,15 +119,15 @@ fn error_status_body(status: Int, body: Str) -> Str {
 /// out_json wraps a JSON body with the status error envelope.
 /// Complexity: O(body). Pure.
 fn out_json(status: Int, body: Str) -> HandlerOut {
-  return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: Vec[(Str, Str)].new(); body: error_status_body(status, body); body_bytes: Vec[UInt8].new(); };
+  return HandlerOut{ status: status; content_type: CONTENT_JSON; headers: EMPTY_HEADERS; body: error_status_body(status, body); body_bytes: EMPTY_BYTES; };
 }
 
 fn out_text(status: Int, body: Str) -> HandlerOut {
-  return HandlerOut{ status: status; content_type: CONTENT_TEXT; headers: Vec[(Str, Str)].new(); body: body; body_bytes: Vec[UInt8].new(); };
+  return HandlerOut{ status: status; content_type: CONTENT_TEXT; headers: EMPTY_HEADERS; body: body; body_bytes: EMPTY_BYTES; };
 }
 
 fn out_html(status: Int, body: Str) -> HandlerOut {
-  return HandlerOut{ status: status; content_type: "text/html; charset=utf-8"; headers: Vec[(Str, Str)].new(); body: body; body_bytes: Vec[UInt8].new(); };
+  return HandlerOut{ status: status; content_type: "text/html; charset=utf-8"; headers: EMPTY_HEADERS; body: body; body_bytes: EMPTY_BYTES; };
 }
 
 fn json_ok_field(key: Str, value: Str) -> Str {
@@ -212,7 +220,7 @@ fn serve_static_file(dir: Str, rel: Str, req: &PulseRequest, max_age: Int) -> Ha
         if parts.1.len() > 0 { loc = loc + "?" + parts.1; }
         var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         hs.push(("Location", loc));
-        return HandlerOut{ status: 301; content_type: CONTENT_TEXT; headers: hs; body: ""; body_bytes: Vec[UInt8].new() };
+        return HandlerOut{ status: 301; content_type: CONTENT_TEXT; headers: hs; body: ""; body_bytes: EMPTY_BYTES };
       }
       var out = serve_static_file(dir, cand, req, config.cfg_site_max_age());
       if string.str_ends_with(cand, ".wasm") {
@@ -305,7 +313,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
   if m.kind == 2 {
         var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
         hs.push(("Allow", m.allow));
-        return HandlerOut{ status: 405; content_type: CONTENT_JSON; headers: hs; body: error_status_body(405, envelope.error_body("method_not_allowed", "method not allowed")); body_bytes: Vec[UInt8].new(); };
+        return HandlerOut{ status: 405; content_type: CONTENT_JSON; headers: hs; body: error_status_body(405, envelope.error_body("method_not_allowed", "method not allowed")); body_bytes: EMPTY_BYTES };
   }
 
   if m.route_id == 1 {
@@ -343,7 +351,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
     hs.push(("Set-Cookie", sessions.session_cookie_header(sid, ttl)));
     hs.push(("Set-Cookie", sessions.csrf_cookie_header(csrf)));
-    return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: json.json_stringify(v); body_bytes: Vec[UInt8].new(); };
+    return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: json.json_stringify(v); body_bytes: EMPTY_BYTES };
   }
   if m.route_id == 5 {
     let cookie_header = http.header_get(req, "cookie");
@@ -363,7 +371,7 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     if sid.len() > 0 { sessions.session_drop(sid); }
     var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
     hs.push(("Set-Cookie", sessions.session_expired_cookie_header()));
-    return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: envelope.ok_bool(true); body_bytes: Vec[UInt8].new(); };
+    return HandlerOut{ status: 200; content_type: CONTENT_JSON; headers: hs; body: envelope.ok_bool(true); body_bytes: EMPTY_BYTES };
   }
   if m.route_id == 7 {
     var rules = schema.schema_rules_new();
@@ -1129,38 +1137,105 @@ fn register_core_routes() -> Int {
   return n;
 }
 
-/// build_dispatch_response - stages 4-6: dispatch the route, build the
-/// response (raw bytes or text), trim a HEAD body at the header end, and
-/// apply the beforeSend std headers + CORS. Returns
-/// (response, status, payload bytes). Complexity: O(n) build.
+/// resp_append_str appends a Str's bytes to a response buffer without an
+/// intermediate Vec (the package helper is module-private). Complexity: O(n).
+fn resp_append_str(out: &mut Vec[UInt8], s: Str) {
+  var i: Int = 0;
+  while i < s.len() {
+    out.push(s.byte_at(i));
+    i = i + 1;
+  }
+}
+
+/// resp_append_bytes appends a raw byte body to a response buffer.
+/// Complexity: O(n).
+fn resp_append_bytes(out: &mut Vec[UInt8], b: &Vec[UInt8]) {
+  var i: Int = 0;
+  while i < b.len() {
+    out.push(b[i]);
+    i = i + 1;
+  }
+}
+
+/// build_response_assembled builds the whole wire response in one pre-sized
+/// buffer, folding Date/CSP/CORS and the standard security headers into the
+/// first copy (the package builder plus with_header_line/with_cors used to
+/// allocate a fresh Vec per stage). `payload_len` is the advertised
+/// Content-Length -- for HEAD it stays the GET representation length --
+/// while `emit_body` appends the body only when the response may carry one.
+/// `body_bytes` takes precedence over `body` (icons/assets/static files).
+/// Complexity: O(n). Pure.
+fn build_response_assembled(req: &PulseRequest, status: Int, content_type: Str, extra_headers: &Vec[(Str, Str)], body: Str, body_bytes: &Vec[UInt8], payload_len: Int, keep: Bool, emit_body: Bool) -> Vec[UInt8] {
+  let has_bytes = body_bytes.len() > 0;
+  let cors_block = cors.cors_header_block(http.header_get(req, "origin"));
+  let csp = config.cfg_csp();
+  var out: Vec[UInt8] = Vec[UInt8].with_capacity((payload_len + 1024) as UInt);
+  resp_append_str(&mut out, "HTTP/1.1 ");
+  resp_append_str(&mut out, status.to_str());
+  resp_append_str(&mut out, " ");
+  resp_append_str(&mut out, http.status_text(status));
+  resp_append_str(&mut out, "\r\nDate: ");
+  resp_append_str(&mut out, static.static_http_date(time.unix_timestamp()));
+  resp_append_str(&mut out, "\r\n");
+  if csp.len() > 0 {
+    resp_append_str(&mut out, "Content-Security-Policy: ");
+    resp_append_str(&mut out, csp);
+    resp_append_str(&mut out, "\r\n");
+  }
+  resp_append_str(&mut out, "Content-Type: ");
+  resp_append_str(&mut out, content_type);
+  resp_append_str(&mut out, "\r\n");
+  var i: Int = 0;
+  while i < extra_headers.len() {
+    let h = extra_headers[i];
+    resp_append_str(&mut out, h.0);
+    resp_append_str(&mut out, ": ");
+    resp_append_str(&mut out, h.1);
+    resp_append_str(&mut out, "\r\n");
+    i = i + 1;
+  }
+  resp_append_str(&mut out, http.security_head_lines());
+  resp_append_str(&mut out, "Content-Length: ");
+  resp_append_str(&mut out, payload_len.to_str());
+  resp_append_str(&mut out, "\r\n");
+  if !keep {
+    resp_append_str(&mut out, "Connection: close\r\n");
+  }
+  resp_append_str(&mut out, "Server: ");
+  resp_append_str(&mut out, http.server_token());
+  resp_append_str(&mut out, "\r\n");
+  if cors_block.len() > 0 {
+    resp_append_str(&mut out, cors_block);
+  }
+  resp_append_str(&mut out, "\r\n");
+  if emit_body {
+    if has_bytes {
+      resp_append_bytes(&mut out, body_bytes);
+    } else {
+      resp_append_str(&mut out, body);
+    }
+  }
+  return out;
+}
+
+/// build_dispatch_response - stages 4-6: dispatch the route, assemble the
+/// response (raw bytes or text) in one buffer, and apply the standard
+/// headers + CORS inline. A HEAD response keeps the GET Content-Length but
+/// omits the body bytes. Returns (response, status, payload bytes).
+/// Complexity: O(n) build.
 fn build_dispatch_response(req: &PulseRequest, reuse: Bool) -> (Vec[UInt8], Int, Int) {
   let body_str = http.bytes_to_str(&req.body, 0, req.body.len());
   var eff_method: Str = req.method;
   if req.method == "HEAD" { eff_method = "GET"; }
   let out = dispatch_one(eff_method, req, body_str);
   let status = out.status;
-  var resp: Vec[UInt8] = Vec[UInt8].new();
   var payload_len: Int = out.body.len();
   if out.body_bytes.len() > 0 {
-    resp = http.build_response_bytes(status, out.content_type, &out.headers, &out.body_bytes, reuse);
     payload_len = out.body_bytes.len();
-  } else {
-    resp = http.build_response_full(status, out.content_type, &out.headers, out.body, reuse);
   }
-  if req.method == "HEAD" {
-    let he = find_header_end(&resp);
-    if he >= 0 {
-      var trimmed: Vec[UInt8] = Vec[UInt8].new();
-      var ti: Int = 0;
-      while ti < he + 4 {
-        trimmed.push(resp[ti]);
-        ti = ti + 1;
-      }
-      resp = trimmed;
-    }
-  }
-  let resp_final = with_std_headers(with_cors(resp, req));
-  return (resp_final, status, payload_len);
+  let emit_body = req.method != "HEAD";
+  let resp = build_response_assembled(req, status, out.content_type, &out.headers, out.body, &out.body_bytes, payload_len, reuse, emit_body);
+  return (resp, status, payload_len);
 }
 
 pub fn main() -> Int {

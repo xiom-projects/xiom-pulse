@@ -79,12 +79,13 @@ all five are packaged in the release dry-run.
 ## Known limitations (state these honestly)
 
 1. **Sustained-load memory (the main blocker).** On v0.65.6 the server
-   retains roughly **15.5 KB per request** on 60 s probes (15.2-15.6 across
-   two runs; 17.6 reference; down from 22.3 on v0.65.4 and 44-50 on
+   retains roughly **14.5 KB per request** on 60 s probes (14.1-14.8 across
+   three runs; 17.6 reference; down from 22.3 on v0.65.4 and 44-50 on
    v0.65.1). The JSON memory class is **fixed** (builder/parse are flat) and
-   the per-request router rebuild + redundant gate route match are **fixed**
-   (2026-11-06); the residual is the response/header path and Map values,
-   plus the deferred ~0.9 KB Option[ServerRequest] aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. Short demos and
+   the per-request router rebuild, redundant gate route match and response
+   assembly copies are **fixed** (2026-11-06/07); the residual is the
+   header/Date path and Map values, plus the deferred ~0.9 KB
+   Option[ServerRequest] aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. Short demos and
    bounded runs are fine; **do not describe the current build as suitable
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
@@ -106,9 +107,9 @@ all five are packaged in the release dry-run.
 ## What's next (public roadmap wording)
 
 - Memory: the JSON class and the per-request router rebuild are fixed; the
-  floor is **~15.5 KB/req** on 60 s probes (15.2-15.6; 17.6 reference). The
-  remaining work is the response/header path plus the deferred Option
-  aggregate, then the 24h/1M soak gate.
+  floor is **~14.5 KB/req** on 60 s probes (14.1-14.8; 17.6 reference). The
+  remaining work is the header/Date path plus the deferred Option aggregate,
+  then the 24h/1M soak gate.
 - **0.3.0**: SQL serving decision, version bump, CHANGELOG, tag, fleet
   watch.
 - Realtime: permessage-deflate, subprotocol negotiation.

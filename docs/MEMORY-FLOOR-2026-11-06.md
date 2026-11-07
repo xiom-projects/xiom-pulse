@@ -293,3 +293,14 @@ current build measured steady **15,597.57** and **15,499.64 B/req**
 16.1 baseline. `test_app` and the live `http_smoke` (135 checks, route-rate
 gate order) are green. The 24 h/1M gates remain open; cut 1
 (HandlerOut/response assembly) is the next unblocked target.
+
+## 9. Post-report cut 1 applied (2026-11-07)
+
+`HandlerOut`/response assembly now builds the wire response in one pre-sized
+buffer; `out_json`/`out_text`/`out_html` reuse shared read-only empty Vecs
+and the old builder -> CORS -> Date chain plus the HEAD build-then-trim copy
+are gone. Three 60 s `/health` probes measured steady **14,755.78, 14,238.48
+and 14,070.96 B/req** (14.1-14.8 KB), down from 15.5. `test_app` and the live
+`http_smoke` (135 checks) are green; responses are byte-equivalent to the old
+builder (Date excluded). Cut #3 (Date/CSP insertion) and cut #4 (read/send
+buffers) remain; the metrics Map is compiler-blocked; 24 h/1M are open.
