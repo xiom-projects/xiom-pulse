@@ -3,7 +3,94 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 52 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 53 close)
+
+You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
+backend / multipurpose framework). This session is closing near the context
+limit. Read this prompt first, then docs\PROGRESS.md,
+docs\ROADMAP-TOP-TIER.md sections 10-12, docs\PARITY-MATRIX.md,
+docs\SECURITY-FINDINGS-2026-11-07.md, docs\MEMORY-FLOOR-2026-11-06.md,
+docs\STATUS-FOR-WEBSITE.md, docs\ROADMAP-FOR-WEBSITE.md. Relays:
+E:\xiom-lang\xiom-relays. Reference shelf: E:\repos.
+
+DOORBELL: re-arm the 2h sweep (git fetch + merge --ff-only, NEVER `git pull`;
+relay.py view --lane pulse; process items; wrap on change). Skip the owner's
+double-charge window 04:00-13:00 Greek (cron hours 0,2,14,16,18,20,22 local).
+If the owner says pause, cancel it.
+
+STATE AT 2026-11-07 (session 53):
+- `main` = the session-53 wrap commit (code c770c27; clean + pushed). CI run
+  42381864881 was queued at c770c27; the last five-leg green is 42379791041
+  at c26266b. Check the new
+  run first (OpenAPI/schema/SSE/users CI expansion).
+- Toolchain: compiler **v0.65.6** (windows a52b8cf3, linux a8fc6668,
+  linux-arm64 dca04f07, macos-x64 c5f0eb0b, macos-arm64 0fc5c6cd) + stdlib
+  **6fdde4ee**; packages xiom.pulse 0.3.2, xiom.http 0.1.11,
+  xiom.template 0.2.0; all five legs build/test/package. Lane home
+  `%LOCALAPPDATA%\xiom-pulse-home`; never touch the shared
+  `%LOCALAPPDATA%\xiom\packages`.
+- **Product 0.2.2.** 0.3.0 waits on the owner's SQL-serving decision
+  (`docs/DESIGN-SQL-SERVING.md`) and the security/pin items; do not tag.
+- **Memory:** /health **13.9 KB/req** (13.5-14.3 three probes; router cache +
+  gate cut + HandlerOut assembly + Date/send cuts); bttger mix **14.0 KiB/req**
+  at 100 req/s sustained. 24 h projection ~124 GB; 256 MB cap ~178 s. The
+  24 h/1M gates are **open**; never run 1M uncapped. Remaining: socket/Option
+  + the compiler-blocked metrics Map (`REL-20261106-1840-pulse`; re-land
+  after v0.65.7+). The 25 KiB PR retention gate is in CI.
+- **Security (2026-11-07):** uploads fixed (strict 29/29); WS critical
+  fixed+verified/closed (stdlib `e8ab289` + PULSE guard 14/14, relay
+  `4b1ca32`); SSE IDs/retry/Last-Event-ID + 1002 reserved opcodes
+  (`6863dbe`); OpenAPI reverse paths + schema enum/UTF-8 (`f20eb3e`; drift
+  9/9, schema 18/18). Framing fixed upstream stdlib `30bacfa` (relay `1032`)
+  awaiting the pin. **Static escape: PULSE guard blocked on the missing
+  stdlib realpath** (`REL-20261107-1427-pulse`, packages `1032-2`); static
+  smoke GAP:HIGH. Do not add a fake lexical guard.
+- **S-08 password:** `src/users.xi` + 82 tests; 600k = **1.9-2.0 s** vs the
+  250/500 ms target; routes/dummy timing/lockout/rate limit not wired; native
+  hash asked (`REL-20261107-1337-pulse`). S-08 remains M.
+- **Ops soak:** 256M-capped lane ready; `scripts/soak_bttger.*` (100 req/s,
+  14.0 KiB/req); do **not** run the 24 h at 14.0 (cap ~178 s); use
+  `--fail-on-projection` for short wiring checks; go/no-go after flat + a
+  verified Linux artifact. Ops item `REL-20261107-1348-pulse`.
+- **Parity:** Beacon 58.9% (94.4% assessed) / Station 71.3% (100%). Top gaps:
+  S-08, O-13, W-04 Beacon, R-11 Beacon, W-05 static, R-14 route wiring.
+- WP4: design + first slice (reuseport/worker-id/N-port smoke); supervisor,
+  control-port drain, reload and the 1/2-worker curve open. Site static +
+  dynamic first slice; Phase C compression/caching/i18n open. WP2 external
+  audit/cross-host repro; WP3 pilot open. Game backend later (ROADMAP 11).
+
+NEXT (dependency order):
+1. Check CI 42381864881; fix any red; confirm test_users/test_stream on the
+   five legs.
+2. Wait for the next compiler/stdlib (v0.65.7+): verify the published archive
+   (SHA256SUMS + mirror), framing `30bacfa`, WS `e8ab289`, NUL `1716`, nested
+   aggregate `1840`; run probes/suites/five-leg CI/release dry-run; pin; then
+   re-run the framing corpus strict, the metrics index cache, and the static
+   fix when stdlib realpath `1427`/package `1032-2` land.
+3. Static: stdlib realpath + `xiom.static` canonicalization; then the PULSE
+   canonical guard/smoke strict. Password: native hash `1337` or route wiring
+   with a strict login rate limit/lockout + the performance gate.
+4. Memory: socket/Option + metrics Map; PR retention gate; 24 h @100 req/s
+   on the bttger mix (256 MB) and 1M after flat; ops go/no-go.
+5. WP4 supervisor/drain/reload/1-2-worker curve; shared sessions/rate/store
+   after the SQL/KV decision.
+6. Site Phase C; game backend only after 1.0.
+7. 0.3.0 after SQL + security/pin; 1.0 after 24h/1M + audit + scale-out + pilot.
+
+COMMANDS: `scripts/run.ps1 tests/test_app.xi` (GREEN), `test_stream.xi`,
+`test_users.xi`, `http_smoke.ps1`, `site_smoke`, `worker_smoke`,
+`scaffold_smoke`, `fuzz_parsers`/`fuzz_cookie`, `security_smoke`
+(framing/static/upload), `rss_gate.py`, `soak_bttger.py`,
+`openapi_drift_probe`, `schema_matrix_probe`, `sse_reconnect_probe`,
+`ws_negative_corpus`. Use unique builds/ports; no 1M/24h.
+
+DISCIPLINE: signed conventional commits; commit/push per unit; update SESSION
++ docs/PROGRESS at every wrap; report blockers on the relay first; verify on
+published archives, not release notes; never claim sustained-load production
+until the memory gate is met. The release is held on the static realpath + the
+next verified pin.
+
+## HANDOFF PROMPT (SUPERSEDED -- 2026-11-07, session 52 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
