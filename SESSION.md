@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 43 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 44 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,11 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Five-leg CI green** (2026-11-07): run **42365426703** at `cfdd077` is
+  green on all five legs (memory 14.5, 25 KiB retention gate, quick gates,
+  known-gap framing/static corpus, strict upload policy). The framing/static
+  relay items are pushed (`a97bb19`); uploads are fixed. Framing/static remain
+  release-blocking; 0.3.0/1.0 held; 24h/1M open.
 - **Upload policy fixed** (2026-11-07): strict multipart parser (8 KiB
   part-header cap, duplicate disposition reject), default-safe ext/MIME
   allowlists + config, 400 `upload_type_not_allowed` / 413 `header_too_large`;
@@ -380,6 +385,15 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   live `http_smoke` (135) GREEN. S-12 Station P; parity 61.2/70.5.
 - The framing (stdlib) and static canonical (packages) findings remain open;
   0.3.0/1.0 held.
+
+## WRAP 2026-11-07 (session 44) -- five-leg CI green
+
+- CI **42365426703** green on all five legs at `cfdd077`: 14.5 KB/req memory,
+  25 KiB retention gate, quick-win gates, known-gap framing/static corpus,
+  strict upload policy. The worker-smoke exec-bit CI failure is fixed.
+- Framing/static relay items pushed (`REL-20261107-1032-pulse` to stdlib,
+  `-2` to packages; relay commit `a97bb19`); uploads fixed.
+- Framing/static remain release-blocking; 0.3.0/1.0 held; 24h/1M open.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 
