@@ -90,6 +90,7 @@ open.
 | `scripts/store_soak.{sh,ps1}` | pass/fail legs | release + PR CI KV 60 s (Linux), HVY | JSONL and KV write soak/reopen |
 | `scripts/rss_probe.{sh,ps1}` | informational | HVY weekly | reports KB/request; not a pass/fail gate |
 | `scripts/rss_gate.py` | 75 s / 200 ms slope | CI Linux x64 + Windows | 25 KiB/req PR retention tripwire (OLS+Theil-Sen) |
+| `scripts/soak_bttger.py` | 6,500 req / 60 s | manual / ops | bttger mix at 100 req/s; memory gate harness; 24 h projection gate |
 | `scripts/repro_check.{sh,ps1}` | 1 hash compare | CI Linux x64 | same-host payload only |
 | `scripts/sbom.py` | schema/count assertions | CI Linux + release | CycloneDX SBOM |
 | `tests/probes/*` | varies | `MAN` unless noted | `probe_sqlite` is built in CI; the rest are manual |
@@ -226,7 +227,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | O-10 | Hot reload | B=M / S=M | NONE; Phase B blocked | not implemented | after WP4: zero-failed-request reload |
 | O-11 | Container/systemd guidance | B=N/A / S=A | docs only (DOC) | no container/systemd smoke | container smoke: build, run, health, shutdown |
 | O-12 | Reproducible release + attestations | B=N/A / S=E | `repro_check` (CI Linux x64), `sbom.py` (CI), provenance/checksums/tag guard (REL) | **same-host payload only; cross-host/zip open; release artifact not executed** | unzip artifact, run `--version`, verify tag/checksum; cross-host repro |
-| O-13 | Flat memory under soak | B=M / S=M | `rss_gate` (CI, 25 KiB); `rss_probe` (HVY); `soak_http` (HVY) | PR regression tripwire is wired; the flat/24 h/1M gate is not run | 24 h @ 100 req/s on the bttger mix after the floor is flat |
+| O-13 | Flat memory under soak | B=M / S=M | `rss_gate` (CI, 25 KiB); `soak_bttger` (100 req/s, 14.0 KiB/req); `rss_probe`/`soak_http` (HVY) | 24 h projection ~124 GB, cap ~178 s; the 24 h/1M gate is not met | 24 h @ 100 req/s on the bttger mix after the floor is flat |
 | O-14 | Published c1/c10 benchmark | B=N/A / S=A | `benchmarks/bttger/results/*.json` (MAN) | no harness rerun gate, no peer comparison | rerun harness in CI/nightly; publish methodology |
 | O-15 | Published 1M soak | B=N/A / S=M | NONE; blocked by O-13 | not run | after O-13: capped 1M soak |
 | O-16 | Fuzzing harness | B=A / S=A | `fuzz_parsers` + `fuzz_cookie` (CI) | OpenAPI/stream fuzz, strict NUL, cookie package fix | OpenAPI/stream fuzz + strict NUL + cookie package fix |
@@ -346,7 +347,7 @@ assembly + Date/send cuts. The matrix
 
 | # | Risk area | Why it matters | Missing test | Rows |
 |---:|---|---|---|---|
-| 1 | **Memory / sustained load** | The 13.9 KB/req floor is the stated production blocker. A 25 KiB/req PR retention gate now catches 1704-class regressions; the final flat/24 h/1M gate is still open. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
+| 1 | **Memory / sustained load** | The 13.9 KB/req (/health) and 14.0 KiB/req (bttger mix) floors are the production blocker; the 24 h projection is ~124 GB and the 256 MB cap trips in ~3 min. A 25 KiB/req PR gate and the bttger-mix harness exist. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
 | 3 | **Parser / framing** | **Confirmed critical:** duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE are accepted; the raw corpus exists and is a known-gap gate. | Fix stdlib (`REL-20261107-1032-pulse`); then make the corpus strict and run `FRAMING_STRICT_NUL=1`. | P-03, P-07, P-08 |
 | 4 | **Static / traversal** | **Confirmed high:** a Windows junction/symlink inside the root escapes (`REL-20261107-1032-pulse-2`); encoded/dot-dot/backslash/NUL cases are blocked. | Fix `xiom.static` canonical/realpath; keep the corpus strict on Windows junctions and Unix symlinks. | W-05 |

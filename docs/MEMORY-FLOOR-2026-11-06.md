@@ -318,3 +318,17 @@ send API exposes no offset/length, so `socket_send` still copies internally;
 the nested-aggregate codegen class was not touched. The big remaining residual
 is the socket/Option path plus the compiler-blocked metrics Map; 24 h/1M are
 open.
+
+## 11. Bttger-mix harness (2026-11-07)
+
+`scripts/soak_bttger.py` (+ `.ps1`/`.sh`) drives the six-endpoint bttger
+contract over persistent HTTP/1.1 keep-alive at a fixed rate, samples
+RSS/fds and gates on errors, rate shortfall and the RSS cap. A 60 s run at
+**100 req/s** (one connection; 6,500 measured + 500 warmup) sustained
+100.00 req/s with **0 errors/non-2xx**, p50 0.82 ms / p95 3.18 / p99 3.44;
+the steady slope was **14,330.58 B/req (~14.0 KiB)**, wire 1,141 B/req;
+RSS 4.6 -> 94.7 MB. The 24 h projection is ~123.8 GB (115.33 GiB); the
+256 MB cap is reached in **~178 s**. 100 req/s is sustainable, but the WP1
+24 h RSS gate is **not met**. Use `--fail-on-projection` for short wiring
+checks; the 24 h command is `soak_bttger.ps1 -Seconds 86400 -Rate 100
+-Port 18800 -MaxRssMb 256 -Rebuild` (or the `.sh` twin).

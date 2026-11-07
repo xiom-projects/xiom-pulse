@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 46 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 47 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,11 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Bttger-mix soak harness** (2026-11-07): `scripts/soak_bttger.*` drives
+  the six-endpoint mix at 100 req/s over keep-alive; 60 s: 6,500 req, 0
+  errors, p50 0.82/p95 3.18 ms, **14.0 KiB/req**, 24 h projection ~124 GB,
+  256 MB cap in **~178 s**. 100 req/s is sustainable; the 24 h memory gate is
+  **not met**. The ops command is in `docs/MEMORY-FLOOR-2026-11-06.md`.
 - **Password credential module** (2026-11-07): `src/users.xi` +
   `tests/test_users.xi` (82 PASS); strict PBKDF2 record, salt, constant-time
   verify, rehash, JSONL store. **600k = 1.9-2.0 s vs 250/500 ms**; routes not
@@ -420,6 +425,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - The big residual is the socket/Option path plus the compiler-blocked
   metrics Map; 24 h/1M open. Password credential module (session 45) and the
   green CI (session 44) stand.
+
+## WRAP 2026-11-07 (session 47) -- bttger-mix soak harness
+
+- `scripts/soak_bttger.py` + `.ps1`/`.sh`: six-endpoint bttger mix at a fixed
+  rate over keep-alive, RSS/fd sampling, error/rate/cap gates,
+  `--fail-on-projection`, JSON summary.
+- 60 s at 100 req/s: 6,500 req, 0 errors, p50 0.82 / p95 3.18 / p99 3.44 ms;
+  **14.0 KiB/req**; 24 h projection **~124 GB**, 256 MB cap in **~178 s**.
+  100 req/s is sustainable; the 24 h memory gate is **not met**.
+- `docs/MEMORY-FLOOR-2026-11-06.md` has the exact ops command. The memory
+  floor (/health 13.9) and the release/security holds are unchanged.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 
