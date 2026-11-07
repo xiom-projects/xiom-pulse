@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 49 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 50 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,11 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **CI green + WS closed** (2026-11-07): five-leg **42379791041** green at
+  `c26266b` (WS blocking, memory 13.9, password, soak, upload/probes). WS
+  `REL-20261107-1349-pulse` verified/**closed** (PULSE guard 14/14 + stdlib
+  `e8ab289`); framing `1032` fixed `30bacfa` pending the pin; static
+  `1032-2`, password `1337`, ops `1348` open.
 - **WS guard + upstream fixes** (2026-11-07): PULSE `src/stream.xi` rejects
   MSB/non-minimal/oversize, RSV, unmasked, control, invalid UTF-8/close;
   consumed bounded; strict corpus 14/14; `test_stream`/`test_app`/
@@ -469,6 +474,16 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   1337 and ops 1348 remain open.
 - W-09 Station P; parity **58.9 / 69.5**; release held until the pin + static.
   CI WS corpus is blocking from now on.
+
+## WRAP 2026-11-07 (session 50) -- CI green + WS verified/closed
+
+- Five-leg CI **42379791041** green at `c26266b`: WS corpus blocking, memory
+  13.9, password module, soak harness, upload and stream probes.
+- WS `REL-20261107-1349-pulse` verified and closed (PULSE guard 14/14 +
+  stdlib `e8ab289`); relay `4b1ca32`. Framing `1032` fixed `30bacfa`,
+  awaiting the pin; static `1032-2`, password `1337`, ops `1348` open.
+- Next PULSE-side: static canonical guard, SSE IDs/replay + reserved opcode,
+  OpenAPI reverse paths + schema enum/length policy.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

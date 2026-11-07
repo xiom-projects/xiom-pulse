@@ -105,10 +105,10 @@ this policy.
   empty method/target shape as defense in depth; the Beacon package needs
   the upstream parser fix. Do not rely on NUL-containing requests being
   rejected until that fix lands.
-- **Findings status (2026-11-07):** the framing and WebSocket defects are
-  fixed upstream (stdlib `30bacfa` / `e8ab289`) and the PULSE WS guard is
-  fixed (strict corpus 14/14); both await the next published toolchain pin for
-  verification. The static symlink/junction escape
+- **Findings status (2026-11-07):** the WebSocket defect is fixed upstream
+  (stdlib `e8ab289`), the PULSE guard is verified (strict corpus 14/14), and
+  the item is **closed**; Beacon consumers re-check at the next pin. The
+  framing fix (`30bacfa`) awaits the pin. The static symlink/junction escape
   (`REL-20261107-1032-pulse-2`, `xiom.static`) remains open. Uploads are fixed
   (default-safe ext/MIME allowlist, 8 KiB part-header cap, duplicate
   disposition; strict corpus 29/29). 0.3.0/1.0 are held until the toolchain

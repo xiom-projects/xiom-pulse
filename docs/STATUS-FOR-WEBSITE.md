@@ -105,9 +105,9 @@ all five are packaged in the release dry-run.
    not publish 1M numbers.
 7. **SQL serving** is a proposal (`docs/DESIGN-SQL-SERVING.md`), pending
    owner approval; the stock app is SQL-free.
-8. **Security findings (2026-11-07):** framing and WebSocket are fixed
-   upstream (stdlib `30bacfa`/`e8ab289`) and the PULSE WS guard is fixed
-   (strict 14/14), awaiting the next verified toolchain pin; a static
+8. **Security findings (2026-11-07):** the WebSocket defect is fixed upstream
+   (`e8ab289`), the PULSE guard is verified (strict 14/14) and the item is
+   closed; framing is fixed upstream (`30bacfa`) and awaits the pin. A static
    symlink/junction inside the root remains open. Uploads are fixed
    (default-safe allowlist, strict 29/29). 0.3.0/1.0 are held until the pin
    and the static fix; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
