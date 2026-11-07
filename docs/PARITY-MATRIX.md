@@ -17,7 +17,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 |---|---|---|---|---|---|---|
 | P-01 | HTTP/1.1 request line, headers, methods | P0 | P | P | F,H11 | http parser; smoke |
 | P-02 | Chunked transfer decoding | P0 | P | P | F,H11 | smoke chunked |
-| P-03 | TE/CL smuggling rejection | P0 | E | E | F,H11 | stricter rules; smoke |
+| P-03 | TE/CL smuggling rejection | P0 | A | A | F,H11 | basic TE+CL 400; duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE accepted (framing corpus 2026-11-07; `REL-20261107-1032-pulse`) |
 | P-04 | `Expect: 100-continue` | P0 | P | P | F,H11 | smoke |
 | P-05 | Keep-alive + pipelining | P0 | P | P | F,H11 | smoke |
 | P-06 | Read/write/idle deadlines (slowloris) | P0 | P | P | F | smoke |
@@ -62,7 +62,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-02 | Structured error envelope | P0 | P | P | FF,G | envelope tests |
 | W-03 | Request IDs | P0 | P | P | FF | rid in logs/404 |
 | W-04 | Static files + ETag/304 | P0 | ? | P | G,FF | smoke 304 |
-| W-05 | Traversal guard | P0 | ? | P | G,FF | smoke traversal |
+| W-05 | Traversal guard | P0 | A | A | G,FF | encoded/dot-dot/backslash/NUL blocked; symlink/junction canonical escape (`REL-20261107-1032-pulse-2`) |
 | W-06 | Range requests | P1 | M | A | G,FF | static_serve Range; probe_pkg_static 206; live route test missing |
 | W-07 | Efficient file streaming (sendfile) | P1 | M | A | G,FF | 50 MB works, copied |
 | W-08 | SSE | P0 | P | P | FF,G | live 20/20 |
@@ -89,7 +89,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | S-09 | Rate limiting (global + route) | P0 | P | P | FF | rate smoke |
 | S-10 | CORS allowlist | P0 | P | P | FF | smoke |
 | S-11 | Stream Origin/auth policy | P0 | P | P | -- | ws-auth 11/11 |
-| S-12 | Upload size/type caps | P0 | ? | P | FF | smoke 415 |
+| S-12 | Upload size/type caps | P0 | A | A | FF | part/total caps enforced; MIME/extension, active content, duplicate disposition and part-header cap gaps (2026-11-07) |
 | S-13 | Secret redaction in logs | P0 | P | P | -- | token=REDACTED |
 | S-14 | Audit log + rotation | P1 | P | P | -- | crash/audit tests |
 | S-15 | TLS termination guidance/automation | P1 | N/A | A | -- | docs only |

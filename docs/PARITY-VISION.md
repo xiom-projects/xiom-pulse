@@ -104,9 +104,11 @@ Targets:
 | **Top-tier readiness** (40% capability + 60% maturity) | **~34-38%** | the honest "comparable to the best" number |
 | **Production-capable with documented limits** | **~60-65%** | features + operability, excluding top-tier perf/audit/adoption |
 
-**Current matrix re-run (2026-11-06, after the FEATURE-TESTS corrections):**
-Beacon **60.3%** (91.1% assessed), Station **71.7%** (100%). The seeded
-baseline above is retained as the historical lower bound.
+**Current matrix re-run (2026-11-07, after the security-corpus findings):**
+Beacon **61.2%** (94.4% assessed), Station **69.9%** (100%). The seeded
+baseline above is retained as the historical lower bound. The Beacon headline
+rose only because W-05/S-12 moved from unassessed to partial; the findings
+are open.
 
 The maturity gates are deliberately separate from feature rows, because a
 project can tick every feature and still not be top tier:

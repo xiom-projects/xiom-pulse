@@ -31,6 +31,12 @@ Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
 `scaffold_smoke.py` is in CI. `proxy_e2e` stays manual; strict NUL and the
 24 h/1M stay heavy. The rows below are the pre-wiring audit.
 
+**Post-security-corpus re-run (2026-11-07):** the framing/static/upload
+findings downgraded P-03, W-05 and S-12 to `A`; re-run **Beacon 61.2%
+(94.4% assessed), Station 69.9% (100%)**. The Beacon headline rose only
+because W-05/S-12 moved from unassessed to partial; the findings are open and
+release-blocking. See `docs/SECURITY-FINDINGS-2026-11-07.md`.
+
 The score is capability parity, not evidence quality. A row can be `P` and
 still have no per-PR test; those rows are flagged in section 9.
 
@@ -104,7 +110,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 |---|---|---|---|---|---|
 | P-01 | Request line, headers, methods | B=P / S=P | `test_http`: parse ok, method, target, version, header count, header_get; `http_smoke`: health/echo (CI) | none material | port a raw-socket method-matrix (all methods + lowercase/reject) into `http_smoke` |
 | P-02 | Chunked decoding | B=P / S=P | `test_http`: chunked parse/multi-chunk/trailer/ext; `test_app`: te chunked accepted; `http_smoke`: chunked (CI) | no chunked extension/trailer abuse assertion at the live layer | add chunk-size overflow + trailer-injection negatives |
-| P-03 | TE/CL smuggling rejection | B=E / S=E | `test_app`: te+cl 400, te gzip 501; `http_smoke`: te+cl 400, te gzip 501; `fuzz_parsers` (CI) | fuzz asserts no crash/empty method, not the *status*; duplicate-CL/obfuscated-TE not enumerated | raw framing corpus: duplicate CL, comma TE, obs-fold, bare LF, CL+TE -> deterministic 400/close |
+| P-03 | TE/CL smuggling rejection | B=A / S=A | `test_app`/`http_smoke`: te+cl 400, te gzip 501; `test_framing` + `security_smoke framing` (known-gap) | **duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE accepted** (2026-11-07; `REL-20261107-1032-pulse`) | strict framing corpus: deterministic 400/close for every smuggling shape |
 | P-04 | `Expect: 100-continue` | B=P / S=P | `test_http`: expects_continue; `http_smoke`: expect 100 (CI) | no test for `Expect` with oversized/invalid body | add 100-continue + cap/malformed tail cases |
 | P-05 | Keep-alive + pipelining | B=P / S=P | `http_smoke`: ka first/second, pipelined, HTTP/1.0, idle, garbage (CI) | no half-close/unread-body/early-response case from the design test plan | port the remaining `DESIGN-KEEPALIVE-DEADLINES` Phase B cases to a raw-socket smoke |
 | P-06 | Read/write/idle deadlines (slowloris) | B=P / S=P | `http_smoke`: slowloris 408, write-stall dropped, loop alive, idle silent close (CI) | no unit-level timeout test; platform behavior only exercised live | add a deadline matrix (read/write/idle, 0 = disabled warning) |
@@ -149,7 +155,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | W-02 | Structured error envelope | B=P / S=P | `test_app`: envelope code/message; `http_smoke`: 404 status (CI) | no schema assertion for every error code | error-code envelope contract test |
 | W-03 | Request IDs | B=P / S=P | `test_app`: rid present/omitted; `http_smoke`: 404 rid (CI) | no uniqueness/collision test | rid uniqueness + propagation into log/audit |
 | W-04 | Static files + ETag/304 | B=? / S=P | `test_app`: site assets/304; `http_smoke`: assets 304; `site_smoke`; `probe_pkg_static` (MAN) | Beacon unassessed; no package-level CI | wire `probe_pkg_static` (200/304/206/404) into CI |
-| W-05 | Traversal guard | B=? / S=P | `test_app`: site traversal blocked; `site_smoke`; `http_smoke`: assets traversal 404; `fuzz_parsers` static path (CI) | Beacon unassessed; lexical guard only, no symlink/canonical escape | symlink inside root -> outside; encoded/backslash/NUL traversal |
+| W-05 | Traversal guard | B=A / S=A | `test_app`/`site_smoke`/`http_smoke`/`fuzz_parsers`: encoded/dot-dot/backslash/NUL blocked; `security_smoke static` | **junction/symlink inside the root escapes** (2026-11-07; `REL-20261107-1032-pulse-2`) | canonical/realpath check + symlink/junction tests |
 | W-06 | Range requests | B=M / S=M | Station `src/server.xi:136` passes `Range` to `static_serve`; `probe_pkg_static` (the `xiom.static` package): 206/range parse (MAN) | **matrix says M but Station code and the package probe support it**; no route-level live test | live Range test: single, open-ended, unsatisfiable, malformed; update Station to A |
 | W-07 | Efficient file streaming (sendfile) | B=M / S=A | `http_smoke` 50 MB write-stall only (CI) | no sendfile/throughput/RSS assertion; file is copied | 50 MB static transfer: RSS ceiling + time; prove no full-file buffer |
 | W-08 | SSE | B=P / S=P | `test_stream`: SSE head/events/clamps; `stream_smoke`: 200/chunked/3 tick/done; `ws_auth_smoke`: SSE auth (CI/Windows) | no backpressure/abort test | client disconnect mid-stream: server releases fd and records once |
@@ -176,7 +182,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | S-09 | Rate limiting (global + route) | B=P / S=P | `test_http`: bucket/route rates; `test_app`: rate; `rate_smoke` (REL) | `rate_smoke` is not a PR gate; no distributed/multi-worker test | move `rate_smoke` to PR CI; add per-IP vs global semantics |
 | S-10 | CORS allowlist | B=P / S=P | `test_app`: cors; `http_smoke`: allow origin/preflight (CI) | no credentials/wildcard interaction | add `Access-Control-Allow-Credentials` matrix |
 | S-11 | Stream Origin/auth policy | B=P / S=P | `test_stream`: origin/auth; `stream_smoke`: Origin; `ws_auth_smoke`: 11 checks (CI **Windows only**) | Unix CI never runs `ws_auth_smoke` | run `ws_auth_smoke` on Unix too |
-| S-12 | Upload size/type caps | B=? / S=P | `test_app`: 413 part cap, 415 no boundary; `http_smoke`: 415 (CI) | only size + boundary; no MIME/extension allowlist or total-request cap | MIME/extension deny-list + total multipart cap + double extension |
+| S-12 | Upload size/type caps | B=A / S=A | `test_app`/`http_smoke`: part/per-request caps; `security_smoke upload` | **no MIME/extension allowlist; `.php`/`.html`/`.svg` stored; duplicate disposition last-wins; no part-header cap** (2026-11-07) | default-safe allowlist + double-extension + active-content reject + part-header cap |
 | S-13 | Secret redaction in logs | B=P / S=P | `test_stream`: redact token/access_token; `ws_auth_smoke`: log redacts token (CI/Windows) | no audit-file redaction assertion in CI | assert both access log and audit file redact query tokens |
 | S-14 | Audit log + rotation | B=P / S=P | `probe_audit_rotate` (MAN); `test_app`: audit_sync config; `crash_test` (REL); `test_stream`: redaction | **rotation is not automated in CI**; only a manual probe | wire `probe_audit_rotate` into CI; assert line content + `.1` rotation |
 | S-15 | TLS termination guidance/automation | B=N/A / S=A | `docs/DEPLOYMENT.md` + `proxy_e2e` (MAN) | edge TLS e2e is not in CI | wire `proxy_e2e` into CI or mark manual-only |
@@ -340,9 +346,9 @@ assembly. The matrix
 |---:|---|---|---|---|
 | 1 | **Memory / sustained load** | The 14.5 KB/req floor is the stated production blocker. A 25 KiB/req PR retention gate now catches 1704-class regressions; the final flat/24 h/1M gate is still open. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
-| 3 | **Parser / framing** | Smuggling is the highest-severity server bug class; fuzz only asserts "no crash/empty method", not the required status. | Raw-socket framing corpus: duplicate CL, obfuscated TE, comma TE, bare LF, NUL in head, chunk-size overflow, trailer injection -> deterministic 400/close. Run with `FUZZ_STRICT_NUL=1`. | P-03, P-07, P-08 |
-| 4 | **Static / traversal** | Lexical guard is tested, but symlink/canonical escapes are not; `%2e%2e`/backslash/NUL matter across platforms. | Create a symlink inside the static root pointing outside; assert 404/403. Add encoded/backslash/NUL traversal table for API, site, and uploads. | W-05 |
-| 5 | **Uploads** | Size/boundary are tested; MIME/extension and total-request caps are not. | Multipart type/extension deny-list, double-extension, per-request total cap, duplicate fields, oversized part headers. | S-12, R-11 |
+| 3 | **Parser / framing** | **Confirmed critical:** duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE are accepted; the raw corpus exists and is a known-gap gate. | Fix stdlib (`REL-20261107-1032-pulse`); then make the corpus strict and run `FRAMING_STRICT_NUL=1`. | P-03, P-07, P-08 |
+| 4 | **Static / traversal** | **Confirmed high:** a Windows junction/symlink inside the root escapes (`REL-20261107-1032-pulse-2`); encoded/dot-dot/backslash/NUL cases are blocked. | Fix `xiom.static` canonical/realpath; keep the corpus strict on Windows junctions and Unix symlinks. | W-05 |
+| 5 | **Uploads** | **Confirmed high:** no MIME/extension allowlist; `.php`/`.html`/`.svg` are stored; duplicate disposition last-wins; no part-header cap. Size/number/total caps are enforced. | PULSE upload policy: default-safe allowlist, double-extension/active-content reject, duplicate disposition and part-header cap; then strict upload smoke. | S-12, R-11 |
 | 6 | **Streaming / SSE / WS** | SSE reconnect is untested; WS negative frames can desynchronise or crash. | SSE `id:` + `Last-Event-ID` replay; WS unmasked/invalid-UTF-8/oversize/bad-close-code corpus; run ws-auth on Unix. | W-08, W-09, W-12, S-11 |
 | 7 | **Durability / store** | KV crash/restart is only release/manual; crash recovery is not a PR gate. | PR CI: JSONL and KV crash/torn-tail/restart; assert count/seq/reopen/compact. | D-01, D-02 |
 | 8 | **Validation + OpenAPI drift** | Schema validation is string-only; OpenAPI drift is one-way and `--check` is untested. | Schema matrix (missing/extra/type/nested/enum) -> 400; bidirectional OpenAPI drift gate + CLI `--check` failure case. | R-14, W-14 |

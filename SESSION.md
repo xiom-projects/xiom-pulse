@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 41 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 42 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,13 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Security corpus findings** (2026-11-07): **critical** framing
+  smuggling (duplicate/conflicting CL, CL overflow, whitespace-colon, TE.TE;
+  `REL-20261107-1032-pulse`, stdlib), **high** static junction/symlink escape
+  (`REL-20261107-1032-pulse-2`, packages), **high** upload MIME/extension gap
+  (PULSE fix in progress; duplicate disposition/part-header cap).
+  `tests/test_framing.xi` is known-red (9; 12 strict); live smokes run with
+  `--allow-known-gaps`. P-03/W-05/S-12 -> A; parity 61.2/69.9. 0.3.0/1.0 held.
 - **PR retention/quick gates** (2026-11-07): `scripts/rss_gate.py` (25 KiB/req,
   OLS+Theil-Sen, fail-closed) on Linux x64 + Windows; `ws_auth_smoke.py` on
   Unix; `openapi --check`, rate/crash, package probes and the KV 60 s soak in
@@ -346,6 +353,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   `ws_auth`, the static/kv/outbound/audit-rotate probes and the KV 60 s soak.
 - Local: gate GREEN 15.32 KiB/req (375/375); a 5 KiB negative control is RED;
   ws_auth 11/11. `proxy_e2e` stays manual; strict NUL and 24h/1M stay heavy.
+
+## WRAP 2026-11-07 (session 42) -- security corpus findings
+
+- Added `tests/test_framing.xi`, `scripts/security_smoke.py` and the
+  framing/static/upload wrappers. Critical framing smuggling, high static
+  canonical escape, high upload MIME/extension gaps; evidence in
+  `docs/SECURITY-FINDINGS-2026-11-07.md`.
+- Filed `REL-20261107-1032-pulse` (stdlib framing) and
+  `REL-20261107-1032-pulse-2` (packages static); the PULSE upload policy fix
+  is in progress. `test_framing` is known-red; live smokes are known-gap in
+  CI. P-03/W-05/S-12 -> A; parity 61.2/69.9; 0.3.0/1.0 held.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

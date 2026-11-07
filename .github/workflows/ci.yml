@@ -234,6 +234,15 @@ jobs:
           PULSE_STORE_BACKEND=kv PULSE_KV_DIR="$PWD/probe-logs/ci-kv-store" \
             bash scripts/store_soak.sh --seconds 60 --port 18304
 
+      - name: Security corpus (Unix, known-gap)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/security_smoke.py framing --server-exe ./out/pulse_app --port 18400 --allow-known-gaps
+          python3 scripts/security_smoke.py static --server-exe ./out/pulse_app --port 18401 --allow-known-gaps
+          python3 scripts/security_smoke.py upload --server-exe ./out/pulse_app --port 18402 --allow-known-gaps
+
       - name: SBOM (generate + validate)
         if: runner.os == 'Linux'
         shell: bash
@@ -285,5 +294,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "worker smoke failed with exit $LASTEXITCODE" }
           python scripts\scaffold_smoke.py
           if ($LASTEXITCODE -ne 0) { throw "scaffold smoke failed with exit $LASTEXITCODE" }
+          python scripts\security_smoke.py framing --server-exe .\out\pulse_app.exe --port 18400 --allow-known-gaps
+          if ($LASTEXITCODE -ne 0) { throw "framing corpus failed with exit $LASTEXITCODE" }
+          python scripts\security_smoke.py static --server-exe .\out\pulse_app.exe --port 18401 --allow-known-gaps
+          if ($LASTEXITCODE -ne 0) { throw "static corpus failed with exit $LASTEXITCODE" }
+          python scripts\security_smoke.py upload --server-exe .\out\pulse_app.exe --port 18402 --allow-known-gaps
+          if ($LASTEXITCODE -ne 0) { throw "upload corpus failed with exit $LASTEXITCODE" }
           & scripts\repro_check.ps1 -TimeoutSec 300
           if ($LASTEXITCODE -ne 0) { throw "repro check failed with exit $LASTEXITCODE" }

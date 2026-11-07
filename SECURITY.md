@@ -105,6 +105,12 @@ this policy.
   empty method/target shape as defense in depth; the Beacon package needs
   the upstream parser fix. Do not rely on NUL-containing requests being
   rejected until that fix lands.
+- **Open high/critical findings (2026-11-07):** duplicate/conflicting
+  Content-Length, CL overflow, whitespace-before-colon and TE.TE are accepted
+  (`REL-20261107-1032-pulse`, stdlib); a symlink/junction inside the site root
+  escapes it (`REL-20261107-1032-pulse-2`, `xiom.static`); the upload route
+  has no MIME/extension allowlist. 0.3.0/1.0 are held until these are fixed;
+  see `docs/SECURITY-FINDINGS-2026-11-07.md`.
 - Release artifacts are SHA-256 pinned with build provenance. A CycloneDX
   SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI with exact
   registry package hashes/signatures and the resolved dependency graph; the

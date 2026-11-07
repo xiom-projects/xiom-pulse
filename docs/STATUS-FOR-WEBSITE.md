@@ -27,7 +27,8 @@ by a front proxy; PULSE serves plaintext on loopback.
   (`6fdde4ee`). v0.64.9 is withdrawn; v0.65.0-0.65.2 are superseded
   (v0.65.2 had a durable-lane push regression and is not used).
 - **Release cadence:** 0.3.0 is prepared but **not tagged** -- it waits on
-  the owner's SQL-serving decision and on the memory work below.
+  the owner's SQL-serving decision, the memory work below, and the open
+  security findings (2026-11-07 framing/static/upload).
 
 ## Platform support (be precise on the site)
 
@@ -102,6 +103,11 @@ all five are packaged in the release dry-run.
    not publish 1M numbers.
 7. **SQL serving** is a proposal (`docs/DESIGN-SQL-SERVING.md`), pending
    owner approval; the stock app is SQL-free.
+8. **Open security findings (2026-11-07):** duplicate/conflicting
+   Content-Length, CL overflow, whitespace-colon and TE.TE are accepted; a
+   static symlink/junction inside the root escapes it; uploads lack a
+   MIME/extension allowlist. 0.3.0/1.0 are held; see
+   `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 ## What's next (public roadmap wording)
 
@@ -109,8 +115,8 @@ all five are packaged in the release dry-run.
   floor is **~14.5 KB/req** on 60 s probes (14.1-14.8; 17.6 reference). The
   remaining work is the header/Date path plus the deferred Option aggregate,
   then the 24h/1M soak gate.
-- **0.3.0**: SQL serving decision, version bump, CHANGELOG, tag, fleet
-  watch.
+- **0.3.0**: SQL serving decision, the open security findings fixed, version
+  bump, CHANGELOG, tag, fleet watch.
 - Realtime: permessage-deflate, subprotocol negotiation.
 - **Dynamic site profile (in-tree, not in the 0.2.2 tag):** static site mode
   ships; `examples/site/` is a Beacon-based server-rendered scaffold with a
