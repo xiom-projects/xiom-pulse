@@ -67,6 +67,14 @@ var req_counter: Int = 0;
 var icon_bytes: Vec[UInt8] = Vec[UInt8].new();
 var icon_loaded: Bool = false;
 
+// Cut #3: cache the IMF-fixdate string per epoch second. The formatter
+// rebuilds the weekday/month names and six zero-padded fields on every
+// response, which was the remaining per-request Date cost. The server is
+// single-threaded, so one (second, string) slot is enough; the epoch second
+// is the key, so rollover never serves a stale value.
+var date_cache_sec: Int = -1;
+var date_cache_str: Str = "";
+
 fn next_rid() -> Str {
   req_counter = req_counter + 1;
   return "r-" + req_counter.to_str();
@@ -714,7 +722,9 @@ fn request_complete(raw: &Vec[UInt8]) -> Bool {
 /// the idle deadline expired before any byte (silent close, fasthttp
 /// model). Complexity: O(n) syscalls.
 fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int, cycling: Bool, recv_buf: &mut Vec[UInt8]) -> (Vec[UInt8], Int, Int) {
-  var raw: Vec[UInt8] = Vec[UInt8].new();
+  // Cut #4: one capacity reservation per request instead of the geometric
+  // push-growth chain (typical headers fit in a few hundred bytes).
+  var raw: Vec[UInt8] = Vec[UInt8].with_capacity((initial.len() + 512) as UInt);
   var i0: Int = 0;
   while i0 < initial.len() {
     raw.push(initial[i0]);
@@ -801,8 +811,16 @@ fn read_request(client: Int, budget_ms: Int, initial: &Vec[UInt8], first_ms: Int
   return (raw, err, idle);
 }
 
-/// send_step queues one 64 KiB slice; -1 on failure. Complexity: O(chunk).
+/// send_step queues one slice; -1 on failure. The common case -- the whole
+/// (<= 64 KiB) response from offset 0 -- goes straight to the socket, so no
+/// per-response chunk Vec is built; only a retry after a short write or a
+/// > 64 KiB buffer pays for the copy. Complexity: O(chunk).
 fn send_step(fd: Int, data: &Vec[UInt8], off: Int, n: Int) -> Int {
+  if off == 0 && n <= 65536 && data.len() == n {
+    let wr = socket.socket_send(fd, data);
+    if wr.is_err { return -1; }
+    return wr.value;
+  }
   var take: Int = n - off;
   if take > 65536 { take = 65536; }
   var chunk: Vec[UInt8] = Vec[UInt8].with_capacity(take as UInt);
@@ -833,14 +851,15 @@ fn send_all(fd: Int, data: &Vec[UInt8]) -> Bool {
   let _ = nb;
   var off: Int = 0;
   var ok: Bool = true;
+  // One poll fd list per send instead of one per poll iteration.
+  var fds: Vec[Int] = Vec[Int].new();
+  fds.push(fd);
   while off < n && ok {
     if budget > 0 {
       let remaining = budget - (time.monotonic_ms() - t0);
       if remaining <= 0 {
         ok = false;
       } else {
-        var fds: Vec[Int] = Vec[Int].new();
-        fds.push(fd);
         let pr = socket.socket_poll_write(&fds, remaining);
         if pr.is_err { ok = false; } else if pr.value.len() == 0 { ok = false; }
       }
@@ -1087,12 +1106,26 @@ fn gate_request(raw: &Vec[UInt8], req: &PulseRequest, rid: Str, csrf_on: Bool, c
   return res;
 }
 
+/// http_date_cached returns the IMF-fixdate for `now_sec`, reusing the
+/// string formatted for the same epoch second. Formatting happens at most
+/// once per second instead of once per response; the seconds key makes the
+/// rollover exact. Complexity: O(1) on a cache hit, O(1) on a miss.
+fn http_date_cached(now_sec: Int) -> Str {
+  if date_cache_sec == now_sec {
+    return date_cache_str;
+  }
+  let s = static.static_http_date(now_sec);
+  date_cache_sec = now_sec;
+  date_cache_str = s;
+  return s;
+}
+
 /// with_std_headers appends the Date header (RFC 1123 / IMF-fixdate) right
 /// after the status line, plus the configured CSP when PULSE_CSP is set;
 /// assembled here at the app layer, reusing the static package's
 /// formatter. Complexity: O(n).
 fn with_std_headers(resp: Vec[UInt8]) -> Vec[UInt8] {
-  var out = http.with_header_line(&resp, "Date: " + static.static_http_date(time.unix_timestamp()));
+  var out = http.with_header_line(&resp, "Date: " + http_date_cached(time.unix_timestamp()));
   let policy = config.cfg_csp();
   if policy.len() > 0 {
     out = http.with_header_line(&out, "Content-Security-Policy: " + policy);
@@ -1196,7 +1229,7 @@ fn build_response_assembled(req: &PulseRequest, status: Int, content_type: Str, 
   resp_append_str(&mut out, " ");
   resp_append_str(&mut out, http.status_text(status));
   resp_append_str(&mut out, "\r\nDate: ");
-  resp_append_str(&mut out, static.static_http_date(time.unix_timestamp()));
+  resp_append_str(&mut out, http_date_cached(time.unix_timestamp()));
   resp_append_str(&mut out, "\r\n");
   if csp.len() > 0 {
     resp_append_str(&mut out, "Content-Security-Policy: ");

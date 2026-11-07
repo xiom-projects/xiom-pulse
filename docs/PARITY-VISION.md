@@ -114,7 +114,7 @@ project can tick every feature and still not be top tier:
 
 | Gate | State | Points | Why |
 |---|---|---:|---|
-| Flat memory under a 1M soak | **missing** | 0 | 14.5 KB/req after the router cache + gate cut + response assembly; 25 KiB PR retention gate; 1M blocked |
+| Flat memory under a 1M soak | **missing** | 0 | 13.9 KB/req after the router cache + gate cut + response assembly + Date/send cuts; 25 KiB PR retention gate; 1M blocked |
 | Real concurrency / scale-out | **missing** | 0 | N-port/reuseport slice; supervisor/drain/1-2-worker curve missing; c10 adds no throughput |
 | TLS + HTTP/2 (or a productised edge story with numbers) | **missing** | 0 | edge-only TLS, no H2 |
 | External audit + fuzzing | **partial** | 0.5 | parser fuzz gate in CI + policy; no external audit |

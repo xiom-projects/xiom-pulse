@@ -304,3 +304,17 @@ and 14,070.96 B/req** (14.1-14.8 KB), down from 15.5. `test_app` and the live
 `http_smoke` (135 checks) are green; responses are byte-equivalent to the old
 builder (Date excluded). Cut #3 (Date/CSP insertion) and cut #4 (read/send
 buffers) remain; the metrics Map is compiler-blocked; 24 h/1M are open.
+
+## 10. Post-report cuts 3 and 4 applied (2026-11-07)
+
+The Date formatter is cached per epoch second (`http_date_cached`); the
+request buffer is pre-sized once; the per-send chunk Vec was removed with a
+whole-buffer `socket_send` fast path; the poll fd list is built once per send.
+Three 60 s `/health` probes measured **13,811.51, 13,546.41 and 14,306.74
+B/req** (13.5-14.3 KB; allocator noise is ±1-2 KB) versus 14.5. `test_app`
+GREEN; live `http_smoke` 135/135 (date, 50 MB asset, slowloris, write-stall,
+gate order) and a second-rollover spot check. Cut #4 is partial: the stdlib
+send API exposes no offset/length, so `socket_send` still copies internally;
+the nested-aggregate codegen class was not touched. The big remaining residual
+is the socket/Option path plus the compiler-blocked metrics Map; 24 h/1M are
+open.

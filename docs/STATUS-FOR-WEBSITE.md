@@ -80,12 +80,12 @@ all five are packaged in the release dry-run.
 ## Known limitations (state these honestly)
 
 1. **Sustained-load memory (the main blocker).** On v0.65.6 the server
-   retains roughly **14.5 KB per request** on 60 s probes (14.1-14.8 across
+   retains roughly **13.9 KB per request** on 60 s probes (13.5-14.3 across
    three runs; 17.6 reference; down from 22.3 on v0.65.4 and 44-50 on
    v0.65.1). The JSON memory class is **fixed** (builder/parse are flat) and
-   the per-request router rebuild, redundant gate route match and response
-   assembly copies are **fixed** (2026-11-06/07); the residual is the
-   header/Date path and Map values, plus the deferred ~0.9 KB
+   the per-request router rebuild, gate route match, response-assembly copies
+   and Date/send-path churn are **fixed** (2026-11-06/07); the residual is the
+   socket/Option path and Map values, plus the deferred ~0.9 KB
    Option[ServerRequest] aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. A 25 KiB/req PR retention gate runs in CI; the 24 h/1M gate is still open. Short demos and bounded runs are fine; **do not describe the current build as suitable
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
@@ -112,8 +112,8 @@ all five are packaged in the release dry-run.
 ## What's next (public roadmap wording)
 
 - Memory: the JSON class and the per-request router rebuild are fixed; the
-  floor is **~14.5 KB/req** on 60 s probes (14.1-14.8; 17.6 reference). The
-  remaining work is the header/Date path plus the deferred Option aggregate,
+  floor is **~13.9 KB/req** on 60 s probes (13.5-14.3; 17.6 reference). The
+  remaining work is the socket/Option path plus the deferred Option aggregate,
   then the 24h/1M soak gate.
 - **0.3.0**: SQL serving decision, the open security findings fixed, version
   bump, CHANGELOG, tag, fleet watch.

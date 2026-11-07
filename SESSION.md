@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 45 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 46 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -36,12 +36,12 @@ STATE AT 2026-11-06:
   **15.1 B/iter**; capped bttger 5k completes (511.6 MB, zero errors).
   Residual: `json_type`/`json_get` still ~2 KB/op (filed
   `REL-20261104-1709-pulse`).
-- **HTTP request-path floor: ~14.5 KB/req** after the router cache + gate
-  cut + HandlerOut assembly (three 60 s probes 14,755.78 / 14,238.48 /
-  14,070.96 B/req; 17.6 reference; `1549-pulse-4` stays acked). The 24 h @
-  100 req/s (RSS <= 256 MB) and 1,000,000-request gates remain open; the
-  remaining floor is the header/Date path plus the deferred ~0.9 KB
-  Option[ServerRequest] aggregate. Never run the 1M bench uncapped.
+- **HTTP request-path floor: ~13.9 KB/req** after the router cache + gate
+  cut + HandlerOut assembly + Date/send cuts (three 60 s probes 13,811.51 /
+  13,546.41 / 14,306.74 B/req; 17.6 reference; `1549-pulse-4` stays acked).
+  The 24 h @ 100 req/s (RSS <= 256 MB) and 1,000,000-request gates remain
+  open; the remaining floor is the socket/Option path plus the deferred
+  ~0.9 KB Option[ServerRequest] aggregate. Never run the 1M bench uncapped.
 - Compiler/socket/arm64 chain closed (`1619`, `1101`, `1628`, `1529`
   verified); `1721` fixed (ops verifies); `1854` closed. v0.65.2 remains
   WITHDRAWN (durable-lane regression); never select it.
@@ -139,12 +139,12 @@ NEXT (dependency order):
    stream/ws-auth, the five-leg CI and release dry-run; then re-land the
    metrics index cache, pin and update SESSION/PROGRESS + the website
    briefs. Re-check the arm chain.
-2. **Memory gate**: the router rebuild, gate route-match cut and HandlerOut
-   assembly are fixed (20.6 -> 14.5 KB/req); drive the header/Date path +
-   Option residual toward flat (cuts #3/#4 are next). Ops has a 256M-capped
-   24h lane ready; supply a Linux artifact from the current main and a
-   go/no-go before the acceptance run, then the capped bttger 5k/1M. Update
-   `benchmarks/bttger/REPORT-2026-11-01.md`.
+2. **Memory gate**: the router rebuild, gate route-match cut, HandlerOut
+   assembly and Date/send cuts are fixed (20.6 -> 13.9 KB/req); drive the
+   socket/Option path + compiler-blocked metrics Map toward flat. Ops has a
+   256M-capped 24h lane ready; supply a Linux artifact from the current main
+   and a go/no-go before the acceptance run, then the capped bttger 5k/1M.
+   Update `benchmarks/bttger/REPORT-2026-11-01.md`.
 3. **Security/release (WP2)**: fuzz gate + disclosure/CVE policy, CycloneDX
    SBOM generator + release attach, reproducible recipe and audit scope are
    shipped; a NUL-in-head parser differential is open upstream
@@ -408,6 +408,18 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   login/token routes and rate limit/lockout are not wired; S-08 remains M.
 - `REL-20261107-1337-pulse` asks packages for a vetted native Argon2id/
   PBKDF2. Memory/SSE/soak agents are still landing separately.
+
+## WRAP 2026-11-07 (session 46) -- WP1 cuts #3/#4
+
+- Date formatter cached per epoch second; request buffer pre-sized; whole-
+  buffer `socket_send` fast path removes the per-send chunk Vec; poll fd list
+  built once. Cut #4 is partial (no offset/length send API).
+- Three 60 s probes: **13,811.51 / 13,546.41 / 14,306.74 B/req** (13.5-14.3
+  KB; noise ±1-2 KB), from 14.5; `test_app` + live `http_smoke` (135) GREEN;
+  Date rollover and the 50 MB asset path verified.
+- The big residual is the socket/Option path plus the compiler-blocked
+  metrics Map; 24 h/1M open. Password credential module (session 45) and the
+  green CI (session 44) stand.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

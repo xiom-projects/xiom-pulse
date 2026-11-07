@@ -84,9 +84,9 @@ is tested.
 - Result: **all five platforms** (linux-x64, linux-arm64, windows-x64,
   macOS x64, macOS arm64) build, pass the full fleet, and package.
 - The per-request memory floor went **46 KB -> 22.3 -> 16.1 -> 15.5 ->
-  14.5 KB** after the router cache, gate cut and response assembly; the
-  response builder is flat and the read buffer is per-connection. It is
-  **not yet flat under soak** -- that is Phase 3.
+  14.5 -> 13.9 KB** after the router cache, gate cut, response assembly and
+  Date/send-path churn; the response builder is flat and the read buffer is
+  per-connection. It is **not yet flat under soak** -- that is Phase 3.
 - Current release: **0.2.2** on compiler **v0.65.6** + stdlib `6fdde4ee`.
 
 **Exit:** the toolchain is no longer the blocker; the remaining gaps are the
@@ -171,8 +171,9 @@ cross-framework ranking, no audit cadence, no ecosystem.
 - Benchmark baseline published (bttger six endpoints, single connection):
   1,923 / 421 / 1,670 / 928 / 1,083 / 377 req/s on v0.65.4, zero errors;
   10 connections add no throughput (the scale-out gap Phase 3 fixes).
-- Memory: **14.5 KB/request** on 60 s probes after the router cache + gate
-  cut + response assembly (14.1-14.8; 17.6 reference; from 46); not flat yet.
+- Memory: **13.9 KB/request** on 60 s probes after the router cache + gate
+  cut + response assembly + Date/send churn (13.5-14.3; 17.6 reference; from
+  46); not flat yet.
 - Supply chain: SHA-pinned toolchain/archives, provenance attestations,
   signed-off release dry-runs.
 

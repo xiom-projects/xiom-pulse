@@ -35,7 +35,8 @@ Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
 downgraded P-03/W-05 to `A`; the upload fix restored S-12 Station to `P`.
 Re-run **Beacon 61.2% (94.4% assessed), Station 70.5% (100%)**. The Beacon
 headline rose only because W-05 moved from unassessed to partial; the
-framing/static findings remain open and release-blocking. See
+framing/static findings remain open and release-blocking. The memory floor
+is **13.9 KB/req** after the Date/send cuts. See
 `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 The score is capability parity, not evidence quality. A row can be `P` and
@@ -329,8 +330,8 @@ leg; release-only and manual probes are called out separately.
    Unix in CI.
 9. **Matrix W-06 and S-08 contradict the code** (section 5).
 10. **Matrix O-13 still says "22 KB/req residual"** while STATUS and
-    PROGRESS say **14.5 KB/req** after the router cache + gate cut + HandlerOut
-assembly. The matrix
+    PROGRESS say **13.9 KB/req** after the router cache + gate cut + HandlerOut
+assembly + Date/send cuts. The matrix
     evidence text is stale even though the status (`M`) is unchanged.
 11. **PARITY-VISION's baseline is stale.** It records 58.4% / 69.1%
     (2026-10-30); the current script prints 60.3% / 70.9%. The vision
@@ -345,7 +346,7 @@ assembly. The matrix
 
 | # | Risk area | Why it matters | Missing test | Rows |
 |---:|---|---|---|---|
-| 1 | **Memory / sustained load** | The 14.5 KB/req floor is the stated production blocker. A 25 KiB/req PR retention gate now catches 1704-class regressions; the final flat/24 h/1M gate is still open. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
+| 1 | **Memory / sustained load** | The 13.9 KB/req floor is the stated production blocker. A 25 KiB/req PR retention gate now catches 1704-class regressions; the final flat/24 h/1M gate is still open. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
 | 3 | **Parser / framing** | **Confirmed critical:** duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE are accepted; the raw corpus exists and is a known-gap gate. | Fix stdlib (`REL-20261107-1032-pulse`); then make the corpus strict and run `FRAMING_STRICT_NUL=1`. | P-03, P-07, P-08 |
 | 4 | **Static / traversal** | **Confirmed high:** a Windows junction/symlink inside the root escapes (`REL-20261107-1032-pulse-2`); encoded/dot-dot/backslash/NUL cases are blocked. | Fix `xiom.static` canonical/realpath; keep the corpus strict on Windows junctions and Unix symlinks. | W-05 |
