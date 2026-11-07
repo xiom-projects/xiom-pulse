@@ -3,7 +3,108 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 53 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 54)
+
+You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
+backend / multipurpose framework). Read this prompt first, then
+docs\PROGRESS.md, docs\ROADMAP-TOP-TIER.md sections 10-12,
+docs\PARITY-MATRIX.md, docs\SECURITY-FINDINGS-2026-11-07.md,
+docs\MEMORY-FLOOR-2026-11-06.md, docs\STATUS-FOR-WEBSITE.md,
+docs\ROADMAP-FOR-WEBSITE.md, docs\DESIGN-WORKERS.md. Relays:
+E:\xiom-lang\xiom-relays. Reference shelf: E:\repos.
+
+DOORBELL: armed as cron `0 0,2,14,16,18,20,22 * * *` (local Greek; skips the
+owner's 04:00-13:00 double-charge window). Each fire does `git fetch` +
+`git merge --ff-only` (NEVER `git pull`), `relay.py view --lane pulse`, then
+processes items and wraps on change. If the owner says pause, cancel the cron.
+
+STATE AT 2026-11-07 (session 54):
+- `main` = **05f01fe** (WP4 phase 1; clean + pushed). CI at 05f01fe is the
+  first check; the previous five-leg green is **42381864881** at c770c27.
+- Toolchain: compiler **v0.65.6** (windows a52b8cf3, linux a8fc6668,
+  linux-arm64 dca04f07, macos-x64 c5f0eb0b, macos-arm64 0fc5c6cd) + stdlib
+  **6fdde4ee**; packages xiom.pulse 0.3.2, xiom.http 0.1.11,
+  xiom.template 0.2.0. Lane home `%LOCALAPPDATA%\xiom-pulse-home`; never
+  touch the shared `%LOCALAPPDATA%\xiom\packages`.
+- **v0.65.7 pin is not ready:** stdlib tag `stdlib-v0.65.7` = 4ec20551 was cut
+  (release run 42381337823), but its gates failed because the compiler
+  `v0.65.7` tag is not published (latest GitHub release is still v0.65.6;
+  the local tag exists). Wait for the compiler release, then verify the
+  published archive (SHA256SUMS + mirror), the five legs and the dry-run.
+- **`REL-20261106-1840-pulse` is FIXED** in the compiler source (nested
+  Vec[Struct] copy-modify-write; 13:57Z). Re-land the metrics index cache and
+  re-measure after the v0.65.7 pin.
+- **Product 0.2.2.** 0.3.0 waits on the owner's SQL-serving decision
+  (`docs/DESIGN-SQL-SERVING.md`) and the security/pin items; do not tag.
+- **Memory:** /health **13.9 KB/req** (13.5-14.3 three probes); bttger mix
+  **14.0 KiB/req** at 100 req/s sustained. 24 h projection ~124 GB; 256 MB cap
+  ~178 s. The 24 h/1M gates are **open**; never run 1M uncapped. Remaining:
+  socket/Option + the now-unblocked metrics Map. The 25 KiB PR retention gate
+  is in CI.
+- **Security (2026-11-07):** uploads fixed (strict 29/29); WS critical
+  fixed+verified/closed (stdlib `e8ab289` + PULSE guard 14/14, relay
+  `4b1ca32`); SSE IDs/retry/Last-Event-ID + 1002 reserved opcodes
+  (`6863dbe`); OpenAPI reverse paths + schema enum/UTF-8 (`f20eb3e`; drift
+  9/9, schema 18/18). Framing fixed upstream stdlib `30bacfa` (relay `1032`)
+  awaiting the pin. **Static escape: PULSE guard blocked on the missing
+  stdlib realpath** (`REL-20261107-1427-pulse`, packages `1032-2`); static
+  smoke GAP:HIGH. Do not add a fake lexical guard.
+- **S-08 password:** `src/users.xi` + 82 tests; 600k = **1.9-2.0 s** vs the
+  250/500 ms target; routes/dummy timing/lockout/rate limit not wired; native
+  hash asked (`REL-20261107-1337-pulse`). S-08 remains M.
+- **Ops soak:** 256M-capped lane ready; `scripts/soak_bttger.*` (100 req/s,
+  14.0 KiB/req); do **not** run the 24 h at 14.0 (cap ~178 s); use
+  `--fail-on-projection` for short wiring checks; go/no-go after flat + a
+  verified Linux artifact. Ops item `REL-20261107-1348-pulse`.
+- **WP4 phase 1 SHIPPED (2026-11-07):** `PULSE_WORKERS` supervisor +
+  loopback control plane (`GET /health`, `POST /drain`, `POST /quit`,
+  `PULSE_CONTROL_TOKEN`, fail-closed). Config `PULSE_WORKERS`,
+  `PULSE_WORKER_CHILD`, `PULSE_CONTROL_PORT`,
+  `PULSE_SUPERVISOR_CONTROL_PORT`, `PULSE_DRAIN_TIMEOUT_MS`;
+  `scripts/drain_smoke.ps1`/`.sh` GREEN on Windows, CI-wired Unix+Windows.
+  Open: zero-downtime reload, 1/2-worker curve, Linux reuseport-under-load,
+  sticky-session config, unit template. New relay item
+  **`REL-20261107-1509-pulse`**: Windows `posix_spawnp` does not inherit the
+  supervisor's redirected stdout/stderr (worker logs lost).
+- **Parity:** Beacon 58.9% (94.4% assessed) / Station 71.3% (100%). Top gaps:
+  S-08, O-13, W-04 Beacon, R-11 Beacon, W-05 static, R-14 route wiring, O-09
+  reload/curve.
+- Site static + dynamic first slice; Phase C compression/caching/i18n open.
+  WP2 external audit/cross-host repro; WP3 pilot open. Game backend later
+  (ROADMAP 11).
+
+NEXT (dependency order):
+1. Check CI at 05f01fe; fix any red; confirm `drain_smoke` on Unix (bash) and
+   Windows and `test_users`/`test_stream` on the five legs.
+2. Wait for the compiler v0.65.7 release + stdlib-v0.65.7 (4ec20551):
+   verify the published archive (SHA256SUMS + mirror), framing `30bacfa`, WS
+   `e8ab289`, NUL `1716`, nested aggregate `1840`; run probes/suites/five-leg
+   CI/release dry-run; pin; then re-run the framing corpus strict, the
+   metrics index cache, and the static fix when `1427`/`1032-2` land.
+3. Static: stdlib realpath + `xiom.static` canonicalization; then the PULSE
+   canonical guard/smoke strict. Password: native hash `1337` or route wiring
+   with a strict login rate limit/lockout + the performance gate.
+4. Memory: re-land the metrics Map cache, socket/Option; PR retention gate;
+   24 h @100 req/s on the bttger mix (256 MB) and 1M after flat; ops go/no-go.
+5. WP4 reload + 1/2-worker curve; shared sessions/rate/store after the SQL/KV
+   decision.
+6. Site Phase C; game backend only after 1.0.
+7. 0.3.0 after SQL + security/pin; 1.0 after 24h/1M + audit + scale-out + pilot.
+
+COMMANDS: `scripts/run.ps1 tests/test_app.xi` (GREEN), `test_stream.xi`,
+`test_users.xi`, `http_smoke.ps1`, `site_smoke`, `worker_smoke`,
+`drain_smoke`, `scaffold_smoke`, `fuzz_parsers`/`fuzz_cookie`,
+`security_smoke` (framing/static/upload), `rss_gate.py`, `soak_bttger.py`,
+`openapi_drift_probe`, `schema_matrix_probe`, `sse_reconnect_probe`,
+`ws_negative_corpus`. Use unique builds/ports; no 1M/24h.
+
+DISCIPLINE: signed conventional commits; commit/push per unit; update SESSION
++ docs/PROGRESS at every wrap; report blockers on the relay first; verify on
+published archives, not release notes; never claim sustained-load production
+until the memory gate is met. The release is held on the static realpath + the
+next verified pin.
+
+## HANDOFF PROMPT (SUPERSEDED -- 2026-11-07, session 53 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
