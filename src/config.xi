@@ -87,6 +87,32 @@ pub fn cfg_upload_max_parts() -> Int {
   return n;
 }
 
+/// cfg_upload_max_header_bytes returns the per-part header-block cap
+/// (PULSE_UPLOAD_MAX_HEADER_BYTES, default 8192; 0/invalid falls back to
+/// the default, values above 1 MiB are clamped). Exceeding it is a 413.
+/// Complexity: O(1). Pure.
+pub fn cfg_upload_max_header_bytes() -> Int {
+  var n: Int = cfg_parse_uint(env.var_or("PULSE_UPLOAD_MAX_HEADER_BYTES", "8192"), 8192);
+  if n < 1 { n = 8192; }
+  if n > 1048576 { n = 1048576; }
+  return n;
+}
+
+/// cfg_upload_allowed_exts returns the upload extension allowlist
+/// (PULSE_UPLOAD_ALLOWED_EXTS, comma-separated; the LAST suffix is
+/// matched lower-cased). Unknown extensions are rejected.
+/// Complexity: O(1). Pure.
+pub fn cfg_upload_allowed_exts() -> Str {
+  return env.var_or("PULSE_UPLOAD_ALLOWED_EXTS", "txt,md,csv,json,png,jpg,jpeg,gif,webp,pdf,zip");
+}
+
+/// cfg_upload_allowed_mimes returns the upload media-type allowlist
+/// (PULSE_UPLOAD_ALLOWED_MIMES, comma-separated; parameters are ignored).
+/// Unknown/absent media types are rejected. Complexity: O(1). Pure.
+pub fn cfg_upload_allowed_mimes() -> Str {
+  return env.var_or("PULSE_UPLOAD_ALLOWED_MIMES", "text/plain,text/markdown,text/csv,application/json,image/png,image/jpeg,image/gif,image/webp,application/pdf,application/zip");
+}
+
 /// cfg_site_dir returns the static-site root (PULSE_SITE_DIR, "" = off).
 /// When set, unmatched GET/HEAD requests and /assets/* serve from this
 /// tree (clean URLs, index resolution, custom 404). Complexity: O(1).
@@ -270,6 +296,9 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "upload_dir", "PULSE_UPLOAD_DIR");
   cfg_apply_str(obj, "upload_max_bytes", "PULSE_UPLOAD_MAX_BYTES");
   cfg_apply_str(obj, "upload_max_parts", "PULSE_UPLOAD_MAX_PARTS");
+  cfg_apply_str(obj, "upload_max_header_bytes", "PULSE_UPLOAD_MAX_HEADER_BYTES");
+  cfg_apply_str(obj, "upload_allowed_exts", "PULSE_UPLOAD_ALLOWED_EXTS");
+  cfg_apply_str(obj, "upload_allowed_mimes", "PULSE_UPLOAD_ALLOWED_MIMES");
   cfg_apply_str(obj, "http_allowlist", "PULSE_HTTP_ALLOWLIST");
   cfg_apply_str(obj, "http_max_bytes", "PULSE_HTTP_MAX_BYTES");
   cfg_apply_str(obj, "site_dir", "PULSE_SITE_DIR");
@@ -494,6 +523,59 @@ fn cfg_bind_has_port(s: Str) -> Bool {
   return false;
 }
 
+/// cfg_ext_token_valid is true for one 1-8 char ASCII alnum extension
+/// token (an optional leading dot is accepted). Complexity: O(n). Pure.
+fn cfg_ext_token_valid(tok: Str) -> Bool {
+  var t = string.str_lower(string.str_trim(tok));
+  if t.len() == 0 { return false; }
+  var i: Int = 0;
+  if t.byte_at(0) == 46u8 { i = 1; }
+  var n: Int = 0;
+  while i < t.len() {
+    let b = t.byte_at(i);
+    let alnum = (b >= 48u8 && b <= 57u8) || (b >= 97u8 && b <= 122u8);
+    if !alnum { return false; }
+    n = n + 1;
+    i = i + 1;
+  }
+  return n >= 1 && n <= 8;
+}
+
+/// cfg_mime_token_valid is true for a `type/subtype` media-type token with
+/// no whitespace/parameters. Complexity: O(n). Pure.
+fn cfg_mime_token_valid(tok: Str) -> Bool {
+  let t = string.str_trim(tok);
+  if t.len() == 0 { return false; }
+  let slash = string.str_index_of(t, "/");
+  if slash.is_none { return false; }
+  let sl = slash.value;
+  if sl == 0 || sl + 1 >= t.len() { return false; }
+  var i: Int = 0;
+  while i < t.len() {
+    let b = t.byte_at(i);
+    if b == 32u8 || b == 9u8 || b == 59u8 { return false; }
+    i = i + 1;
+  }
+  return string.str_index_of(string.str_slice(t, sl + 1, t.len()), "/").is_none;
+}
+
+fn cfg_csv_bad_token(csv: Str, is_ext: Bool) -> Str {
+  let items = string.str_split(csv, ",");
+  var i: Int = 0;
+  while i < items.len() {
+    let tok = string.str_trim(items[i]);
+    var ok: Bool = false;
+    if is_ext {
+      ok = cfg_ext_token_valid(tok);
+    } else {
+      ok = cfg_mime_token_valid(tok);
+    }
+    if !ok { return tok; }
+    i = i + 1;
+  }
+  return "";
+}
+
 /// cfg_validate returns human-readable warnings for set-but-invalid
 /// values (invalid values silently fall back to defaults, so surface them
 /// once at startup and in --check-config). Empty vector = all good.
@@ -607,6 +689,41 @@ pub fn cfg_validate() -> Vec[Str] {
   let wid = env.var_or("PULSE_WORKER_ID", "");
   if wid.len() > 0 && cfg_digit_value(wid) < 0 {
     w.push("PULSE_WORKER_ID=\"" + wid + "\" is not a non-negative integer; using 0");
+  }
+
+  let umb = env.var_or("PULSE_UPLOAD_MAX_BYTES", "");
+  if umb.len() > 0 && cfg_digit_value(umb) < 1 {
+    w.push("PULSE_UPLOAD_MAX_BYTES=\"" + umb + "\" is not a positive integer; using 1048576");
+  }
+  let ump = env.var_or("PULSE_UPLOAD_MAX_PARTS", "");
+  if ump.len() > 0 {
+    let v = cfg_digit_value(ump);
+    if v < 1 || v > 64 {
+      w.push("PULSE_UPLOAD_MAX_PARTS=\"" + ump + "\" is outside 1-64; clamping");
+    }
+  }
+  let umh = env.var_or("PULSE_UPLOAD_MAX_HEADER_BYTES", "");
+  if umh.len() > 0 {
+    let v = cfg_digit_value(umh);
+    if v < 1 {
+      w.push("PULSE_UPLOAD_MAX_HEADER_BYTES=\"" + umh + "\" is not a positive integer; using 8192");
+    } else if v > 1048576 {
+      w.push("PULSE_UPLOAD_MAX_HEADER_BYTES=\"" + umh + "\" exceeds 1 MiB; clamping");
+    }
+  }
+  let uae = env.var_or("PULSE_UPLOAD_ALLOWED_EXTS", "");
+  if uae.len() > 0 {
+    let bad = cfg_csv_bad_token(uae, true);
+    if bad.len() > 0 || string.str_split(uae, ",").len() == 0 {
+      w.push("PULSE_UPLOAD_ALLOWED_EXTS contains invalid extension \"" + bad + "\"; entries must be 1-8 ASCII letters/digits");
+    }
+  }
+  let uam = env.var_or("PULSE_UPLOAD_ALLOWED_MIMES", "");
+  if uam.len() > 0 {
+    let bad = cfg_csv_bad_token(uam, false);
+    if bad.len() > 0 || string.str_split(uam, ",").len() == 0 {
+      w.push("PULSE_UPLOAD_ALLOWED_MIMES contains invalid media type \"" + bad + "\"; entries must be type/subtype");
+    }
   }
 
   return w;

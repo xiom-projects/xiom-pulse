@@ -2,7 +2,8 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Security findings -- 2026-11-07 (framing, static, uploads)
 
-**Status: OPEN. The high/critical items are release-blocking for 0.3.0/1.0.**
+**Status: OPEN for the framing/static items; the upload policy is fixed
+(2026-11-07). The framing/static highs are release-blocking for 0.3.0/1.0.**
 Evidence: `tests/test_framing.xi` (fast parser/Station gate) and
 `scripts/security_smoke.py` (live raw TCP, subcommands `framing`, `static`,
 `upload`), plus the wrappers. Toolchain v0.65.6 + stdlib `6fdde4ee`.
@@ -47,9 +48,13 @@ Gaps accepted (200):
   overrides `dup.txt`.
 - **LOW -- no part-header cap:** a 200 KiB part header is accepted.
 
-The PULSE fix is an upload policy (default-safe allowlist, extension + MIME,
-double-extension, active-content) plus a part-header cap and duplicate
-disposition rejection; the corpus is the acceptance test.
+**Resolved 2026-11-07:** the upload route now uses a strict multipart parser
+with a default-safe extension + MIME allowlist, an 8 KiB part-header cap and
+duplicate-`Content-Disposition` rejection; `.txt`/`text/plain` still uploads
+200. `security_smoke upload` is **29/29 PASS, zero gaps**; `test_app` and the
+live `http_smoke` (135) are green. Config: `PULSE_UPLOAD_ALLOWED_EXTS`,
+`PULSE_UPLOAD_ALLOWED_MIMES`, `PULSE_UPLOAD_MAX_HEADER_BYTES` (all printed by
+`--check-config`).
 
 ## 4. Harness and CI policy
 

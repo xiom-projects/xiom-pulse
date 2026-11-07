@@ -31,11 +31,12 @@ Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
 `scaffold_smoke.py` is in CI. `proxy_e2e` stays manual; strict NUL and the
 24 h/1M stay heavy. The rows below are the pre-wiring audit.
 
-**Post-security-corpus re-run (2026-11-07):** the framing/static/upload
-findings downgraded P-03, W-05 and S-12 to `A`; re-run **Beacon 61.2%
-(94.4% assessed), Station 69.9% (100%)**. The Beacon headline rose only
-because W-05/S-12 moved from unassessed to partial; the findings are open and
-release-blocking. See `docs/SECURITY-FINDINGS-2026-11-07.md`.
+**Post-security-corpus re-run (2026-11-07):** the framing/static findings
+downgraded P-03/W-05 to `A`; the upload fix restored S-12 Station to `P`.
+Re-run **Beacon 61.2% (94.4% assessed), Station 70.5% (100%)**. The Beacon
+headline rose only because W-05 moved from unassessed to partial; the
+framing/static findings remain open and release-blocking. See
+`docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 The score is capability parity, not evidence quality. A row can be `P` and
 still have no per-PR test; those rows are flagged in section 9.
@@ -182,7 +183,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | S-09 | Rate limiting (global + route) | B=P / S=P | `test_http`: bucket/route rates; `test_app`: rate; `rate_smoke` (REL) | `rate_smoke` is not a PR gate; no distributed/multi-worker test | move `rate_smoke` to PR CI; add per-IP vs global semantics |
 | S-10 | CORS allowlist | B=P / S=P | `test_app`: cors; `http_smoke`: allow origin/preflight (CI) | no credentials/wildcard interaction | add `Access-Control-Allow-Credentials` matrix |
 | S-11 | Stream Origin/auth policy | B=P / S=P | `test_stream`: origin/auth; `stream_smoke`: Origin; `ws_auth_smoke`: 11 checks (CI **Windows only**) | Unix CI never runs `ws_auth_smoke` | run `ws_auth_smoke` on Unix too |
-| S-12 | Upload size/type caps | B=A / S=A | `test_app`/`http_smoke`: part/per-request caps; `security_smoke upload` | **no MIME/extension allowlist; `.php`/`.html`/`.svg` stored; duplicate disposition last-wins; no part-header cap** (2026-11-07) | default-safe allowlist + double-extension + active-content reject + part-header cap |
+| S-12 | Upload size/type caps | B=A / S=P | `test_app`/`http_smoke`: part/total/header caps; `security_smoke upload` strict 29/29 | **fixed 2026-11-07:** default-safe ext/MIME allowlist, 8 KiB part-header cap, duplicate disposition reject; `.txt` still 200 | keep the strict corpus in the release gate |
 | S-13 | Secret redaction in logs | B=P / S=P | `test_stream`: redact token/access_token; `ws_auth_smoke`: log redacts token (CI/Windows) | no audit-file redaction assertion in CI | assert both access log and audit file redact query tokens |
 | S-14 | Audit log + rotation | B=P / S=P | `probe_audit_rotate` (MAN); `test_app`: audit_sync config; `crash_test` (REL); `test_stream`: redaction | **rotation is not automated in CI**; only a manual probe | wire `probe_audit_rotate` into CI; assert line content + `.1` rotation |
 | S-15 | TLS termination guidance/automation | B=N/A / S=A | `docs/DEPLOYMENT.md` + `proxy_e2e` (MAN) | edge TLS e2e is not in CI | wire `proxy_e2e` into CI or mark manual-only |
@@ -348,7 +349,7 @@ assembly. The matrix
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
 | 3 | **Parser / framing** | **Confirmed critical:** duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE are accepted; the raw corpus exists and is a known-gap gate. | Fix stdlib (`REL-20261107-1032-pulse`); then make the corpus strict and run `FRAMING_STRICT_NUL=1`. | P-03, P-07, P-08 |
 | 4 | **Static / traversal** | **Confirmed high:** a Windows junction/symlink inside the root escapes (`REL-20261107-1032-pulse-2`); encoded/dot-dot/backslash/NUL cases are blocked. | Fix `xiom.static` canonical/realpath; keep the corpus strict on Windows junctions and Unix symlinks. | W-05 |
-| 5 | **Uploads** | **Confirmed high:** no MIME/extension allowlist; `.php`/`.html`/`.svg` are stored; duplicate disposition last-wins; no part-header cap. Size/number/total caps are enforced. | PULSE upload policy: default-safe allowlist, double-extension/active-content reject, duplicate disposition and part-header cap; then strict upload smoke. | S-12, R-11 |
+| 5 | ~~**Uploads**~~ **Fixed 2026-11-07** | Strict corpus 29/29; default-safe extension/MIME allowlist, 8 KiB part-header cap and duplicate-disposition reject; `.txt` still 200. | Keep the strict upload corpus in the release gate. | S-12, R-11 |
 | 6 | **Streaming / SSE / WS** | SSE reconnect is untested; WS negative frames can desynchronise or crash. | SSE `id:` + `Last-Event-ID` replay; WS unmasked/invalid-UTF-8/oversize/bad-close-code corpus; run ws-auth on Unix. | W-08, W-09, W-12, S-11 |
 | 7 | **Durability / store** | KV crash/restart is only release/manual; crash recovery is not a PR gate. | PR CI: JSONL and KV crash/torn-tail/restart; assert count/seq/reopen/compact. | D-01, D-02 |
 | 8 | **Validation + OpenAPI drift** | Schema validation is string-only; OpenAPI drift is one-way and `--check` is untested. | Schema matrix (missing/extra/type/nested/enum) -> 400; bidirectional OpenAPI drift gate + CLI `--check` failure case. | R-14, W-14 |

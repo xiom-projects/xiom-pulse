@@ -540,13 +540,34 @@ pub fn handle_route(m: PulseRoute, req: &PulseRequest, body: Str) -> HandlerOut 
     if boundary.len() == 0 {
       return out_json(415, envelope.error_body("unsupported_media_type", "expected multipart/form-data with a boundary"));
     }
-    let parsed = multipart.parse_multipart(&req.body, boundary, config.cfg_upload_max_parts(), config.cfg_upload_max_bytes());
+    let parsed = multipart.parse_multipart_strict(&req.body, boundary, config.cfg_upload_max_parts(), config.cfg_upload_max_bytes(), config.cfg_upload_max_header_bytes());
     if !parsed.ok {
       var st: Int = 400;
-      if parsed.error == "part_too_large" || parsed.error == "too_many_parts" {
+      if parsed.error == "part_too_large" || parsed.error == "too_many_parts" || parsed.error == "header_too_large" {
         st = 413;
       }
       return out_json(st, envelope.error_body(parsed.error, "multipart body rejected"));
+    }
+    // Upload policy (SECURITY-FINDINGS-2026-11-07 section 3): a file part
+    // is accepted only when BOTH its last, lower-cased suffix and its
+    // Content-Type media type are in the configured allowlists. Validate
+    // every part before writing anything so a rejected part never leaves
+    // earlier parts on disk.
+    let allowed_exts = config.cfg_upload_allowed_exts();
+    let allowed_mimes = config.cfg_upload_allowed_mimes();
+    var vi: Int = 0;
+    while vi < parsed.parts.len() {
+      let vp = parsed.parts[vi];
+      if vp.filename.len() > 0 {
+        let vext = multipart.sanitized_ext(vp.filename);
+        if !multipart.ext_allowed(vext, allowed_exts) {
+          return out_json(400, envelope.error_body("upload_type_not_allowed", "file extension is not allowed"));
+        }
+        if !multipart.mime_allowed(vp.content_type, allowed_mimes) {
+          return out_json(400, envelope.error_body("upload_type_not_allowed", "file content type is not allowed"));
+        }
+      }
+      vi = vi + 1;
     }
     let dir = config.cfg_upload_dir();
     // is_dir, not file_exists: fopen("r") fails on directories on Windows,
@@ -1344,6 +1365,10 @@ pub fn main() -> Int {
       io.println("openapi=" + config.cfg_openapi_path());
       io.println("assets_dir=" + config.cfg_assets_dir());
       io.println("landing_path=" + config.cfg_landing_path());
+      io.println("upload_dir=" + config.cfg_upload_dir());
+      io.println("upload_max_bytes=" + config.cfg_upload_max_bytes().to_str() + " upload_max_parts=" + config.cfg_upload_max_parts().to_str() + " upload_max_header_bytes=" + config.cfg_upload_max_header_bytes().to_str());
+      io.println("upload_allowed_exts=" + config.cfg_upload_allowed_exts());
+      io.println("upload_allowed_mimes=" + config.cfg_upload_allowed_mimes());
       io.println("read_timeout_ms=" + config.cfg_read_timeout().to_str());
       io.println("write_timeout_ms=" + config.cfg_write_timeout().to_str());
       io.println("idle_timeout_ms=" + config.cfg_idle_timeout().to_str());

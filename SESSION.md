@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 42 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 43 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,11 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Upload policy fixed** (2026-11-07): strict multipart parser (8 KiB
+  part-header cap, duplicate disposition reject), default-safe ext/MIME
+  allowlists + config, 400 `upload_type_not_allowed` / 413 `header_too_large`;
+  +24 tests; strict upload corpus **29/29**; `test_app`/`http_smoke` GREEN.
+  S-12 Station P; parity 61.2/70.5. The framing/static findings remain open.
 - **Security corpus findings** (2026-11-07): **critical** framing
   smuggling (duplicate/conflicting CL, CL overflow, whitespace-colon, TE.TE;
   `REL-20261107-1032-pulse`, stdlib), **high** static junction/symlink escape
@@ -364,6 +369,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   `REL-20261107-1032-pulse-2` (packages static); the PULSE upload policy fix
   is in progress. `test_framing` is known-red; live smokes are known-gap in
   CI. P-03/W-05/S-12 -> A; parity 61.2/69.9; 0.3.0/1.0 held.
+
+## WRAP 2026-11-07 (session 43) -- upload policy fixed
+
+- `src/multipart.xi` strict parser (8 KiB part-header cap, duplicate
+  disposition reject); `src/config.xi` default-safe ext/MIME allowlists +
+  header cap + validation; `src/server.xi` 400 `upload_type_not_allowed` /
+  413 `header_too_large`; `--check-config` prints them.
+- +24 tests; strict `security_smoke upload` 29/29 (0 gaps); `test_app` +
+  live `http_smoke` (135) GREEN. S-12 Station P; parity 61.2/70.5.
+- The framing (stdlib) and static canonical (packages) findings remain open;
+  0.3.0/1.0 held.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

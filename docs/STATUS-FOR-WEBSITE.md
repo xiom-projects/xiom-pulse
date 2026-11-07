@@ -105,9 +105,9 @@ all five are packaged in the release dry-run.
    owner approval; the stock app is SQL-free.
 8. **Open security findings (2026-11-07):** duplicate/conflicting
    Content-Length, CL overflow, whitespace-colon and TE.TE are accepted; a
-   static symlink/junction inside the root escapes it; uploads lack a
-   MIME/extension allowlist. 0.3.0/1.0 are held; see
-   `docs/SECURITY-FINDINGS-2026-11-07.md`.
+   static symlink/junction inside the root escapes it. The upload policy is
+   fixed (default-safe ext/MIME allowlist, strict corpus 29/29). 0.3.0/1.0
+   are held; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 ## What's next (public roadmap wording)
 

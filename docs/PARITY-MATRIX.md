@@ -89,7 +89,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | S-09 | Rate limiting (global + route) | P0 | P | P | FF | rate smoke |
 | S-10 | CORS allowlist | P0 | P | P | FF | smoke |
 | S-11 | Stream Origin/auth policy | P0 | P | P | -- | ws-auth 11/11 |
-| S-12 | Upload size/type caps | P0 | A | A | FF | part/total caps enforced; MIME/extension, active content, duplicate disposition and part-header cap gaps (2026-11-07) |
+| S-12 | Upload size/type caps | P0 | A | P | FF | part/total/header caps + default-safe ext/MIME allowlist + duplicate disposition; strict corpus 29/29 (2026-11-07) |
 | S-13 | Secret redaction in logs | P0 | P | P | -- | token=REDACTED |
 | S-14 | Audit log + rotation | P1 | P | P | -- | crash/audit tests |
 | S-15 | TLS termination guidance/automation | P1 | N/A | A | -- | docs only |

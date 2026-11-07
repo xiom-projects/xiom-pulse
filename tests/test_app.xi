@@ -573,7 +573,7 @@ pub fn main() -> Int {
   }
   f = f + check("upload content exact", up_text == "hello world");
   f = f + check("upload generated name", string.str_contains(up1_name, "up-") && string.str_ends_with(up1_name, ".txt") && !string.str_contains(up1_name, "..") && !string.str_contains(up1_name, "/") && !string.str_contains(up1_name, "\\"));
-  let mp_trav = "--B2\r\nContent-Disposition: form-data; name=\"f\"; filename=\"..\\..\\evil.txt\"\r\n\r\nx\r\n--B2--\r\n";
+  let mp_trav = "--B2\r\nContent-Disposition: form-data; name=\"f\"; filename=\"..\\..\\evil.txt\"\r\nContent-Type: text/plain\r\n\r\nx\r\n--B2--\r\n";
   let up2 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=B2\r\n", mp_trav);
   f = f + check("upload traversal 200", up2.status == 200 && string.str_contains(up2.body, "evil.txt"));
   let up2_name = json_field(up2.body, "name");
@@ -588,12 +588,104 @@ pub fn main() -> Int {
   let up5 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=B4\r\n", mp_big);
   f = f + check("upload part cap 413", up5.status == 413 && string.str_contains(up5.body, "\"code\":\"part_too_large\""));
   env.remove_var("PULSE_UPLOAD_MAX_BYTES");
+
+  // --- upload policy (SECURITY-FINDINGS-2026-11-07 section 3) --------------
+  env.remove_var("PULSE_UPLOAD_ALLOWED_EXTS");
+  env.remove_var("PULSE_UPLOAD_ALLOWED_MIMES");
+  env.remove_var("PULSE_UPLOAD_MAX_HEADER_BYTES");
+  f = f + check("config upload exts default safe", string.str_contains(config.cfg_upload_allowed_exts(), "txt") && !string.str_contains(config.cfg_upload_allowed_exts(), "php") && !string.str_contains(config.cfg_upload_allowed_exts(), "svg"));
+  f = f + check("config upload mimes default safe", string.str_contains(config.cfg_upload_allowed_mimes(), "text/plain") && !string.str_contains(config.cfg_upload_allowed_mimes(), "svg") && !string.str_contains(config.cfg_upload_allowed_mimes(), "html"));
+  f = f + check("config upload header cap default", config.cfg_upload_max_header_bytes() == 8192);
+  env.set_var("PULSE_UPLOAD_ALLOWED_EXTS", "txt, md");
+  env.set_var("PULSE_UPLOAD_ALLOWED_MIMES", "text/plain,text/markdown");
+  env.set_var("PULSE_UPLOAD_MAX_HEADER_BYTES", "4096");
+  f = f + check("config upload exts override", config.cfg_upload_allowed_exts() == "txt, md");
+  f = f + check("config upload mimes override", config.cfg_upload_allowed_mimes() == "text/plain,text/markdown");
+  f = f + check("config upload header cap override", config.cfg_upload_max_header_bytes() == 4096);
+  env.remove_var("PULSE_UPLOAD_ALLOWED_EXTS");
+  env.remove_var("PULSE_UPLOAD_ALLOWED_MIMES");
+  env.remove_var("PULSE_UPLOAD_MAX_HEADER_BYTES");
+  env.set_var("PULSE_UPLOAD_MAX_BYTES", "nope");
+  let wu1 = config.cfg_validate();
+  f = f + check("cfg warn bad upload max bytes", wu1.len() == 1 && string.str_contains(wu1[0], "PULSE_UPLOAD_MAX_BYTES"));
+  env.remove_var("PULSE_UPLOAD_MAX_BYTES");
+  env.set_var("PULSE_UPLOAD_MAX_PARTS", "0");
+  let wu2 = config.cfg_validate();
+  f = f + check("cfg warn bad upload max parts", wu2.len() == 1 && string.str_contains(wu2[0], "PULSE_UPLOAD_MAX_PARTS"));
+  env.remove_var("PULSE_UPLOAD_MAX_PARTS");
+  env.set_var("PULSE_UPLOAD_MAX_HEADER_BYTES", "0");
+  let wu3 = config.cfg_validate();
+  f = f + check("cfg warn bad upload header cap", wu3.len() == 1 && string.str_contains(wu3[0], "PULSE_UPLOAD_MAX_HEADER_BYTES"));
+  env.remove_var("PULSE_UPLOAD_MAX_HEADER_BYTES");
+  env.set_var("PULSE_UPLOAD_ALLOWED_EXTS", "txt, ..");
+  let wu4 = config.cfg_validate();
+  f = f + check("cfg warn bad upload exts", wu4.len() == 1 && string.str_contains(wu4[0], "PULSE_UPLOAD_ALLOWED_EXTS"));
+  env.remove_var("PULSE_UPLOAD_ALLOWED_EXTS");
+  env.set_var("PULSE_UPLOAD_ALLOWED_MIMES", "textplain");
+  let wu5 = config.cfg_validate();
+  f = f + check("cfg warn bad upload mimes", wu5.len() == 1 && string.str_contains(wu5[0], "PULSE_UPLOAD_ALLOWED_MIMES"));
+  env.remove_var("PULSE_UPLOAD_ALLOWED_MIMES");
+
+  let pol_ok_body = "--P1\r\nContent-Disposition: form-data; name=\"f\"; filename=\"ok.txt\"\r\nContent-Type: text/plain\r\n\r\nSAFE\r\n--P1--\r\n";
+  let pol_ok = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P1\r\n", pol_ok_body);
+  f = f + check("upload policy safe txt 200", pol_ok.status == 200 && string.str_contains(pol_ok.body, "\"stored\":1"));
+  let pol_ok_name = json_field(pol_ok.body, "name");
+  let pol_php_body = "--P2\r\nContent-Disposition: form-data; name=\"f\"; filename=\"shell.php\"\r\nContent-Type: text/plain\r\n\r\nPHP\r\n--P2--\r\n";
+  let pol_php = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P2\r\n", pol_php_body);
+  f = f + check("upload policy php ext 400", pol_php.status == 400 && string.str_contains(pol_php.body, "\"code\":\"upload_type_not_allowed\""));
+  let pol_dbl_body = "--P3\r\nContent-Disposition: form-data; name=\"f\"; filename=\"evil.txt.php\"\r\nContent-Type: text/plain\r\n\r\nPHP\r\n--P3--\r\n";
+  let pol_dbl = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P3\r\n", pol_dbl_body);
+  f = f + check("upload policy double ext 400", pol_dbl.status == 400);
+  let pol_upper_body = "--P4\r\nContent-Disposition: form-data; name=\"f\"; filename=\"shell.PHP\"\r\nContent-Type: text/plain\r\n\r\nPHP\r\n--P4--\r\n";
+  let pol_upper = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P4\r\n", pol_upper_body);
+  f = f + check("upload policy uppercase php 400", pol_upper.status == 400);
+  let pol_svg_body = "--P5\r\nContent-Disposition: form-data; name=\"f\"; filename=\"x.svg\"\r\nContent-Type: image/svg+xml\r\n\r\nSVG\r\n--P5--\r\n";
+  let pol_svg = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P5\r\n", pol_svg_body);
+  f = f + check("upload policy svg 400", pol_svg.status == 400);
+  let pol_html_body = "--P6\r\nContent-Disposition: form-data; name=\"f\"; filename=\"x.html\"\r\nContent-Type: text/html\r\n\r\nHTML\r\n--P6--\r\n";
+  let pol_html = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P6\r\n", pol_html_body);
+  f = f + check("upload policy html 400", pol_html.status == 400);
+  let pol_mime_body = "--P7\r\nContent-Disposition: form-data; name=\"f\"; filename=\"ok.txt\"\r\nContent-Type: application/x-php\r\n\r\nPHP\r\n--P7--\r\n";
+  let pol_mime = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P7\r\n", pol_mime_body);
+  f = f + check("upload policy bad mime 400", pol_mime.status == 400);
+  let pol_dup_body = "--P8\r\nContent-Disposition: form-data; name=\"f\"; filename=\"dup.txt\"\r\nContent-Type: text/plain\r\nContent-Disposition: form-data; name=\"evil\"; filename=\"evil.php\"\r\n\r\nDUP\r\n--P8--\r\n";
+  let pol_dup = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P8\r\n", pol_dup_body);
+  f = f + check("upload policy duplicate disposition 400", pol_dup.status == 400 && string.str_contains(pol_dup.body, "\"code\":\"duplicate_content_disposition\""));
+  var hdr_pad: Str = "";
+  var hp: Int = 0;
+  while hp < 9000 {
+    hdr_pad = hdr_pad + "P";
+    hp = hp + 1;
+  }
+  let pol_hdr_body = "--P9\r\nContent-Disposition: form-data; name=\"f\"; filename=\"hdr.txt\"\r\nContent-Type: text/plain\r\nX-Pad: " + hdr_pad + "\r\n\r\nHDR\r\n--P9--\r\n";
+  let pol_hdr = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=P9\r\n", pol_hdr_body);
+  f = f + check("upload policy part header cap 413", pol_hdr.status == 413 && string.str_contains(pol_hdr.body, "\"code\":\"header_too_large\""));
+  env.set_var("PULSE_UPLOAD_MAX_HEADER_BYTES", "16");
+  let pol_hdr2_body = "--PA\r\nContent-Disposition: form-data; name=\"f\"; filename=\"ok.txt\"\r\nContent-Type: text/plain\r\n\r\nHDR\r\n--PA--\r\n";
+  let pol_hdr2 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=PA\r\n", pol_hdr2_body);
+  f = f + check("upload policy header cap configurable", pol_hdr2.status == 413 && string.str_contains(pol_hdr2.body, "\"code\":\"header_too_large\""));
+  env.remove_var("PULSE_UPLOAD_MAX_HEADER_BYTES");
+  env.set_var("PULSE_UPLOAD_ALLOWED_EXTS", "md");
+  let pol_txt2 = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=PB\r\n", "--PB\r\nContent-Disposition: form-data; name=\"f\"; filename=\"ok.txt\"\r\nContent-Type: text/plain\r\n\r\nSAFE\r\n--PB--\r\n");
+  f = f + check("upload policy ext allowlist configurable", pol_txt2.status == 400);
+  let pol_md_body = "--PC\r\nContent-Disposition: form-data; name=\"f\"; filename=\"doc.md\"\r\nContent-Type: text/markdown\r\n\r\n# doc\r\n--PC--\r\n";
+  let pol_md = route_req_hdr_cl("POST", "/api/uploads", "Content-Type: multipart/form-data; boundary=PC\r\n", pol_md_body);
+  f = f + check("upload policy configured md 200", pol_md.status == 200 && string.str_contains(pol_md.body, "\"stored\":1"));
+  let pol_md_name = json_field(pol_md.body, "name");
+  env.remove_var("PULSE_UPLOAD_ALLOWED_EXTS");
+
   // cleanup by known names (the dir itself stays; gitignored)
   if up1_name.len() > 0 {
     let _ru1 = io.remove_file(io.join_paths(updir, up1_name));
   }
   if up2_name.len() > 0 {
     let _ru2 = io.remove_file(io.join_paths(updir, up2_name));
+  }
+  if pol_ok_name.len() > 0 {
+    let _ru3 = io.remove_file(io.join_paths(updir, pol_ok_name));
+  }
+  if pol_md_name.len() > 0 {
+    let _ru4 = io.remove_file(io.join_paths(updir, pol_md_name));
   }
   env.remove_var("PULSE_UPLOAD_DIR");
 

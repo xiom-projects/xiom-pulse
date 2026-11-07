@@ -29,6 +29,12 @@ pub type MultipartParse = {
   parts: Vec[MultipartPart];
 }
 
+/// PartScan - one decoded part plus header-policy observations.
+type PartScan = {
+  part: MultipartPart;
+  dup_disposition: Bool;
+}
+
 fn ascii_lower(s: Str) -> Str {
   var out: Vec[UInt8] = Vec[UInt8].new();
   var i: Int = 0;
@@ -94,6 +100,48 @@ pub fn sanitized_ext(filename: Str) -> Str {
   return out;
 }
 
+/// csv_has reports whether tok is a comma-separated list entry. Entries
+/// and tok are trimmed and lower-cased; extension entries may carry a
+/// leading dot. Complexity: O(n). Pure.
+fn csv_has(csv: Str, tok: Str, strip_dot: Bool) -> Bool {
+  if tok.len() == 0 { return false; }
+  let items = string.str_split(csv, ",");
+  var i: Int = 0;
+  while i < items.len() {
+    var t = ascii_lower(string.str_trim(items[i]));
+    if strip_dot && t.len() > 0 && t.byte_at(0) == 46u8 {
+      t = string.str_slice(t, 1, t.len());
+    }
+    if t == tok { return true; }
+    i = i + 1;
+  }
+  return false;
+}
+
+/// ext_allowed reports whether a sanitized extension is in the allowlist
+/// (comma-separated, e.g. "txt,md,png"). Unknown/empty extensions are
+/// always rejected. Complexity: O(n). Pure.
+pub fn ext_allowed(ext: Str, allowed_csv: Str) -> Bool {
+  return csv_has(allowed_csv, ext, true);
+}
+
+/// mime_base normalizes a Content-Type to its lower-case media type
+/// (parameters such as `; charset=utf-8` are dropped). Complexity: O(n). Pure.
+pub fn mime_base(content_type: Str) -> Str {
+  let lower = ascii_lower(string.str_trim(content_type));
+  let semi = string.str_index_of(lower, ";");
+  if semi.is_none { return lower; }
+  return string.str_trim(string.str_slice(lower, 0, semi.value));
+}
+
+/// mime_allowed reports whether a part Content-Type's media type is in the
+/// allowlist. An absent/unknown media type is rejected. Complexity: O(n). Pure.
+pub fn mime_allowed(content_type: Str, allowed_csv: Str) -> Bool {
+  let m = mime_base(content_type);
+  if m.len() == 0 { return false; }
+  return csv_has(allowed_csv, m, false);
+}
+
 /// find_bytes returns the first index >= start where `needle` occurs in
 /// `hay`, or -1. Naive O(n*m) scan (bodies are <= 1 MiB). Pure.
 fn find_bytes(hay: &Vec[UInt8], needle: &Vec[UInt8], start: Int) -> Int {
@@ -127,8 +175,10 @@ fn param_value(header_value: Str, param: Str) -> Str {
   return string.str_slice(header_value, start, start + end.value);
 }
 
-fn part_from(headers: Str, content: Str) -> MultipartPart {
+fn part_from_scan(headers: Str, content: Str) -> PartScan {
   var p: MultipartPart = MultipartPart{ name: ""; filename: ""; content_type: ""; content: content };
+  var seen_cd: Bool = false;
+  var dup_cd: Bool = false;
   let lines = string.str_split(headers, "\r\n");
   var i: Int = 0;
   while i < lines.len() {
@@ -138,6 +188,8 @@ fn part_from(headers: Str, content: Str) -> MultipartPart {
       let hn = ascii_lower(string.str_trim(string.str_slice(line, 0, colon.value)));
       let hv = string.str_trim(string.str_slice(line, colon.value + 1, line.len()));
       if hn == "content-disposition" {
+        if seen_cd { dup_cd = true; }
+        seen_cd = true;
         p.name = param_value(hv, "name");
         p.filename = param_value(hv, "filename");
       }
@@ -147,12 +199,24 @@ fn part_from(headers: Str, content: Str) -> MultipartPart {
     }
     i = i + 1;
   }
-  return p;
+  return PartScan{ part: p; dup_disposition: dup_cd };
 }
 
 /// parse_multipart decodes a multipart/form-data body. Complexity:
 /// O(body * parts).
 pub fn parse_multipart(body: &Vec[UInt8], boundary: Str, max_parts: Int, max_file_bytes: Int) -> MultipartParse {
+  return parse_multipart_core(body, boundary, max_parts, max_file_bytes, 0, false);
+}
+
+/// parse_multipart_strict is the upload-policy parser: it additionally
+/// enforces a part-header cap (`max_header_bytes`, 413 when exceeded) and
+/// rejects a part with more than one Content-Disposition header instead of
+/// letting the last one win. Complexity: O(body * parts).
+pub fn parse_multipart_strict(body: &Vec[UInt8], boundary: Str, max_parts: Int, max_file_bytes: Int, max_header_bytes: Int) -> MultipartParse {
+  return parse_multipart_core(body, boundary, max_parts, max_file_bytes, max_header_bytes, true);
+}
+
+fn parse_multipart_core(body: &Vec[UInt8], boundary: Str, max_parts: Int, max_file_bytes: Int, max_header_bytes: Int, reject_dup: Bool) -> MultipartParse {
   var out: MultipartParse = MultipartParse{ ok: false; error: ""; parts: Vec[MultipartPart].new() };
   if boundary.len() == 0 {
     out.error = "boundary_not_found";
@@ -183,6 +247,10 @@ pub fn parse_multipart(body: &Vec[UInt8], boundary: Str, max_parts: Int, max_fil
       out.error = "malformed";
       return out;
     }
+    if max_header_bytes > 0 && he - pos > max_header_bytes {
+      out.error = "header_too_large";
+      return out;
+    }
     let headers = http.bytes_to_str(body, pos, he);
     pos = he + 4;
     let ce = find_bytes(body, &crlf_delim, pos);
@@ -200,7 +268,12 @@ pub fn parse_multipart(body: &Vec[UInt8], boundary: Str, max_parts: Int, max_fil
       return out;
     }
     let content = http.bytes_to_str(body, pos, ce);
-    out.parts.push(part_from(headers, content));
+    let scan = part_from_scan(headers, content);
+    if reject_dup && scan.dup_disposition {
+      out.error = "duplicate_content_disposition";
+      return out;
+    }
+    out.parts.push(scan.part);
     pos = ce + 2 + delim.len();
   }
   return out;

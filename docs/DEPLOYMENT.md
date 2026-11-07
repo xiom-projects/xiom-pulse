@@ -51,9 +51,14 @@ linux-arm64 and windows-x64**; the next tag ships all three.
 | `PULSE_CSRF` | `1` | `0` disables CSRF checks |
 | `PULSE_CORS_ORIGIN` | (unset) | opt-in CORS allowlist (comma-separated; `*` = any) |
 | `PULSE_WS_AUTH` | `off` | stream-route auth: `off` \| `jwt` \| `session` (see below) |
+| `PULSE_UPLOAD_ALLOWED_EXTS` | `txt,md,csv,json,png,jpg,jpeg,gif,webp,pdf,zip` | default-safe upload extension allowlist (last suffix) |
+| `PULSE_UPLOAD_ALLOWED_MIMES` | `text/plain,text/markdown,text/csv,application/json,image/png,image/jpeg,image/gif,image/webp,application/pdf,application/zip` | default-safe upload media-type allowlist |
+| `PULSE_UPLOAD_MAX_HEADER_BYTES` | `8192` | per-part multipart header cap |
 
 Invalid values warn at startup and in `--check-config` (they fall back to
-the defaults above). `PULSE_BIND` is the address only -- the port goes in
+the defaults above). Keep the upload directory outside the site root and
+never web-serve or execute it; the allowlist is defense in depth, not a
+substitute for that separation. `PULSE_BIND` is the address only -- the port goes in
 `PULSE_PORT` (a combined `addr:port` value is flagged as a warning).
 
 Run: `out/pulse_app` (Linux) or `out\pulse_app.exe` (Windows); rebuild
