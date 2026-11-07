@@ -39,7 +39,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if ! "$PULSE_SCRIPTS_DIR/build.sh" "$PULSE_REPO_ROOT/src/server.xi" \
+if ! bash "$PULSE_SCRIPTS_DIR/build.sh" "$PULSE_REPO_ROOT/src/server.xi" \
      --name worker_app --timeout-sec 300; then
   pulse_log "worker-smoke: RED (build failed)"
   exit 1
