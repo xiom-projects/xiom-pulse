@@ -243,6 +243,21 @@ jobs:
           python3 scripts/security_smoke.py static --server-exe ./out/pulse_app --port 18401 --allow-known-gaps
           python3 scripts/security_smoke.py upload --server-exe ./out/pulse_app --port 18402 --allow-known-gaps
 
+      - name: Stream/OpenAPI/schema gap probes (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/sse_reconnect_probe.py --exe ./out/pulse_app --port 18721
+          python3 scripts/openapi_drift_probe.py --exe ./out/pulse_app
+          python3 scripts/schema_matrix_probe.py --exe ./out/pulse_app --port 18722
+
+      - name: WS negative corpus (Unix, known-gap)
+        if: runner.os != 'Windows'
+        continue-on-error: true
+        shell: bash
+        run: python3 scripts/ws_negative_corpus.py --exe ./out/pulse_app --port 18720
+
       - name: SBOM (generate + validate)
         if: runner.os == 'Linux'
         shell: bash
@@ -300,5 +315,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "static corpus failed with exit $LASTEXITCODE" }
           python scripts\security_smoke.py upload --server-exe .\out\pulse_app.exe --port 18402 --allow-known-gaps
           if ($LASTEXITCODE -ne 0) { throw "upload corpus failed with exit $LASTEXITCODE" }
+          python scripts\sse_reconnect_probe.py --exe .\out\pulse_app.exe --port 18721
+          if ($LASTEXITCODE -ne 0) { throw "SSE probe failed with exit $LASTEXITCODE" }
+          python scripts\openapi_drift_probe.py --exe .\out\pulse_app.exe
+          if ($LASTEXITCODE -ne 0) { throw "OpenAPI probe failed with exit $LASTEXITCODE" }
+          python scripts\schema_matrix_probe.py --exe .\out\pulse_app.exe --port 18722
+          if ($LASTEXITCODE -ne 0) { throw "schema probe failed with exit $LASTEXITCODE" }
+          python scripts\ws_negative_corpus.py --exe .\out\pulse_app.exe --port 18720
+          if ($LASTEXITCODE -ne 0) { Write-Host "WS corpus known-gap exit $LASTEXITCODE (non-blocking)" }
           & scripts\repro_check.ps1 -TimeoutSec 300
           if ($LASTEXITCODE -ne 0) { throw "repro check failed with exit $LASTEXITCODE" }

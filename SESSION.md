@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 47 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 48 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,12 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **WS/SSE/OpenAPI/schema probes** (2026-11-07): **critical** WS frame with
+  MSB-set 64-bit length crashes (`0xC0000005`) or hangs `GET /api/ws`;
+  `REL-20261107-1349-pulse` (stdlib); PULSE guard in progress. SSE lacks
+  `id:`/`retry:`/`Last-Event-ID`; OpenAPI reverse gaps (assets/stream);
+  schema extra/Unicode/enum gaps. W-08/W-09 A, W-12 M; parity 58.9/68.9;
+  release held.
 - **Bttger-mix soak harness** (2026-11-07): `scripts/soak_bttger.*` drives
   the six-endpoint mix at 100 req/s over keep-alive; 60 s: 6,500 req, 0
   errors, p50 0.82/p95 3.18 ms, **14.0 KiB/req**, 24 h projection ~124 GB,
@@ -436,6 +442,16 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   100 req/s is sustainable; the 24 h memory gate is **not met**.
 - `docs/MEMORY-FLOOR-2026-11-06.md` has the exact ops command. The memory
   floor (/health 13.9) and the release/security holds are unchanged.
+
+## WRAP 2026-11-07 (session 48) -- WS/SSE/OpenAPI/schema corpus
+
+- Added `gap_probe_lib` + WS negative, SSE reconnect, OpenAPI reverse and
+  schema matrix probes. Wire commands in `docs/SECURITY-FINDINGS-2026-11-07.md`
+  section 6; CI runs SSE/OpenAPI/schema blocking known-gap and WS
+  continue-on-error.
+- **Critical:** MSB-set 64-bit WS length crashes/hangs `GET /api/ws`; filed
+  `REL-20261107-1349-pulse`; PULSE consumed guard fix in progress.
+- W-08/W-09 -> A, W-12 -> M; parity 58.9/68.9; release held.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

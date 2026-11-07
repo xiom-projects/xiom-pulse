@@ -65,11 +65,11 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-05 | Traversal guard | P0 | A | A | G,FF | encoded/dot-dot/backslash/NUL blocked; symlink/junction canonical escape (`REL-20261107-1032-pulse-2`) |
 | W-06 | Range requests | P1 | M | A | G,FF | static_serve Range; probe_pkg_static 206; live route test missing |
 | W-07 | Efficient file streaming (sendfile) | P1 | M | A | G,FF | 50 MB works, copied |
-| W-08 | SSE | P0 | P | P | FF,G | live 20/20 |
-| W-09 | WebSocket handshake/frames/fragmentation | P0 | P | P | FF,G | live 20/20 |
+| W-08 | SSE | P0 | A | A | FF,G | basic SSE + disconnect/reconnect; no id/retry/Last-Event-ID (2026-11-07) |
+| W-09 | WebSocket handshake/frames/fragmentation | P0 | A | A | FF,G | handshake/echo; **critical MSB-length crash/hang**, RSV/UTF-8/close-code/non-minimal gaps (`REL-20261107-1349-pulse`) |
 | W-10 | WS permessage-deflate | P1 | M | M | FF | not implemented |
 | W-11 | WS subprotocol negotiation | P2 | M | M | FF | not implemented |
-| W-12 | SSE event IDs + reconnect semantics | P1 | A | A | FF | verify |
+| W-12 | SSE event IDs + reconnect semantics | P1 | M | M | FF | no `id:`/`retry:`/`Last-Event-ID`; basic disconnect/reconnect only |
 | W-13 | Templating / server-side rendering | P1 | N/A | A | G,FA | `xiom.template` 0.2.0 + `examples/site`; docs/SITE-SERVER.md |
 | W-14 | OpenAPI generation | P1 | M | A | FA,FF | document only, not schema-driven |
 | W-15 | CORS responses + preflight | P0 | ? | P | G,FF | smoke preflight |

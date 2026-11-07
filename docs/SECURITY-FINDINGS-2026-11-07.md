@@ -73,3 +73,48 @@ live `http_smoke` (135) are green. Config: `PULSE_UPLOAD_ALLOWED_EXTS`,
 0.3.0/1.0 are held while these high/critical items are open. The framing fix
 is stdlib/compiler; the static fix is `xiom.static`; the upload policy is a
 PULSE change. The 24 h/1M memory gate remains separate and open.
+
+## 6. WebSocket / SSE / OpenAPI / schema (2026-11-07)
+
+### 6.1 WebSocket -- CRITICAL (stdlib; `REL-20261107-1349-pulse`)
+
+A masked FIN text frame with 64-bit length `0x8000000000000000` (MSB set, no
+payload) sent to `GET /api/ws` crashes the server on Windows
+(`0xC0000005`) or hangs it; `/health` becomes unresponsive. The stdlib
+`ws_frame_take` returns a negative consumed count; `src/stream.xi`
+`drop_prefix` indexes with it. Remote unauthenticated DoS.
+
+RFC 6455 gaps: RSV1 accepted/echoed; invalid UTF-8 echoed (no 1007); close
+codes 1005/999/1-byte echoed; non-minimal 16/64-bit lengths accepted; a
+declared `1<<40` length ends in a 1001 idle timeout instead of 1009/1002.
+The PULSE guard fix is in progress; the stdlib item is release-blocking.
+
+### 6.2 SSE (W-08/W-12) -- gaps
+
+Basic SSE and disconnect/reconnect work (3 ticks/done/zero chunk; 8
+mid-stream disconnects keep the server alive; exactly one access-log line per
+connection; fds 61 -> 61). No `id:` on events, no `retry:`, and
+`Last-Event-ID: 2` is ignored (the stream restarts at 1,2,3).
+
+### 6.3 OpenAPI reverse drift (W-14) -- gaps
+
+25 router routes + 2 stream routes; the document has 26 operations. All 25
+router routes are present; no duplicates; `--check` is green and its failure
+path works. `GET /assets/{path}` is documented but served by the
+`dispatch_one` special case; `GET /api/sse` and `GET /api/ws` are in `routes`
+but absent from the document.
+
+### 6.4 Schema matrix (R-14) -- gaps
+
+Missing/extra/wrong-type/nested/array/empty/65-char/malformed/top-level-array
+behave with 400 `invalid_request`; extra scalar/nested fields are accepted by
+design; Unicode length is byte-based (33 two-byte chars = 66 bytes rejected);
+no enum; the number/bool/object/array rules exist but no product route
+exercises them.
+
+### 6.5 Harness
+
+`scripts/gap_probe_lib.py` + `ws_negative_corpus.py`,
+`sse_reconnect_probe.py`, `openapi_drift_probe.py`,
+`schema_matrix_probe.py`, `gap_stream_probes.ps1`. WS is `continue-on-error`
+in CI until the crash is fixed; SSE/OpenAPI/schema are blocking known-gap.

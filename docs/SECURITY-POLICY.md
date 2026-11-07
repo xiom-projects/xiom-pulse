@@ -108,6 +108,7 @@ documented workaround and a target release.
 | `REL-20261106-1716-pulse` | open (stdlib) | NUL in the request head truncates method/target/headers; Station guard rejects the empty shape; Beacon needs the parser fix |
 | `REL-20261107-1032-pulse` | open (stdlib) | duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE accepted; the framing corpus is a known-gap gate; release-blocking |
 | `REL-20261107-1032-pulse-2` | open (packages) | static symlink/junction inside the root escapes; canonical/realpath check needed; release-blocking |
+| `REL-20261107-1349-pulse` | open (stdlib) | WS frame with MSB-set 64-bit length crashes/hangs `GET /api/ws`; PULSE guard in progress; release-blocking |
 | upload policy | fixed (PULSE) | default-safe ext/MIME allowlist, 8 KiB part-header cap and duplicate-disposition reject; strict corpus 29/29 (2026-11-07) |
 | `xiom.cookie` 0.1.2 contract | known caveat | `cookie_parse_request` -> `cookie_serialize_request` preserves a literal CRLF if handed an unframed value. PULSE only passes a single parsed Cookie header value, so the HTTP path is not affected; the cookie fuzz gate tracks it as `known_crlf` and CI runs with `-AllowKnownCrlf`. Do not treat the package as a sanitizer. |
 

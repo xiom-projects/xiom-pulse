@@ -108,10 +108,12 @@ this policy.
 - **Open high/critical findings (2026-11-07):** duplicate/conflicting
   Content-Length, CL overflow, whitespace-before-colon and TE.TE are accepted
   (`REL-20261107-1032-pulse`, stdlib); a symlink/junction inside the site root
-  escapes it (`REL-20261107-1032-pulse-2`, `xiom.static`). The upload policy is
-  fixed (default-safe ext/MIME allowlist, 8 KiB part-header cap, duplicate
-  disposition; strict corpus 29/29). 0.3.0/1.0 are held until the framing and
-  static findings are fixed; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
+  escapes it (`REL-20261107-1032-pulse-2`, `xiom.static`); a WebSocket frame
+  with an MSB-set 64-bit length crashes or hangs `GET /api/ws`
+  (`REL-20261107-1349-pulse`, stdlib). The upload policy is fixed (default-safe
+  ext/MIME allowlist, 8 KiB part-header cap, duplicate disposition; strict
+  corpus 29/29). 0.3.0/1.0 are held until the framing, static and WS findings
+  are fixed; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
 - Release artifacts are SHA-256 pinned with build provenance. A CycloneDX
   SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI with exact
   registry package hashes/signatures and the resolved dependency graph; the

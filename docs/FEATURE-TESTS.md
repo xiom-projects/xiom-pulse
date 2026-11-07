@@ -33,10 +33,10 @@ Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
 
 **Post-security-corpus re-run (2026-11-07):** the framing/static findings
 downgraded P-03/W-05 to `A`; the upload fix restored S-12 Station to `P`.
-Re-run **Beacon 61.2% (94.4% assessed), Station 70.5% (100%)**. The Beacon
-headline rose only because W-05 moved from unassessed to partial; the
-framing/static findings remain open and release-blocking. The memory floor
-is **13.9 KB/req** after the Date/send cuts. See
+Re-run **Beacon 58.9% (94.4% assessed), Station 68.9% (100%)** after the
+WS/SSE findings (W-09/W-08 -> A, W-12 -> M). The framing/static/WS findings
+remain open and release-blocking. The memory floor is **13.9 KB/req** after
+the Date/send cuts. See
 `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 The score is capability parity, not evidence quality. A row can be `P` and
@@ -91,6 +91,11 @@ open.
 | `scripts/rss_probe.{sh,ps1}` | informational | HVY weekly | reports KB/request; not a pass/fail gate |
 | `scripts/rss_gate.py` | 75 s / 200 ms slope | CI Linux x64 + Windows | 25 KiB/req PR retention tripwire (OLS+Theil-Sen) |
 | `scripts/soak_bttger.py` | 6,500 req / 60 s | manual / ops | bttger mix at 100 req/s; memory gate harness; 24 h projection gate |
+| `scripts/ws_negative_corpus.py` | 14 frames | manual / CI known-gap | RFC 6455 negative frames; **critical MSB-length crash** |
+| `scripts/sse_reconnect_probe.py` | 9 checks | manual / CI | SSE id/retry/Last-Event-ID/disconnect |
+| `scripts/openapi_drift_probe.py` | 9 checks | manual / CI | bidirectional route/doc drift |
+| `scripts/schema_matrix_probe.py` | 17 checks | manual / CI | R-14 input schema matrix |
+| `scripts/gap_probe_lib.py` | shared | support | scrubbed server harness |
 | `scripts/repro_check.{sh,ps1}` | 1 hash compare | CI Linux x64 | same-host payload only |
 | `scripts/sbom.py` | schema/count assertions | CI Linux + release | CycloneDX SBOM |
 | `tests/probes/*` | varies | `MAN` unless noted | `probe_sqlite` is built in CI; the rest are manual |
@@ -146,7 +151,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | R-11 | Multipart uploads | B=? / S=P | `test_app`: upload happy/traversal/boundary/cap; `http_smoke`: upload; `fuzz_parsers` multipart (CI) | Beacon unassessed; no duplicate field/part-header abuse | wire a package multipart probe; add duplicate field + header caps |
 | R-12 | Cookie parse/set | B=P / S=P | `test_app`: cookie parse/absent; `http_smoke`: login/logout cookies (CI) | no malformed-cookie/large-cookie test | add cookie injection (semicolon/comma/NUL) matrix |
 | R-13 | Content negotiation (`Accept`) | B=M / S=M | NONE | not implemented | negative: absent `Accept` defaults; unsupported -> documented |
-| R-14 | Schema validation of input | B=M / S=A | `test_app`: validate field/too long/wrong type/object; `schema` route (CI) | only string/length; no nested/array/number/enum/unknown-field | schema matrix: missing/extra/wrong-type/nested/enum -> 400 envelope |
+| R-14 | Schema validation of input | B=M / S=A | `test_app` + `schema_matrix_probe`: missing/wrong-type/nested/array/length/malformed -> 400 | extra fields accepted by design; Unicode length byte-based; no enum; number/bool/object/array rules unexercised | add enum/UTF-8 length policy/extra-field mode + route coverage |
 | R-15 | Dependency injection | B=N/A / S=M | NONE | not implemented | document as non-goal for 1.0 |
 | R-16 | Typed response models | B=M / S=A | `test_app`: envelope/status; `openapi` (CI) | no response-schema validation | validate each route response against the OpenAPI schema |
 
@@ -161,13 +166,13 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | W-05 | Traversal guard | B=A / S=A | `test_app`/`site_smoke`/`http_smoke`/`fuzz_parsers`: encoded/dot-dot/backslash/NUL blocked; `security_smoke static` | **junction/symlink inside the root escapes** (2026-11-07; `REL-20261107-1032-pulse-2`) | canonical/realpath check + symlink/junction tests |
 | W-06 | Range requests | B=M / S=M | Station `src/server.xi:136` passes `Range` to `static_serve`; `probe_pkg_static` (the `xiom.static` package): 206/range parse (MAN) | **matrix says M but Station code and the package probe support it**; no route-level live test | live Range test: single, open-ended, unsatisfiable, malformed; update Station to A |
 | W-07 | Efficient file streaming (sendfile) | B=M / S=A | `http_smoke` 50 MB write-stall only (CI) | no sendfile/throughput/RSS assertion; file is copied | 50 MB static transfer: RSS ceiling + time; prove no full-file buffer |
-| W-08 | SSE | B=P / S=P | `test_stream`: SSE head/events/clamps; `stream_smoke`: 200/chunked/3 tick/done; `ws_auth_smoke`: SSE auth (CI/Windows) | no backpressure/abort test | client disconnect mid-stream: server releases fd and records once |
-| W-09 | WebSocket handshake/frames/fragmentation | B=P / S=P | `test_stream`: handshake/origin/auth; `stream_smoke`: 101/echo/ping/fragment/close/1002/403/426 (CI) | no invalid UTF-8, unmasked client frame, 64-bit length, bad close code | WS negative corpus: unmasked, invalid UTF-8 -> 1007, oversize, bad close |
+| W-08 | SSE | B=A / S=A | `test_stream`/`stream_smoke` + `sse_reconnect_probe`: 3 ticks/done, 8 disconnects, fds 61->61, exactly-once log | **no `id:`, `retry:`, `Last-Event-ID` resume** | wire `id:`/`Last-Event-ID` + a strict SSE probe |
+| W-09 | WebSocket handshake/frames/fragmentation | B=A / S=A | `test_stream`/`stream_smoke`; `ws_negative_corpus`: 3 PASS, 10 GAP, **1 CRITICAL FAIL** | **MSB-set 64-bit length crashes/hangs `GET /api/ws`**; RSV/UTF-8/close/non-minimal gaps (`REL-20261107-1349-pulse`) | PULSE consumed guard + stdlib parser fix; then strict corpus |
 | W-10 | WS permessage-deflate | B=M / S=M | NONE | not implemented | negative: no extension negotiated |
 | W-11 | WS subprotocol negotiation | B=M / S=M | NONE | not implemented | negative: requested subprotocol not echoed |
-| W-12 | SSE event IDs + reconnect semantics | B=A / S=A | `test_stream`: tick/done; `stream_smoke`: tick count (CI) | no `id:` field, `Last-Event-ID`, retry, or reconnect replay test | SSE `id:` + `Last-Event-ID` replay (+ `retry:`) test |
+| W-12 | SSE event IDs + reconnect semantics | B=M / S=M | `sse_reconnect_probe`: no `id:`/`retry:`; `Last-Event-ID: 2` ignored; basic reconnect works | event IDs and replay are missing | add `id:`/`Last-Event-ID` replay (+ `retry:`) |
 | W-13 | Templating / SSR | B=N/A / S=A | `test_app`: site mode; `site_smoke` (CI); `examples/site` | no template caching/compression/i18n | template escaping matrix + custom 404 (escaping partly covered) |
-| W-14 | OpenAPI generation | B=M / S=A | `test_app`: openapi marker/title/version, route-table drift; `http_smoke`: CLI openapi (CI); `src/server.xi:1197` `--check` | `--check` not tested; drift check is one-way (routes -> doc) | bidirectional drift gate: doc paths exist in router, router routes exist in doc; run CLI `--check` |
+| W-14 | OpenAPI generation | B=M / S=A | `test_app`/`http_smoke`; `openapi_drift_probe`: all 25 router routes present, `--check` failure path works | `GET /assets/{path}` documented but special-cased; `GET /api/sse`/`ws` in `routes` but not the doc | add the missing paths + bidirectional gate |
 | W-15 | CORS responses + preflight | B=? / S=P | `test_app`: cors list/star/off; `http_smoke`: preflight 204 (CI) | Beacon unassessed; no wildcard+credentials negative | package CORS probe + credentials/wildcard rejection |
 
 ## 5. Evidence map — security and auth
