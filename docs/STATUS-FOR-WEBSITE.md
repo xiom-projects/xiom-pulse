@@ -64,6 +64,10 @@ all five are packaged in the release dry-run.
   fragmentation, ping/pong, close, Origin policy) with **opt-in stream
   auth** (`PULSE_WS_AUTH=off|jwt|session`; JWT via Authorization,
   subprotocol carrier, or query string; tokens redacted from logs).
+- **Multi-worker (phase 1):** `PULSE_WORKERS` supervisor, N ports or Linux
+  `SO_REUSEPORT`, and a loopback control plane (`/health`, `/drain`,
+  `/quit`) with a token. Stateless-first: sessions/rate/store/game state are
+  per-worker until the shared-state phase.
 - **CLI**: `version`, `--check-config`, `routes`, `openapi`, plus `--serve`.
 
 ## Quality evidence (for badges / a "tested" section)
@@ -119,6 +123,10 @@ all five are packaged in the release dry-run.
   floor is **~13.9 KB/req** on 60 s probes (13.5-14.3; 17.6 reference). The
   remaining work is the socket/Option path plus the deferred Option aggregate,
   then the 24h/1M soak gate.
+- **Scale-out (WP4 phase 1):** the `PULSE_WORKERS` supervisor and the
+  loopback `/drain` control port landed 2026-11-07 (smoke-verified and
+  CI-wired). Zero-downtime reload and the 1/2-worker throughput curve are
+  next.
 - **0.3.0**: SQL serving decision, the open security findings fixed, version
   bump, CHANGELOG, tag, fleet watch.
 - Realtime: permessage-deflate, subprotocol negotiation.

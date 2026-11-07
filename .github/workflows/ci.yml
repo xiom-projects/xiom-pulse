@@ -177,6 +177,11 @@ jobs:
         shell: bash
         run: bash scripts/worker_smoke.sh
 
+      - name: Drain/supervisor smoke (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash scripts/drain_smoke.sh
+
       - name: App scaffold smoke (Unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -306,6 +311,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "cookie fuzz failed with exit $LASTEXITCODE" }
           & scripts\worker_smoke.ps1
           if ($LASTEXITCODE -ne 0) { throw "worker smoke failed with exit $LASTEXITCODE" }
+          & scripts\drain_smoke.ps1
+          if ($LASTEXITCODE -ne 0) { throw "drain smoke failed with exit $LASTEXITCODE" }
           python scripts\scaffold_smoke.py
           if ($LASTEXITCODE -ne 0) { throw "scaffold smoke failed with exit $LASTEXITCODE" }
           python scripts\security_smoke.py framing --server-exe .\out\pulse_app.exe --port 18400 --allow-known-gaps

@@ -2,7 +2,28 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # XIOM PULSE -- Progress Tracker
 
-**Last updated:** 2026-11-07 (five-leg CI green 42379791041; WP1 13.9 KB/req; PR retention gate; password credential module; WP2 fuzz/policy/SBOM/repro; dynamic site first slice; v0.65.6 adopted; **1704 JSON memory class closed** -- builder/parse flat at 14-15 B/iter, capped bttger 5k completes at 511.6 MB; HTTP floor ~13.9 KB/req after the router cache + gate cut + response assembly + Date/send cuts (24h gate open); five CI legs green `41885904766`; one `let`->`var` source fix; macos-arm64 packaging retry pending on runner capacity; v0.65.5 full platform matrix; 0.2.2 released; parity program + public roadmap; `PULSE_WS_AUTH`)
+**Last updated:** 2026-11-07 (WP4 supervisor + control-port drain; five-leg CI green 42379791041; WP1 13.9 KB/req; PR retention gate; password credential module; WP2 fuzz/policy/SBOM/repro; dynamic site first slice; v0.65.6 adopted; **1704 JSON memory class closed** -- builder/parse flat at 14-15 B/iter, capped bttger 5k completes at 511.6 MB; HTTP floor ~13.9 KB/req after the router cache + gate cut + response assembly + Date/send cuts (24h gate open); five CI legs green `41885904766`; one `let`->`var` source fix; macos-arm64 packaging retry pending on runner capacity; v0.65.5 full platform matrix; 0.2.2 released; parity program + public roadmap; `PULSE_WS_AUTH`)
+
+_Delta 2026-11-07 (WP4 supervisor + control-port drain): `src/config.xi` adds
+`PULSE_WORKERS`, `PULSE_WORKER_CHILD`, `PULSE_CONTROL_PORT`,
+`PULSE_SUPERVISOR_CONTROL_PORT`, `PULSE_CONTROL_TOKEN` and
+`PULSE_DRAIN_TIMEOUT_MS` (validation, config-file keys, `--check-config`).
+`src/server.xi` adds the loopback control listener (`GET /health`,
+`POST /drain`, `POST /quit`, constant-time token compare, fail-closed without
+a token), a 250 ms public+control `socket_poll_read` accept loop plus a
+between-cycle zero-timeout poll (the control-disabled path is unchanged), and
+the `PULSE_WORKERS>1` supervisor: `posix_spawnp` children with per-worker
+id/port/control/token/store env, `proc_is_running` + `wait_status` monitoring
+(`process_status` is a stub), 1/2/4/.../30 s backoff with a 10-restart cap,
+supervisor drain over each child's control port and a survivor kill after
+`PULSE_DRAIN_TIMEOUT_MS`. `scripts/drain_smoke.ps1`/`.sh`: single worker 6/6
+(control health, no/wrong/right token, exit 0, port closed) and 2-worker
+supervisor 5/5 (both health, supervisor health/drain, all ports closed),
+**GREEN on Windows**, wired in CI on Unix and Windows; `test_app` config
+checks GREEN. Known limitation: on Windows `posix_spawnp` does not propagate
+the supervisor's redirected stdout/stderr to children (stdlib item filed).
+Reload, the 1/2-worker curve, reuseport-under-load, sticky sessions and the
+unit template remain open. 0.3.0/1.0 holds unchanged.
 
 _Delta 2026-11-07 (OpenAPI/schema + static blocker): `src/openapi.xi` adds extra routes (`/assets/:path`, `/api/sse`, `/api/ws`) and `--check` covers them; `src/schema.xi` adds enum + UTF-8 length APIs and documents the extra-field policy; `resources/openapi.json` has 27 paths/28 operations and `additionalProperties: true` on login/token. `openapi_drift` **9/9**, `schema_matrix` **18/18**, `test_app` GREEN; W-14 Station P. The static canonical guard is **blocked**: the pinned stdlib has no real canonicalization (`Path.canonicalize`/`io.normalize_path` lexical; `is_symlink`/`readlink` stubs); no fake guard. Filed `REL-20261107-1427-pulse` (stdlib realpath/reparse); packages `1032-2` remains. Parity **Beacon 58.9% / Station 71.3%**; release held.
 

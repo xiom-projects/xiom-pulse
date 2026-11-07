@@ -51,6 +51,12 @@ use xiom.static;
 use xiom.env;
 use xiom.encoding.percent;
 use xiom.pulse.audit;
+use xiom.os.proc;
+use xiom.os.proc_ffi;
+use xiom.process;
+use xiom.thread;
+use xiom.crypto;
+use xiom.encoding.hex;
 use xiom.pulse.openapi;
 use xiom.pulse.multipart;
 
@@ -1292,6 +1298,309 @@ fn build_dispatch_response(req: &PulseRequest, reuse: Bool) -> (Vec[UInt8], Int,
   return (resp, status, payload_len);
 }
 
+// -- WP4 control plane (loopback drain/health) -------------------------------
+//
+// The control listener binds 127.0.0.1 only; it is never exposed through the
+// edge. Requests are tiny and one-shot, so the handler reads one bounded
+// segment and closes. The token is compared in constant time over equal
+// lengths (loopback-only, but cheap to do right).
+const CONTROL_MAX_REQ: Int = 8192;
+
+fn control_token_eq(a: Str, b: Str) -> Bool {
+  if a.len() != b.len() { return false; }
+  var diff: Int = 0;
+  var i: Int = 0;
+  while i < a.len() {
+    diff = diff | ((a.byte_at(i) as Int) ^ (b.byte_at(i) as Int));
+    i = i + 1;
+  }
+  return diff == 0;
+}
+
+fn control_respond(cfd: Int, status: Int, body: Str) {
+  var hs: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  hs.push(("Cache-Control", "no-store"));
+  let resp = http.build_response_full(status, CONTENT_JSON, &hs, body, false);
+  let _s = socket.socket_send_all(cfd, &resp);
+}
+
+/// handle_control accepts one control connection and returns:
+/// 0 = no state change, 1 = drain, 2 = quit. Failures are answered and
+/// ignored; the control plane must never take the data plane down.
+fn handle_control(control_fd: Int, token: Str, worker: Int) -> Int {
+  let ca = socket.socket_accept(control_fd);
+  if ca.is_err { return 0; }
+  let cfd = ca.value;
+  var cbuf: Vec[UInt8] = Vec[UInt8].new();
+  let rr = socket.socket_recv_timeout_into(cfd, &mut cbuf, CONTROL_MAX_REQ, 2000);
+  if rr.is_err || cbuf.len() == 0 {
+    control_respond(cfd, 400, "{\"error\":\"bad_request\"}");
+    socket.socket_close(cfd);
+    return 0;
+  }
+  let req = http.parse_request(&cbuf);
+  let target = req.target;
+  if req.method == "GET" && target == "/health" {
+    var who: Str = "\"worker\":" + worker.to_str();
+    if worker < 0 { who = "\"role\":\"supervisor\""; }
+    control_respond(cfd, 200, "{\"status\":\"ok\"," + who + "}");
+    socket.socket_close(cfd);
+    return 0;
+  }
+  if req.method != "POST" {
+    control_respond(cfd, 405, "{\"error\":\"method_not_allowed\"}");
+    socket.socket_close(cfd);
+    return 0;
+  }
+  if target != "/drain" && target != "/quit" {
+    control_respond(cfd, 404, "{\"error\":\"not_found\"}");
+    socket.socket_close(cfd);
+    return 0;
+  }
+  let got = http.header_get(&req, "x-pulse-control-token");
+  if token.len() == 0 || !control_token_eq(got, token) {
+    control_respond(cfd, 403, "{\"error\":\"forbidden\"}");
+    socket.socket_close(cfd);
+    return 0;
+  }
+  if target == "/quit" {
+    control_respond(cfd, 200, "{\"status\":\"quitting\"}");
+    socket.socket_close(cfd);
+    return 2;
+  }
+  control_respond(cfd, 200, "{\"status\":\"draining\"}");
+  socket.socket_close(cfd);
+  return 1;
+}
+
+// -- WP4 supervisor (PULSE_WORKERS > 1) --------------------------------------
+//
+// The supervisor binds nothing public: it spawns N children on N ports (or
+// one port under SO_REUSEPORT), monitors them with the real
+// proc_is_running/wait_status primitives (process_status is still a stub),
+// restarts unexpected exits with capped backoff, and drains every child over
+// its loopback control port. Signals stay phase 1b (os.on_signal is a stub).
+
+fn supervisor_backoff_ms(restarts: Int) -> Int {
+  var ms: Int = 1000;
+  var i: Int = 0;
+  while i < restarts && ms < 30000 {
+    ms = ms * 2;
+    i = i + 1;
+  }
+  if ms > 30000 { ms = 30000; }
+  return ms;
+}
+
+fn supervisor_worker_store(base: Str, worker: Int) -> Str {
+  if base.len() == 0 { return base; }
+  return base + ".w" + worker.to_str();
+}
+
+fn supervisor_spawn(exe: Str, worker: Int, port: Int, control_port: Int, token: Str, generation: Str, store_path: Str) -> Result[Int, Str] {
+  env.set_var("PULSE_WORKER_CHILD", "1");
+  env.set_var("PULSE_WORKER_ID", worker.to_str());
+  env.set_var("PULSE_PORT", port.to_str());
+  env.set_var("PULSE_CONTROL_PORT", control_port.to_str());
+  env.set_var("PULSE_CONTROL_TOKEN", token);
+  env.set_var("PULSE_WORKER_GENERATION", generation);
+  if store_path.len() > 0 {
+    env.set_var("PULSE_STORE_PATH", store_path);
+  }
+  var args: Vec[Str] = Vec[Str].new();
+  args.push(exe);
+  return proc_ffi.posix_spawnp(exe, &args);
+}
+
+// control_client sends one control request to a loopback worker and reports
+// whether it saw a 2xx status. Used by the supervisor drain.
+fn control_client(port: Int, method: Str, path: Str, token: Str) -> Bool {
+  let sr = socket.socket_tcp();
+  if sr.is_err { return false; }
+  let cfd = sr.value;
+  let cr = socket.socket_connect(cfd, "127.0.0.1", port);
+  if cr.is_err {
+    socket.socket_close(cfd);
+    return false;
+  }
+  let text = method + " " + path + " HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Pulse-Control-Token: " + token + "\r\nConnection: close\r\nContent-Length: 0\r\n\r\n";
+  var b: Vec[UInt8] = Vec[UInt8].new();
+  var i: Int = 0;
+  while i < text.len() {
+    b.push(text.byte_at(i));
+    i = i + 1;
+  }
+  let snd = socket.socket_send_all(cfd, &b);
+  var ok: Bool = false;
+  if !snd.is_err {
+    var rbuf: Vec[UInt8] = Vec[UInt8].new();
+    let rr = socket.socket_recv_timeout_into(cfd, &mut rbuf, 4096, 2000);
+    if rr.is_ok {
+      let resp = http.bytes_to_str(&rbuf, 0, rbuf.len());
+      ok = string.str_contains(resp, " 200 ");
+    }
+  }
+  socket.socket_close(cfd);
+  return ok;
+}
+
+// supervisor_drain asks every child to drain, waits for the deadline, then
+// kills survivors. Returns the survivor count (0 = clean).
+fn supervisor_drain(pids: &Vec[Int], control_base: Int, token: Str, drain_ms: Int) -> Int {
+  var i: Int = 0;
+  while i < pids.len() {
+    if pids[i] > 0 {
+      let _ok = control_client(control_base + i, "POST", "/drain", token);
+    }
+    i = i + 1;
+  }
+  let deadline = time.monotonic_ms() + drain_ms;
+  var alive: Int = 0;
+  while time.monotonic_ms() < deadline {
+    alive = 0;
+    var j: Int = 0;
+    while j < pids.len() {
+      if pids[j] > 0 && proc.proc_is_running(pids[j]) { alive = alive + 1; }
+      j = j + 1;
+    }
+    if alive == 0 { break; }
+    thread.sleep_ms(100);
+  }
+  var k: Int = 0;
+  while k < pids.len() {
+    if pids[k] > 0 && proc.proc_is_running(pids[k]) {
+      let _k = process.kill(pids[k]);
+      let _w = proc_ffi.wait_status(pids[k]);
+    }
+    k = k + 1;
+  }
+  return alive;
+}
+
+fn supervisor_run(n: Int) -> Int {
+  let exe_r = env.current_exe();
+  if exe_r.is_err {
+    io.println("pulse: supervisor: cannot determine executable path");
+    io.flush_stdout();
+    return 1;
+  }
+  let exe = exe_r.value;
+  let base_port = config.cfg_port();
+  let reuseport_on = config.cfg_reuseport();
+  var control_base = config.cfg_control_port();
+  if control_base == 0 { control_base = 19000; }
+  var token = config.cfg_control_token();
+  if token.len() == 0 {
+    token = hex.hex_encode(&crypto.secure_random_bytes(16));
+    io.println("pulse: supervisor: PULSE_CONTROL_TOKEN unset; generated an internal token (set it to use operator drain)");
+    io.flush_stdout();
+  }
+  let generation = env.var_or("PULSE_WORKER_GENERATION", "0");
+  let drain_ms = config.cfg_drain_timeout_ms();
+  let store_base = config.cfg_store_path();
+
+  var sup_ctl = config.cfg_supervisor_control_port();
+  if sup_ctl == 0 && control_base > 1 { sup_ctl = control_base - 1; }
+  var sup_fd: Int = -1;
+  if sup_ctl > 0 {
+    let ssr = socket.socket_tcp();
+    if !ssr.is_err {
+      let sfd = ssr.value;
+      let sbr = socket.socket_bind(sfd, "127.0.0.1", sup_ctl);
+      if sbr.is_err {
+        io.println("pulse: supervisor: control bind 127.0.0.1:" + sup_ctl.to_str() + " failed");
+        socket.socket_close(sfd);
+      } else {
+        let slr = socket.socket_listen(sfd, 16);
+        if slr.is_err {
+          io.println("pulse: supervisor: control listen failed");
+          socket.socket_close(sfd);
+        } else {
+          sup_fd = sfd;
+        }
+      }
+    }
+  }
+  var rp_note: Str = "off";
+  if reuseport_on { rp_note = "on"; }
+  io.println("pulse: supervisor workers=" + n.to_str() + " base_port=" + base_port.to_str() + " reuseport=" + rp_note);
+  if sup_fd >= 0 {
+    io.println("pulse: supervisor control on 127.0.0.1:" + sup_ctl.to_str() + " (health/drain/quit)");
+  } else {
+    io.println("pulse: supervisor control disabled (no loopback port)");
+  }
+  io.flush_stdout();
+
+  var pids: Vec[Int] = Vec[Int].new();
+  var restarts: Vec[Int] = Vec[Int].new();
+  var i: Int = 0;
+  while i < n {
+    var wport = base_port + i;
+    if reuseport_on { wport = base_port; }
+    let sp = supervisor_spawn(exe, i, wport, control_base + i, token, generation, supervisor_worker_store(store_base, i));
+    if sp.is_err {
+      io.println("pulse: supervisor: worker " + i.to_str() + " spawn failed: " + sp.error);
+      pids.push(-1);
+    } else {
+      pids.push(sp.value);
+    }
+    restarts.push(0);
+    i = i + 1;
+  }
+  io.flush_stdout();
+
+  var running: Bool = true;
+  while running {
+    var j: Int = 0;
+    while j < pids.len() {
+      if pids[j] > 0 && !proc.proc_is_running(pids[j]) {
+        let st = proc_ffi.wait_status(pids[j]);
+        var code: Int = -1;
+        if st.is_ok { code = proc_ffi.exit_code(st.value); }
+        io.println("pulse: supervisor: worker " + j.to_str() + " exited code=" + code.to_str());
+        if restarts[j] >= 10 {
+          io.println("pulse: supervisor: worker " + j.to_str() + " exceeded the restart cap; not restarting");
+          pids[j] = -1;
+        } else {
+          let wait_ms = supervisor_backoff_ms(restarts[j]);
+          io.println("pulse: supervisor: worker " + j.to_str() + " restarting in " + wait_ms.to_str() + "ms");
+          io.flush_stdout();
+          thread.sleep_ms(wait_ms);
+          var wport = base_port + j;
+          if reuseport_on { wport = base_port; }
+          let sp = supervisor_spawn(exe, j, wport, control_base + j, token, generation, supervisor_worker_store(store_base, j));
+          if sp.is_err {
+            io.println("pulse: supervisor: worker " + j.to_str() + " respawn failed: " + sp.error);
+          } else {
+            pids[j] = sp.value;
+          }
+          restarts[j] = restarts[j] + 1;
+        }
+        io.flush_stdout();
+      }
+      j = j + 1;
+    }
+    if sup_fd >= 0 {
+      var fds: Vec[Int] = Vec[Int].new();
+      fds.push(sup_fd);
+      let pr = socket.socket_poll_read(&fds, 250);
+      if !pr.is_err && pr.value.len() > 0 {
+        let ca = handle_control(sup_fd, token, -1);
+        if ca == 1 || ca == 2 {
+          running = false;
+        }
+      }
+    } else {
+      thread.sleep_ms(250);
+    }
+  }
+  let left = supervisor_drain(&pids, control_base, token, drain_ms);
+  if sup_fd >= 0 { socket.socket_close(sup_fd); }
+  io.println("pulse: supervisor: stopped (survivors=" + left.to_str() + ")");
+  io.flush_stdout();
+  return 0;
+}
+
 pub fn main() -> Int {
   // CLI: --version / --help. Build provenance is surfaced from the deploy
   // environment (PULSE_BUILD_COMMIT / PULSE_BUILD_DATE); compile-time
@@ -1359,6 +1668,8 @@ pub fn main() -> Int {
       io.println("xiom-pulse " + APP_VERSION + " -- plaintext HTTP/1.1 service");
       io.println("usage: pulse_app [--version|--help|--check-config] | routes | openapi [--check] | version | check-config");
       io.println("env: PULSE_PORT PULSE_WORKER_ID PULSE_REUSEPORT PULSE_STORE_PATH PULSE_AUDIT_PATH PULSE_AUDIT_MAX_BYTES");
+      io.println("     PULSE_WORKERS PULSE_WORKER_CHILD PULSE_CONTROL_PORT PULSE_SUPERVISOR_CONTROL_PORT");
+      io.println("     PULSE_CONTROL_TOKEN PULSE_DRAIN_TIMEOUT_MS");
       io.println("     PULSE_JWT_SECRET PULSE_RATE_LIMIT PULSE_RATE_BURST PULSE_RATE_ROUTES PULSE_CORS_ORIGIN");
       io.println("     PULSE_CSRF PULSE_SESSION_TTL PULSE_STATIC_DIR PULSE_CONFIG PULSE_OPENAPI_PATH");
       io.println("     PULSE_READ_TIMEOUT PULSE_WRITE_TIMEOUT PULSE_IDLE_TIMEOUT PULSE_SITE_DIR");
@@ -1385,6 +1696,16 @@ pub fn main() -> Int {
       var rp_note: Str = "off";
       if config.cfg_reuseport() { rp_note = "on"; }
       io.println("reuseport=" + rp_note);
+      io.println("workers=" + config.cfg_workers().to_str());
+      var wch_note: Str = "0";
+      if config.cfg_worker_child() { wch_note = "1"; }
+      io.println("worker_child=" + wch_note);
+      io.println("control_port=" + config.cfg_control_port().to_str());
+      io.println("supervisor_control_port=" + config.cfg_supervisor_control_port().to_str());
+      var ct_note: Str = "unset";
+      if config.cfg_control_token().len() > 0 { ct_note = "set"; }
+      io.println("control_token=" + ct_note);
+      io.println("drain_timeout_ms=" + config.cfg_drain_timeout_ms().to_str());
       io.println("store=" + config.cfg_store_path());
       io.println("store_backend=" + config.cfg_store_backend());
       io.println("audit=" + config.cfg_audit_path());
@@ -1442,6 +1763,11 @@ pub fn main() -> Int {
     }
     io.flush_stdout();
   }
+  // WP4: PULSE_WORKERS > 1 (and not a supervisor child) runs the supervisor.
+  let worker_count = config.cfg_workers();
+  if worker_count > 1 && !config.cfg_worker_child() {
+    return supervisor_run(worker_count);
+  }
   // Phase B: keep the Beacon route table in sync with the product table.
   let _core_routes = register_core_routes();
   // Station identity on the wire: the Beacon builders default to the
@@ -1494,6 +1820,45 @@ pub fn main() -> Int {
   }
   io.println("pulse: listening on " + bind_addr + ":" + port.to_str());
   io.flush_stdout();
+
+  // WP4 phase 1: optional loopback control listener (health/drain/quit).
+  // Disabled unless PULSE_CONTROL_PORT is set; an empty token fails closed
+  // (never expose an unauthenticated drain). It binds 127.0.0.1 only.
+  let control_port = config.cfg_control_port();
+  let control_token = config.cfg_control_token();
+  var control_fd: Int = -1;
+  var draining: Bool = false;
+  if control_port > 0 {
+    if control_token.len() == 0 {
+      io.println("pulse: PULSE_CONTROL_PORT set without PULSE_CONTROL_TOKEN; control disabled (fail closed)");
+      io.flush_stdout();
+    } else {
+      let csr = socket.socket_tcp();
+      if csr.is_err {
+        io.println("pulse: control socket create failed");
+        io.flush_stdout();
+      } else {
+        let cfd0 = csr.value;
+        let cbr = socket.socket_bind(cfd0, "127.0.0.1", control_port);
+        if cbr.is_err {
+          io.println("pulse: control bind 127.0.0.1:" + control_port.to_str() + " failed");
+          io.flush_stdout();
+          socket.socket_close(cfd0);
+        } else {
+          let clr = socket.socket_listen(cfd0, 16);
+          if clr.is_err {
+            io.println("pulse: control listen failed");
+            io.flush_stdout();
+            socket.socket_close(cfd0);
+          } else {
+            control_fd = cfd0;
+            io.println("pulse: control on 127.0.0.1:" + control_port.to_str() + " (health/drain/quit)");
+            io.flush_stdout();
+          }
+        }
+      }
+    }
+  }
   metrics.metrics_mark_start(time.monotonic_ms());
 
   let store_ok = store.store_init(config.cfg_store_path());
@@ -1536,13 +1901,61 @@ pub fn main() -> Int {
   var served: Int = 0;
   var running: Bool = true;
   while running {
-    let ar = socket.socket_accept(fd);
-    if ar.is_err {
-      io.println("pulse: accept failed");
-      io.flush_stdout();
-      return 1;
+    var client: Int = -1;
+    if control_fd >= 0 {
+      // Poll the public and control listeners together so a drain request
+      // is observed without a second thread. 250 ms bounds shutdown latency.
+      if draining {
+        running = false;
+      } else {
+        var fds: Vec[Int] = Vec[Int].new();
+        fds.push(fd);
+        fds.push(control_fd);
+        let pr = socket.socket_poll_read(&fds, 250);
+        if pr.is_err {
+          io.println("pulse: poll failed");
+          io.flush_stdout();
+          return 1;
+        }
+        let ready = pr.value;
+        var pub_ready: Bool = false;
+        var ri: Int = 0;
+        while ri < ready.len() {
+          if ready[ri] == control_fd {
+            let ca = handle_control(control_fd, control_token, config.cfg_worker_id());
+            if ca == 1 { draining = true; }
+            if ca == 2 { draining = true; }
+          } elif ready[ri] == fd {
+            pub_ready = true;
+          }
+          ri = ri + 1;
+        }
+        if draining {
+          running = false;
+        } else if !pub_ready {
+          continue;
+        } else {
+          let ar = socket.socket_accept(fd);
+          if ar.is_err {
+            io.println("pulse: accept failed");
+            io.flush_stdout();
+            return 1;
+          }
+          client = ar.value;
+        }
+      }
+    } else {
+      let ar = socket.socket_accept(fd);
+      if ar.is_err {
+        io.println("pulse: accept failed");
+        io.flush_stdout();
+        return 1;
+      }
+      client = ar.value;
     }
-    let client = ar.value;
+    if !running || client < 0 {
+      continue;
+    }
     var conn_open: Bool = true;
     var keep: Bool = config.cfg_keepalive();
     var buf: Vec[UInt8] = Vec[UInt8].new();
@@ -1550,7 +1963,7 @@ pub fn main() -> Int {
     // the request loop allocates no recv Vec (the v0.64.x 64 KiB/req leak).
     var recv_buf: Vec[UInt8] = Vec[UInt8].new();
     var cycle: Int = 0;
-    while conn_open && running {
+    while conn_open && running && !draining {
       let t0_ms = time.monotonic_ms();
       var first_ms: Int = config.cfg_read_timeout();
       if cycle > 0 { first_ms = config.cfg_idle_timeout(); }
@@ -1674,12 +2087,26 @@ pub fn main() -> Int {
           }
         }
       }
+      if control_fd >= 0 && !draining {
+        // Observe a drain request between keep-alive cycles (zero-timeout:
+        // an in-flight request still completes first, but an idle upstream
+        // does not wait the full idle timeout).
+        var cfds: Vec[Int] = Vec[Int].new();
+        cfds.push(control_fd);
+        let cp = socket.socket_poll_read(&cfds, 0);
+        if !cp.is_err && cp.value.len() > 0 {
+          let ca2 = handle_control(control_fd, control_token, config.cfg_worker_id());
+          if ca2 == 1 { draining = true; }
+          if ca2 == 2 { draining = true; }
+        }
+      }
       cycle = cycle + 1;
     }
     socket.socket_close(client);
   }
 
   socket.socket_close(fd);
+  if control_fd >= 0 { socket.socket_close(control_fd); }
   io.println("pulse: shutdown served=" + served.to_str());
   io.flush_stdout();
   return 0;

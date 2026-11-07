@@ -187,6 +187,55 @@ pub fn cfg_worker_id() -> Int {
   return cfg_parse_uint(env.var_or("PULSE_WORKER_ID", "0"), 0);
 }
 
+/// cfg_workers returns the supervisor child count (PULSE_WORKERS, default
+/// 1). Values outside 1-64 fall back to 1 (the single-process path).
+/// Complexity: O(1). Pure.
+pub fn cfg_workers() -> Int {
+  let n = cfg_parse_uint(env.var_or("PULSE_WORKERS", "1"), 1);
+  if n < 1 || n > 64 { return 1; }
+  return n;
+}
+
+/// cfg_worker_child is true when this process was spawned by the
+/// supervisor (PULSE_WORKER_CHILD=1). Complexity: O(1). Pure.
+pub fn cfg_worker_child() -> Bool {
+  return env.var_or("PULSE_WORKER_CHILD", "0") == "1";
+}
+
+/// cfg_control_port returns the loopback control port (PULSE_CONTROL_PORT,
+/// default 0 = disabled). Invalid or out-of-range values return 0.
+/// Complexity: O(1). Pure.
+pub fn cfg_control_port() -> Int {
+  let p = cfg_parse_uint(env.var_or("PULSE_CONTROL_PORT", "0"), 0);
+  if p < 1 || p > 65535 { return 0; }
+  return p;
+}
+
+/// cfg_supervisor_control_port returns the supervisor's own loopback control
+/// port (PULSE_SUPERVISOR_CONTROL_PORT, default 0 = derive from the child
+/// control base as base - 1). Complexity: O(1). Pure.
+pub fn cfg_supervisor_control_port() -> Int {
+  let p = cfg_parse_uint(env.var_or("PULSE_SUPERVISOR_CONTROL_PORT", "0"), 0);
+  if p < 1 || p > 65535 { return 0; }
+  return p;
+}
+
+/// cfg_control_token returns the control-plane bearer token
+/// (PULSE_CONTROL_TOKEN). Empty disables the control port (fail closed).
+/// Complexity: O(1). Pure.
+pub fn cfg_control_token() -> Str {
+  return env.var_or("PULSE_CONTROL_TOKEN", "");
+}
+
+/// cfg_drain_timeout_ms returns the drain deadline
+/// (PULSE_DRAIN_TIMEOUT_MS, default 10000; non-positive falls back).
+/// Complexity: O(1). Pure.
+pub fn cfg_drain_timeout_ms() -> Int {
+  let ms = cfg_parse_uint(env.var_or("PULSE_DRAIN_TIMEOUT_MS", "10000"), 10000);
+  if ms < 1 { return 10000; }
+  return ms;
+}
+
 /// cfg_legacy_loop: PULSE_LEGACY_LOOP (default "0") -- "1" keeps the
 /// product accept loop for the Phase B rollback window; the default uses
 /// the Beacon serve_with_ctx loop + stateful hooks.
@@ -275,6 +324,12 @@ pub fn cfg_load_file() -> Bool {
   cfg_apply_str(obj, "bind", "PULSE_BIND");
   cfg_apply_str(obj, "reuseport", "PULSE_REUSEPORT");
   cfg_apply_str(obj, "worker_id", "PULSE_WORKER_ID");
+  cfg_apply_str(obj, "workers", "PULSE_WORKERS");
+  cfg_apply_str(obj, "worker_child", "PULSE_WORKER_CHILD");
+  cfg_apply_str(obj, "control_port", "PULSE_CONTROL_PORT");
+  cfg_apply_str(obj, "supervisor_control_port", "PULSE_SUPERVISOR_CONTROL_PORT");
+  cfg_apply_str(obj, "control_token", "PULSE_CONTROL_TOKEN");
+  cfg_apply_str(obj, "drain_timeout_ms", "PULSE_DRAIN_TIMEOUT_MS");
   cfg_apply_str(obj, "log", "PULSE_LOG");
   cfg_apply_str(obj, "store_path", "PULSE_STORE_PATH");
   cfg_apply_str(obj, "audit_path", "PULSE_AUDIT_PATH");
@@ -689,6 +744,30 @@ pub fn cfg_validate() -> Vec[Str] {
   let wid = env.var_or("PULSE_WORKER_ID", "");
   if wid.len() > 0 && cfg_digit_value(wid) < 0 {
     w.push("PULSE_WORKER_ID=\"" + wid + "\" is not a non-negative integer; using 0");
+  }
+  let wkr = env.var_or("PULSE_WORKERS", "");
+  if wkr.len() > 0 {
+    let v = cfg_digit_value(wkr);
+    if v < 1 || v > 64 {
+      w.push("PULSE_WORKERS=\"" + wkr + "\" is outside 1-64; using 1");
+    }
+  }
+  let wch = env.var_or("PULSE_WORKER_CHILD", "");
+  if wch.len() > 0 && wch != "0" && wch != "1" {
+    w.push("PULSE_WORKER_CHILD=\"" + wch + "\" is not 0 or 1; treating as 0");
+  }
+  let ctlp = env.var_or("PULSE_CONTROL_PORT", "");
+  if ctlp.len() > 0 {
+    let v = cfg_digit_value(ctlp);
+    if v < 0 || v > 65535 {
+      w.push("PULSE_CONTROL_PORT=\"" + ctlp + "\" is not a valid port (0-65535); control disabled");
+    } else if v > 0 && env.var_or("PULSE_CONTROL_TOKEN", "").len() == 0 {
+      w.push("PULSE_CONTROL_PORT is set without PULSE_CONTROL_TOKEN; control disabled (fail closed)");
+    }
+  }
+  let drt = env.var_or("PULSE_DRAIN_TIMEOUT_MS", "");
+  if drt.len() > 0 && cfg_digit_value(drt) < 1 {
+    w.push("PULSE_DRAIN_TIMEOUT_MS=\"" + drt + "\" is not a positive integer; using 10000");
   }
 
   let umb = env.var_or("PULSE_UPLOAD_MAX_BYTES", "");

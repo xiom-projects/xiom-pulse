@@ -2,10 +2,15 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # WP4 design -- supervisor, workers, drain and reload
 
-**Status 2026-11-06:** design ready; **not implemented**. The single-accept
-loop is the measured ceiling (10 connections add no throughput), so
-scale-out is a 1.0 gate. This document fixes the topology, the process model,
-the drain protocol and the shared-state boundary before code lands.
+**Status 2026-11-07:** phase 1 worker-side control port + `/drain` + the
+`PULSE_WORKERS` supervisor are **implemented and smoke-verified**
+(`scripts/drain_smoke.ps1`/`.sh`: single-worker drain 6/6, 2-worker
+supervisor 5/5, clean child exit). Reload, the 1/2-worker throughput curve,
+Linux reuseport-under-load, the sticky-session config and the operator unit
+template remain open. The single-accept loop is still the measured ceiling
+per worker, so no multi-worker throughput claim is made. This document fixes
+the topology, the process model, the drain protocol and the shared-state
+boundary.
 
 **Non-goals for phase 1:** a shared session/rate/store service, native TLS,
 HTTP/2, 4+ workers, and multi-worker sustained-load claims. Those follow the
@@ -70,8 +75,10 @@ the process is the **supervisor**:
    - `PULSE_CONTROL_PORT=<control-base+i>` (loopback)
    - a per-worker `PULSE_STORE_PATH` when the JSONL store is enabled
    - `PULSE_WORKER_GENERATION=<n>` for reload accounting
-3. monitor with `process_status(pid)`; restart an unexpected exit with
-   backoff (1 s, 2 s, 4 s, capped at 30 s; log the exit code);
+3. monitor with `proc_is_running(pid)` (`process_status` is still a stub on
+   the pinned stdlib) and reap with `wait_status(pid)`; restart an unexpected
+   exit with backoff (1 s, 2 s, 4 s, capped at 30 s; log the exit code; stop
+   after 10 restarts for one slot);
 4. on its own drain: ask every child to drain, wait for exit (deadline),
    then exit 0; kill survivors after the deadline.
 
@@ -106,6 +113,16 @@ even if a connection is already in the backlog. The edge must remove the
 upstream **before** the drain request (N-ports) so new requests never queue
 on a draining worker. With reuseport, closing the listener removes the
 worker from the kernel group; new connections go to the remaining workers.
+
+**Implementation note (2026-11-07):** the sequential accept loop polls the
+public and control listeners together (`socket_poll_read`, 250 ms) only when
+`PULSE_CONTROL_PORT` is set; the control-disabled path keeps the original
+blocking `socket_accept`. It additionally polls the control fd with a zero
+timeout between keep-alive cycles, so an idle connection is drained without
+waiting the full idle timeout. A control request that arrives while the
+worker is blocked reading a partial request is observed after that request's
+read deadline; an in-flight request always completes first. This is the
+single-threaded phase-1 bound.
 
 ```mermaid
 stateDiagram-v2
@@ -175,8 +192,9 @@ state; phase 1 can ship the supervisor and the stateless curve without it.
 | `PULSE_WORKER_ID` | `0` | worker label for logs/metrics/store path |
 | `PULSE_PORT` | `8080` | base port; worker `i` uses `base+i` (N-ports) |
 | `PULSE_REUSEPORT` | `0` | Linux only; same port for every worker |
-| `PULSE_CONTROL_PORT` | `19000+i` | loopback drain/health control |
-| `PULSE_CONTROL_TOKEN` | random at supervisor start | required on control requests |
+| `PULSE_CONTROL_PORT` | `0` (disabled; supervisor uses `19000+i`) | loopback drain/health control |
+| `PULSE_SUPERVISOR_CONTROL_PORT` | `0` (derived as `PULSE_CONTROL_PORT-1`) | supervisor's own loopback control |
+| `PULSE_CONTROL_TOKEN` | random at supervisor start | required on control requests; empty disables control (fail closed) |
 | `PULSE_DRAIN_TIMEOUT_MS` | `10000` | in-flight/close deadline |
 | `PULSE_WORKER_GENERATION` | `0` | reload generation (logs/metrics) |
 | `PULSE_STORE_PATH` | config default | per-worker path when multi-worker |
@@ -189,12 +207,24 @@ never exposed through the edge. The edge health check uses the public
 
 **Phase 1 -- portable workers + drain (the 1.0 gate):**
 1. `PULSE_REUSEPORT` option before bind (POSIX; Windows returns the
-   documented Err and falls back to N ports).
+   documented Err and falls back to N ports). **Done (2026-11-06).**
 2. Control port + `/drain` + `Connection: close` + drain deadline.
+   **Done (2026-11-07).**
 3. Supervisor `PULSE_WORKERS` with spawn/monitor/restart/backoff.
-4. N-ports edge template (Caddy/nginx) + ops unit template.
+   **Done (2026-11-07).**
+4. N-ports edge template (Caddy/nginx) + ops unit template. **Edge template
+   shipped; the supervisor now covers the process-manager role; the unit
+   template is still a doc item.**
 5. 2-worker smoke and the 1/2-worker curve on a stateless endpoint.
-6. Windows N-port smoke; Linux reuseport smoke.
+   **2-worker smoke done; the curve is open.**
+6. Windows N-port smoke; Linux reuseport smoke. **Windows N-port done;
+   reuseport is exercised at startup, not yet under load.**
+
+**Known phase-1 limitation:** on Windows the stdlib `posix_spawnp` does not
+propagate the supervisor's redirected stdout/stderr to the children, so
+worker startup/access logs are not interleaved into the supervisor's log
+stream (POSIX inherits them). Filed to the stdlib lane; use systemd/journal or
+per-worker log capture until it lands.
 
 **Phase 1b -- POSIX signals + reuseport:** wire `SIGTERM`/`SIGINT` to the
 drain state once the stdlib delivers signals; test reuseport on Linux and

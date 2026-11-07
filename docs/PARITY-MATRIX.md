@@ -124,10 +124,10 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | O-03 | Structured access logs | P0 | A | P | FF | JSON lines |
 | O-04 | Audit log + rotation | P1 | N/A | P | -- | tests |
 | O-05 | Tracing / OpenTelemetry | P2 | M | M | FF | not implemented |
-| O-06 | Graceful shutdown / drain | P1 | A | A | F,FF | quit flag, no drain |
+| O-06 | Graceful shutdown / drain | P1 | A | A | F,FF | quit flag + loopback `/drain` with a token (2026-11-07); in-flight completes, idle keep-alive closes; supervisor drains children |
 | O-07 | Config validation + `--check-config` | P0 | N/A | P | -- | smoke |
 | O-08 | CLI (routes/openapi/version) | P1 | N/A | P | -- | smoke |
-| O-09 | Cluster / scale-out | P1 | M | A | -- | N-port workers + reuseport config/smoke; supervisor/drain/reload/curve open |
+| O-09 | Cluster / scale-out | P1 | M | A | -- | N-port workers + reuseport config/smoke; `PULSE_WORKERS` supervisor + control-port drain shipped 2026-11-07 (drain smoke GREEN); reload/curve open |
 | O-10 | Hot reload | P2 | M | M | -- | Phase B blocked |
 | O-11 | Container/systemd guidance | P1 | N/A | A | -- | partial docs |
 | O-12 | Reproducible release + attestations | P0 | N/A | E | -- | SHA pins, dry-run, same-host double-build gate |

@@ -6,7 +6,7 @@ Design: `docs/DESIGN-WORKERS.md`. **Status: design only; do not tag a release
 claiming multi-worker until every phase-1 box is checked and the evidence is
 attached.** The memory gate stays single-worker until phase 3.
 
-## Phase 1 slice evidence (2026-11-06)
+## Phase 1 evidence (2026-11-07)
 
 - [x] `PULSE_REUSEPORT` is read and `socket_set_reuseport(fd, true)` is called
       before `socket_bind`; Windows logs the documented Err and falls back to
@@ -17,17 +17,34 @@ attached.** The memory gate stays single-worker until phase 3.
       `/health` 200, GREEN; `docs/N-PORT-EDGE.md` has Caddy/nginx templates.
 - [x] `tests/test_app.xi` covers the getters/defaults/warnings; suite GREEN.
 - [x] The N-port smoke is a CI step on Unix and Windows.
-- [ ] Supervisor `PULSE_WORKERS`, control-port `/drain`, reload, 1/2-worker
-      curve and the keep-alive drain test.
+- [x] Config: `PULSE_WORKERS`, `PULSE_WORKER_CHILD`, `PULSE_CONTROL_PORT`,
+      `PULSE_SUPERVISOR_CONTROL_PORT`, `PULSE_CONTROL_TOKEN`,
+      `PULSE_DRAIN_TIMEOUT_MS` + validation; `test_app` getter/override/warn
+      checks GREEN.
+- [x] Loopback control listener (`127.0.0.1` only): `GET /health`,
+      `POST /drain`, `POST /quit`, constant-time token compare; an empty
+      token disables control (fail closed).
+- [x] Public+control poll (`socket_poll_read`, 250 ms) and a between-cycle
+      zero-timeout poll; public accept stops when draining; the
+      control-disabled path keeps the original blocking loop.
+- [x] Supervisor `PULSE_WORKERS>1`: `posix_spawnp` children with per-worker
+      id/port/control/token/store env; `proc_is_running` + `wait_status`
+      monitor; 1/2/4/…/30 s backoff, 10-restart cap; supervisor drain via
+      child control ports with a survivor kill after the deadline.
+- [x] `scripts/drain_smoke.ps1`/`.sh`: single worker (control health,
+      no/wrong/right token, exit 0, public port closed) + 2-worker
+      supervisor (both health, supervisor health/drain, all ports closed)
+      **GREEN on Windows**; wired in CI on Unix and Windows.
+- [ ] Reload (zero-downtime generation swap), 1/2-worker throughput curve,
+      Linux reuseport-under-load, sticky-session config, ops unit template.
 
 ## 0. Prerequisites (record the pin)
 
-- [ ] Confirm on the pinned toolchain: `socket_set_reuseport(fd, on)`,
-      `socket_poll_read(fds, ms)`, `posix_spawn`/`posix_spawnp`,
-      `process_status`/`wait_status`, `proc_is_running`. Record the
-      compiler/stdlib hashes in this file.
-- [ ] Confirm the signal state: `os.on_signal` is a stub in v0.65.6; phase 1
-      uses the loopback control port. Re-check on the next pin.
+- [x] Confirmed on compiler **v0.65.6** + stdlib **6fdde4ee**:
+      `socket_set_reuseport`, `socket_poll_read`, `posix_spawnp`,
+      `wait_status`, `proc_is_running` are real. `process_status` is a stub
+      (monitor uses `proc_is_running`), and `os.on_signal` is a stub (phase 1
+      uses the loopback control port). Re-check on the next pin.
 - [ ] Confirm the SQL/KV decision status; phase 1 must not depend on a
       shared store.
 

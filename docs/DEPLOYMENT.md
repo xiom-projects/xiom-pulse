@@ -190,6 +190,41 @@ The direct checks are `scripts/stream_smoke.ps1` / `.sh`.
 `docs/PROGRESS.md`) is fixed, add `MemoryMax=` and an RSS alert; the
 restart policy keeps the process fresh.
 
+### 4.1 Multi-worker supervisor and drain (phase 1, 2026-11-07)
+
+`PULSE_WORKERS=N` (default 1) makes the process a **supervisor**: it binds
+nothing public, spawns N children (`PULSE_WORKER_CHILD=1`) on
+`PULSE_PORT+i` (or one port under `PULSE_REUSEPORT=1` on Linux), restarts an
+unexpected child exit with 1/2/4/.../30 s backoff (10-restart cap), and
+drains every child over a loopback control port.
+
+Set `PULSE_CONTROL_TOKEN` to a strong secret; an empty token disables the
+control plane (fail closed). The supervisor listens on
+`PULSE_CONTROL_PORT-1` by default (`PULSE_SUPERVISOR_CONTROL_PORT` overrides);
+child `i` uses `PULSE_CONTROL_PORT+i`. Every control listener binds
+`127.0.0.1` only and is never exposed through the edge.
+
+```bash
+PULSE_WORKERS=2 PULSE_PORT=18201 PULSE_CONTROL_PORT=19000 \
+PULSE_CONTROL_TOKEN='<secret>' ./out/pulse_app
+curl -s http://127.0.0.1:18999/health            # supervisor
+curl -s -X POST -H "X-Pulse-Control-Token: <secret>" \
+  http://127.0.0.1:18999/drain
+```
+
+Drain sequence: remove the upstreams at the edge **before** `POST /drain`.
+The supervisor asks each child to drain, waits `PULSE_DRAIN_TIMEOUT_MS`
+(default 10000), then kills survivors; all workers exit 0 and the ports close.
+`GET /health` on a child control port returns 200 while it is accepting.
+
+The surface is **stateless-first**: sessions, rate limits, the event store,
+uploads and game state are per-worker. Use sticky sessions at the edge (hash
+the `sid` cookie) or a shared store (phase 2) before routing stateful
+endpoints across workers. The supervisor does not proxy connections; the edge
+or `SO_REUSEPORT` distributes. Windows `posix_spawnp` does not inherit the
+supervisor's redirected stdout/stderr (stdlib gap), so capture worker logs
+per worker or use the service manager.
+
 ## 5. Data, backup, retention
 
 - `pulse-events.jsonl` (default backend): append-only; copy it for

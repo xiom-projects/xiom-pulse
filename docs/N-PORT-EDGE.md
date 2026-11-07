@@ -7,10 +7,19 @@ load-balances across the upstream pool. This is the Windows/macOS baseline
 (SO_REUSEPORT is Linux-only; the app falls back to N ports when it is
 requested but unavailable).
 
-**Status:** phase-1 *slice* only. The supervisor, control-port drain, and the
-1/2-worker throughput curve are still pending. Run the workers under your
-service manager for now (systemd `pulse@.service`, NSSM, or a process
-supervisor), e.g.:
+**Status (2026-11-07):** the worker-side loopback control port, `/drain` and
+the `PULSE_WORKERS` supervisor are shipped and smoke-verified. Zero-downtime
+reload and the 1/2-worker throughput curve remain open. The supervisor can
+replace the N-service shape:
+
+```bash
+PULSE_WORKERS=2 PULSE_PORT=18201 PULSE_CONTROL_PORT=19000 \
+PULSE_CONTROL_TOKEN='<secret>' ./out/pulse_app
+# children: 18201/18202, control 19000/19001; supervisor control 18999
+```
+
+Without the supervisor, run the workers under your service manager
+(systemd `pulse@.service`, NSSM, or a process supervisor), e.g.:
 
 ```bash
 PULSE_PORT=18201 PULSE_WORKER_ID=0 PULSE_REUSEPORT=0 PULSE_STORE_PATH=/var/lib/pulse/w0.jsonl ./out/pulse_app
