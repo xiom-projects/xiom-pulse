@@ -104,6 +104,22 @@ published archives, not release notes; never claim sustained-load production
 until the memory gate is met. The release is held on the static realpath + the
 next verified pin.
 
+## SWEEP 2026-11-07T16:00 (doorbell)
+
+- Origin moved: WP4 phase 1 `05f01fe` (supervisor + loopback control-port
+  drain), session-54 handoff `146c5d2`, arm64 worker fix `c49ad24`. The
+  session-54 handoff above is the current one.
+- CI `42385224049` at `146c5d2` failed only on `ubuntu-22.04-arm`; `c49ad24`
+  is the arm64 `xiom_process_kill` fix. Rerun the five-leg CI on `c49ad24`;
+  the last green is `42381864881` at `c770c27`.
+- v0.65.7 acceptance `REL-20261107-1511-compiler-6` is **acked but blocked**
+  on benchmark `REL-20261107-1557` (raw t8 LSI 45 -> 40, double-free silent
+  canary corruption; release held). Do not pin or mark accepted until that
+  clears; then run the full published-archive acceptance.
+- Static realpath `REL-20261107-1427-pulse` is acked (stdlib); static
+  `1032-2`, password `1337`, ops `1348` remain open; framing `1032` fixed;
+  WS `1349` closed.
+
 ## HANDOFF PROMPT (SUPERSEDED -- 2026-11-07, session 53 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
