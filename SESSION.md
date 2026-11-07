@@ -104,6 +104,19 @@ published archives, not release notes; never claim sustained-load production
 until the memory gate is met. The release is held on the static realpath + the
 next verified pin.
 
+## SWEEP 2026-11-07T18:00 (doorbell)
+
+- CI **42389299643** green at `95492ec` (WP4 phase 1 + arm64 fix), five legs.
+  Origin unchanged.
+- v0.65.7 acceptance is moving: orbitdb/playground/website accepted
+  (`26e9bc3`, `2b6a0b0`, `1511-compiler-8`); the benchmark item
+  `REL-20261107-1557` remains open (raw t8 LSI 45 -> 40, release held).
+  PULSE `REL-20261107-1511-compiler-6` stays acked/blocked; do not pin or
+  accept until the archive is released and the benchmark clears. Then run the
+  full published-archive acceptance.
+- Static realpath `REL-20261107-1427-pulse` acked; static `1032-2`,
+  password `1337`, ops `1348` open; framing `1032` fixed; WS `1349` closed.
+
 ## SWEEP 2026-11-07T16:00 (doorbell)
 
 - Origin moved: WP4 phase 1 `05f01fe` (supervisor + loopback control-port
