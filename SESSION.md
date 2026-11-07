@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 44 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 45 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,10 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Password credential module** (2026-11-07): `src/users.xi` +
+  `tests/test_users.xi` (82 PASS); strict PBKDF2 record, salt, constant-time
+  verify, rehash, JSONL store. **600k = 1.9-2.0 s vs 250/500 ms**; routes not
+  wired; S-08 remains M; native-hash ask `REL-20261107-1337-pulse` (packages).
 - **Five-leg CI green** (2026-11-07): run **42365426703** at `cfdd077` is
   green on all five legs (memory 14.5, 25 KiB retention gate, quick gates,
   known-gap framing/static corpus, strict upload policy). The framing/static
@@ -394,6 +398,16 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - Framing/static relay items pushed (`REL-20261107-1032-pulse` to stdlib,
   `-2` to packages; relay commit `a97bb19`); uploads fixed.
 - Framing/static remain release-blocking; 0.3.0/1.0 held; 24h/1M open.
+
+## WRAP 2026-11-07 (session 45) -- password credential module
+
+- `src/users.xi` + `tests/test_users.xi` (82 PASS): strict pbkdf2-sha256
+  record, CSPRNG salt, constant-time verify, rehash, JSONL store (0600,
+  atomic rewrite); no plaintext.
+- **600k = 1.9-2.0 s** (target 250/500 ms) -> performance gate fails; the
+  login/token routes and rate limit/lockout are not wired; S-08 remains M.
+- `REL-20261107-1337-pulse` asks packages for a vetted native Argon2id/
+  PBKDF2. Memory/SSE/soak agents are still landing separately.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

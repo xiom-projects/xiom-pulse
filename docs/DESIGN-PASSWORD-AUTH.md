@@ -2,11 +2,13 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Design: password authentication (audit S-08)
 
-Status: **DESIGN ONLY (2026-11-07)**. Nothing in this document is
-implemented. It creates no source, test, CI, or configuration change and
-does not close S-08. `docs/PARITY-MATRIX.md:88` and
-`docs/FEATURE-TESTS.md:167` remain correct: PULSE login is user-only and
-there is no password field, credential store, or hash.
+**Status (2026-11-07): DESIGN + first implementation.** The credential
+module `src/users.xi` + `tests/test_users.xi` is landed (82 PASS): strict
+`pbkdf2-sha256` records, 16-byte CSPRNG salt, 32-byte key, constant-time
+verify, rehash, JSONL store (0600, atomic rewrite). It does **not** close
+S-08: the login/token routes and the login rate limit/lockout are not wired,
+and the 600k derivation is **1.9-2.0 s** vs the 250/500 ms target. S-08
+remains M; the native-hash ask is `REL-20261107-1337-pulse`.
 
 Scope: the cookie-session login (`POST /api/session/login`), the sibling
 JWT mint (`POST /api/token`), session/CSRF integration, the credential

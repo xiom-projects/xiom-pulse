@@ -85,7 +85,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | S-05 | JWT asymmetric algs (RS/ES/EdDSA) | P1 | M | M | J | not implemented |
 | S-06 | JWE / JWK key sets | P2 | M | M | J | not implemented |
 | S-07 | OAuth/OIDC client | P2 | N/A | M | -- | not implemented |
-| S-08 | Password hashing | P0 | M | M | -- | login is user-only; no password field/hash |
+| S-08 | Password hashing | P0 | M | M | -- | login is user-only; credential module (`src/users.xi`) landed but routes are not wired; 600k = 1.9-2.0 s; native-hash ask `REL-20261107-1337-pulse` |
 | S-09 | Rate limiting (global + route) | P0 | P | P | FF | rate smoke |
 | S-10 | CORS allowlist | P0 | P | P | FF | smoke |
 | S-11 | Stream Origin/auth policy | P0 | P | P | -- | ws-auth 11/11 |
