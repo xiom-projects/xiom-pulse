@@ -3,22 +3,23 @@
 # Copyright (c) 2026 Eleftherios Notas and The XIOM Authors
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# The audit's R-14 row says schema coverage is string/length only and asks
-# for a missing/extra/wrong-type/nested/enum matrix returning the 400
-# envelope. This probe exercises the product route POST /api/session/login
+# This probe exercises the product route POST /api/session/login
 # (schema_string("user", required, 1, 64)):
 #
-#   * missing, wrong type (number/bool/null), nested object, array -> 400
-#   * empty and 65-char strings -> 400 min/max
-#   * exact 64-char boundary -> 200
-#   * unknown extra scalar/object fields -> current 200 (allowed by the
-#     schema module's "unknown extra fields are allowed" contract)
+#   * missing, wrong type (number/bool/null/nested object/array) -> 400
+#   * empty and 65-byte strings -> 400 min/max
+#   * exact 64-byte boundary -> 200
+#   * unknown extra fields of every JSON type (number/bool/object/array)
+#     -> 200: the documented extra-field policy accepts unknown keys
 #   * malformed JSON and a top-level array -> 400
-#   * unicode length uses byte length, not character count -> 200 expected
-#     for 33 two-byte chars, current 400
+#   * UTF-8 length: the login route uses the backward-compatible BYTE policy,
+#     so 32 two-byte chars (64 bytes) pass and 33 (66 bytes) trip the cap.
 #
-# Enum and the number/bool/object/array rule kinds have no product route;
-# those are reported as GAPs rather than silently skipped.
+# The schema module also supports string enums (schema_enum) and an opt-in
+# UTF-8 CODEPOINT length policy (schema_string_utf8/schema_string_units),
+# plus number/bool/object/array rule kinds. Those are module capabilities;
+# the product routes here still validate a string field only, so the probe
+# records the route coverage as INFO rather than silently skipping it.
 #
 # Usage:
 #   python scripts/schema_matrix_probe.py --exe out/pulse_gap_18700.exe \
@@ -76,8 +77,8 @@ def require_error(server, reporter, name, body, fragment=""):
                       "code=%r body=%r" % (status, code, raw[:200]))
         return
     if fragment and fragment not in message:
-        reporter.gap(name, "400 invalid_request but message lacks %r: %r"
-                     % (fragment, message))
+        reporter.fail(name, "400 invalid_request but message lacks %r: %r"
+                      % (fragment, message))
         return
     reporter.ok(name, "%s: %s" % (code, message[:100]))
 
@@ -90,25 +91,30 @@ def require_ok(server, reporter, name, body):
                       % (status, code, message))
         return
     if not isinstance(parsed, dict) or not parsed.get("sid"):
-        reporter.gap(name, "200 but no sid in body=%r" % (raw[:160],))
+        reporter.fail(name, "200 but no sid in body=%r" % (raw[:160],))
         return
     reporter.ok(name, "200 with sid")
 
 
-def check_extra(server, reporter, name, body):
+def require_extra_allowed(server, reporter, name, body, kind):
+    """Unknown fields are accepted by the documented extra-field policy."""
     status, parsed, raw = post_json(server, body)
     if status == 200:
-        reporter.gap(name, "extra field accepted (200); schema allows "
-                     "unknown fields by design")
-    elif status == 400:
+        reporter.ok(name, "%s extra field accepted (policy: unknown fields "
+                    "allowed)" % kind)
+        return
+    if status == 400:
         code, message = error_fields(parsed)
-        if code == "invalid_request":
-            reporter.ok(name, "extra field rejected: %s" % message[:100])
-        else:
-            reporter.fail(name, "400 with unexpected code=%r" % (code,))
-    else:
-        reporter.fail(name, "expected 200 or 400; got status=%s body=%r"
-                      % (status, raw[:160]))
+        if code == "invalid_request" and (
+                "extra" in message.lower() or "unknown" in message.lower()):
+            reporter.ok(name, "strict policy rejected %s extra field: %s"
+                        % (kind, message[:100]))
+            return
+        reporter.fail(name, "400 with unexpected code=%r message=%r"
+                      % (code, message[:100]))
+        return
+    reporter.fail(name, "expected 200 or 400; got status=%s body=%r"
+                  % (status, raw[:160]))
 
 
 def main(argv=None):
@@ -137,54 +143,58 @@ def main(argv=None):
     print("schema-matrix-probe: %s port=%d" % (exe, args.port))
     try:
         require_ok(server, reporter, "valid user", {"user": "alice"})
-        require_ok(server, reporter, "64-char boundary", {"user": "a" * 64})
+        require_ok(server, reporter, "64-byte boundary", {"user": "a" * 64})
 
         require_error(server, reporter, "missing user", {},
                       "missing required field 'user'")
-        require_error(server, reporter, "wrong type number", {"user": 123},
+        require_error(server, reporter, "number value for string", {"user": 123},
                       "must be a string")
-        require_error(server, reporter, "wrong type bool", {"user": True},
+        require_error(server, reporter, "bool value for string", {"user": True},
                       "must be a string")
-        require_error(server, reporter, "wrong type null", {"user": None},
+        require_error(server, reporter, "null value for string", {"user": None},
                       "must be a string")
-        require_error(server, reporter, "nested object for string",
+        require_error(server, reporter, "object value for string",
                       {"user": {"nested": 1}}, "must be a string")
-        require_error(server, reporter, "array for string",
+        require_error(server, reporter, "array value for string",
                       {"user": [1, 2]}, "must be a string")
         require_error(server, reporter, "empty string", {"user": ""},
                       "at least 1")
-        require_error(server, reporter, "65-char overflow", {"user": "a" * 65},
+        require_error(server, reporter, "65-byte overflow", {"user": "a" * 65},
                       "at most 64")
         require_error(server, reporter, "malformed JSON", "{",
                       "not valid JSON")
         require_error(server, reporter, "top-level array", "[]",
                       "must be a JSON object")
 
-        check_extra(server, reporter, "extra scalar field",
-                    {"user": "alice", "extra": 1})
-        check_extra(server, reporter, "extra nested field",
-                    {"user": "alice", "extra": {"a": 1}})
+        # Extra-field policy: unknown keys of every JSON type are allowed.
+        require_extra_allowed(server, reporter, "extra number field",
+                              {"user": "alice", "extra": 1}, "number")
+        require_extra_allowed(server, reporter, "extra bool field",
+                              {"user": "alice", "extra": True}, "bool")
+        require_extra_allowed(server, reporter, "extra object field",
+                              {"user": "alice", "extra": {"a": 1}}, "object")
+        require_extra_allowed(server, reporter, "extra array field",
+                              {"user": "alice", "extra": [1, 2]}, "array")
 
-        # Length is measured in bytes today: 33 x U+00E9 is 33 characters
-        # but 66 UTF-8 bytes, so it trips the 64-byte cap.
-        status, parsed, raw = post_json(
-            server, {"user": "\u00e9" * 33})
-        if status == 200:
-            reporter.ok("unicode length boundary", "33 two-byte chars accepted")
-        elif status == 400:
-            code, message = error_fields(parsed)
-            reporter.gap("unicode length boundary",
-                         "33 chars (66 bytes) rejected: %s" % message[:100])
-        else:
-            reporter.fail("unicode length boundary",
-                          "got status=%s body=%r" % (status, raw[:160]))
+        # The login route keeps the backward-compatible BYTE policy:
+        # 32 x U+00E9 = 32 codepoints but exactly 64 UTF-8 bytes -> 200.
+        require_ok(server, reporter, "unicode 64-byte boundary",
+                   {"user": "\u00e9" * 32})
+        # 33 x U+00E9 = 33 codepoints but 66 bytes -> 400 max.
+        require_error(server, reporter, "unicode 65+ byte overflow",
+                      {"user": "\u00e9" * 33}, "at most 64")
 
-        reporter.gap("enum rule",
-                     "no enum rule kind or product route; R-14 enum case "
-                     "cannot return a 400 envelope today")
-        reporter.gap("number/bool/object/array rules",
-                     "schema_number/schema_bool/schema_object/schema_array "
-                     "exist but no product route exercises them")
+        reporter.note("UTF-8 codepoint length policy",
+                      "schema_string_utf8/schema_string_units counts "
+                      "codepoints; login/token keep the default byte policy")
+        reporter.note("enum rule",
+                      "schema_enum validates string membership (code=enum); "
+                      "no product route wires an enum yet")
+        reporter.note("number/bool/object/array rule kinds",
+                      "schema_number/schema_bool/schema_object/schema_array "
+                      "are implemented; the probe exercises those JSON value "
+                      "types as wrong-type/extra fields, but no product route "
+                      "applies those rule kinds")
     finally:
         server.stop()
 

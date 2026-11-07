@@ -19,6 +19,7 @@
     { "name": "tokens", "description": "JWT issue and verify" },
     { "name": "events", "description": "event store" },
     { "name": "ops", "description": "metrics and contract" },
+    { "name": "streams", "description": "SSE and WebSocket endpoints" },
     { "name": "uploads", "description": "multipart file uploads" },
     { "name": "game", "description": "game server control plane (PULSE x XIOM Engine)" }
   ],
@@ -46,6 +47,34 @@
             "description": "Name, version, and optional build provenance",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Version" } } }
           }
+        }
+      }
+    },
+    "/api/sse": {
+      "get": {
+        "tags": ["streams"],
+        "summary": "Demo Server-Sent Events stream (chunked text/event-stream; ticks then a done event)",
+        "operationId": "getSse",
+        "parameters": [
+          { "name": "events", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 5 } },
+          { "name": "interval_ms", "in": "query", "schema": { "type": "integer", "minimum": 0, "maximum": 5000, "default": 50 } }
+        ],
+        "responses": {
+          "200": { "description": "Event stream (chunked)", "content": { "text/event-stream": { "schema": { "type": "string" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/ws": {
+      "get": {
+        "tags": ["streams"],
+        "summary": "RFC 6455 WebSocket echo (requires Sec-WebSocket-Key/Version upgrade)",
+        "operationId": "getWs",
+        "responses": {
+          "101": { "description": "Switching Protocols; echo frames follow" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
         }
       }
     },
@@ -87,7 +116,7 @@
         "operationId": "postSessionLogin",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "type": "string" } } } } }
+          "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true, "properties": { "user": { "type": "string" } } } } }
         },
         "responses": {
           "200": { "description": "Session and CSRF cookies set", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionLogin" } } } },
@@ -127,7 +156,7 @@
         "operationId": "postToken",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "sub": { "type": "string" } } } } }
+          "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true, "properties": { "sub": { "type": "string" } } } } }
         },
         "responses": {
           "200": { "description": "Issued token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Token" } } } },
@@ -142,7 +171,7 @@
         "operationId": "postTokenVerify",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "token": { "type": "string" } } } } }
+          "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true, "properties": { "token": { "type": "string" } } } } }
         },
         "responses": {
           "200": { "description": "Token accepted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenVerify" } } } },

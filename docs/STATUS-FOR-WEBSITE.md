@@ -108,9 +108,10 @@ all five are packaged in the release dry-run.
 8. **Security findings (2026-11-07):** the WebSocket defect is fixed upstream
    (`e8ab289`), the PULSE guard is verified (strict 14/14) and the item is
    closed; framing is fixed upstream (`30bacfa`) and awaits the pin. A static
-   symlink/junction inside the root remains open. Uploads are fixed
-   (default-safe allowlist, strict 29/29). 0.3.0/1.0 are held until the pin
-   and the static fix; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
+   symlink/junction inside the root remains open; the PULSE guard is blocked
+   on the missing stdlib realpath (`REL-20261107-1427-pulse`). Uploads are
+   fixed (default-safe allowlist, strict 29/29). 0.3.0/1.0 are held until the
+   pin and the static fix; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 ## What's next (public roadmap wording)
 

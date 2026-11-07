@@ -61,13 +61,39 @@ pub fn openapi_template(pattern: Str) -> Str {
   return Str::from_utf8(out);
 }
 
+/// openapi_extra_routes returns the served routes that are not entries in
+/// router.route_defs(): the `/assets/{path}` dispatch_one special case and
+/// the two built-in stream-registry routes. They are part of the public
+/// surface, so the one-way `openapi --check` guard verifies them too.
+/// Complexity: O(1). Pure.
+pub fn openapi_extra_routes() -> Vec[(Str, Str)] {
+  var out: Vec[(Str, Str)] = Vec[(Str, Str)].new();
+  out.push(("GET", "/assets/:path"));
+  out.push(("GET", "/api/sse"));
+  out.push(("GET", "/api/ws"));
+  return out;
+}
+
+// _missing_one appends method+path to `missing` when the templated path or
+// the lowercase verb is absent from the document's `paths` object.
+fn _missing_one(paths: JsonValue, method: Str, pattern: Str, missing: &mut Vec[Str]) {
+  let tmpl = openapi_template(pattern);
+  let po = json.json_get(paths, tmpl);
+  if po.is_none {
+    missing.push(method + " " + tmpl);
+    return;
+  }
+  let mo = json.json_get(po.value, string.str_lower(method));
+  if mo.is_none { missing.push(method + " " + tmpl + " (verb)"); }
+}
+
 /// openapi_missing_routes reports route-table entries absent from `doc`:
-/// for every (method, pattern) in router.route_defs() the parsed document
-/// must carry the templated path key and the lowercase method verb under
-/// it. One-way guard: a route-table addition/removal that never reaches
-/// the contract fails the suite. Returns "METHOD /path" for missing
-/// entries (and a marker when the document does not parse).
-/// Complexity: O(routes * doc).
+/// for every (method, pattern) in router.route_defs() plus the served
+/// extra routes (openapi_extra_routes), the parsed document must carry the
+/// templated path key and the lowercase method verb under it. A
+/// route-table addition/removal that never reaches the contract fails the
+/// suite. Returns "METHOD /path" for missing entries (and a marker when
+/// the document does not parse). Complexity: O(routes * doc).
 pub fn openapi_missing_routes(doc: Str) -> Vec[Str] {
   var missing: Vec[Str] = Vec[Str].new();
   let pv = json.json_parse(doc);
@@ -85,15 +111,15 @@ pub fn openapi_missing_routes(doc: Str) -> Vec[Str] {
   var i: Int = 0;
   while i < defs.len() {
     let d = defs[i];
-    let tmpl = openapi_template(d.1);
-    let po = json.json_get(paths, tmpl);
-    if po.is_none {
-      missing.push(d.0 + " " + tmpl);
-    } else {
-      let mo = json.json_get(po.value, string.str_lower(d.0));
-      if mo.is_none { missing.push(d.0 + " " + tmpl + " (verb)"); }
-    }
+    _missing_one(paths, d.0, d.1, &mut missing);
     i = i + 1;
+  }
+  let extras = openapi_extra_routes();
+  var e: Int = 0;
+  while e < extras.len() {
+    let d = extras[e];
+    _missing_one(paths, d.0, d.1, &mut missing);
+    e = e + 1;
   }
   return missing;
 }

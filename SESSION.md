@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 51 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 52 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,12 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **OpenAPI/schema + static blocker** (2026-11-07): extra OpenAPI routes
+  (assets/SSE/WS) and bidirectional `--check`; enum + UTF-8 length APIs and
+  the extra-field policy; drift 9/9, schema 18/18, test_app GREEN; W-14
+  Station P. The static canonical guard is **blocked** on the pinned stdlib
+  (no real realpath/reparse; `is_symlink`/`readlink` stubs); filed
+  `REL-20261107-1427-pulse`; packages `1032-2` remains. Parity 58.9/71.3.
 - **SSE IDs/retry + reserved opcodes** (2026-11-07): `id:` per event,
   `retry: 3000`, `Last-Event-ID: N` -> N+1 continuation; reserved WS opcodes
   3-7/11-15 close 1002. Strict SSE probe 11/11; `test_stream`/`stream_smoke`
@@ -496,6 +502,18 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   opcodes 3-7/11-15 close 1002. W-08/W-12 Station P; parity 58.9/70.9.
 - Opaque-feed true replay needs a bounded ring (design note). Static and
   OpenAPI/schema agents are still running; release hold unchanged.
+
+## WRAP 2026-11-07 (session 52) -- OpenAPI/schema + static blocker
+
+- OpenAPI: extra routes for assets/SSE/WS; bidirectional `--check`; drift
+  9/9; W-14 Station P. Schema: enum + UTF-8 length APIs, extra-field policy;
+  probe 18/18; R-14 remains A (not route-wired).
+- Static canonical guard is **blocked** on the pinned stdlib: no real
+  realpath/reparse (`Path.canonicalize`/`io.normalize_path` lexical;
+  `is_symlink`/`readlink` stubs). Filed `REL-20261107-1427-pulse` (stdlib);
+  packages `1032-2` remains. No fake guard.
+- Parity **58.9 / 71.3**; release held until the pin + static;
+  static/framing corpus remain known-gap.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

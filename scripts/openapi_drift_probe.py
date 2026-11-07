@@ -15,11 +15,13 @@
 #   * the route table must not contain duplicate operations
 #   * the CLI `openapi --check` must still pass
 #
-# Known current drift (2026-11-07):
+# Served surface accounted for on both directions (fixed 2026-11-07):
 #   - GET /assets/{path} is in the document but not in route_defs; it is
-#     served by the dispatch_one /assets/ special-case (src/server.xi:272).
+#     served by the dispatch_one /assets/ special-case (src/server.xi:272)
+#     and is registered in src/openapi.xi openapi_extra_routes().
 #   - GET /api/sse and GET /api/ws are stream-registry routes, printed by
-#     `routes`, but absent from the OpenAPI paths object (stream.xi:11).
+#     `routes`, registered in src/openapi.xi openapi_extra_routes(), and
+#     present in the OpenAPI paths object.
 #
 # Usage:
 #   python scripts/openapi_drift_probe.py --exe out/pulse_gap_18700.exe \
@@ -213,29 +215,34 @@ def main(argv=None):
     else:
         reporter.ok("router route missing from document", "none")
 
-    # Direction 2: document -> route table / stream registry.
-    known_special = {("GET", "/assets/{path}")}
+    # Direction 2: document -> route table / stream registry / served extras.
+    # Keep this in sync with openapi.openapi_extra_routes() in src/openapi.xi:
+    # those routes are served without a route_defs() entry.
+    served_extra = {("GET", "/assets/{path}")}
     doc_only = doc_ops - router_ops - stream_ops
-    unknown_doc_only = doc_only - known_special
+    unknown_doc_only = doc_only - served_extra
     if unknown_doc_only:
         reporter.fail("document operation missing from route table",
                       ", ".join("%s %s" % op for op in
                                 sorted(unknown_doc_only)))
     else:
         reporter.ok("document operation missing from route table",
-                    "none beyond known special-cases")
+                    "none beyond served extras")
 
-    if ("GET", "/assets/{path}") in doc_ops:
-        reporter.gap(
-            "doc-only /assets/{path}",
-            "in document but not route_defs; served by the "
-            "dispatch_one /assets/ special-case (src/server.xi:272)")
+    missing_extra = sorted(served_extra - doc_ops)
+    if missing_extra:
+        reporter.fail("served special-case missing from document",
+                      ", ".join("%s %s" % op for op in missing_extra))
+    else:
+        reporter.ok("served special-case documented",
+                    ", ".join("%s %s" % op
+                              for op in sorted(served_extra & doc_ops)))
 
-    # Stream-registry routes are in the route table/`routes` CLI, not the doc.
+    # Stream-registry routes are part of the document (fixed 2026-11-07).
     stream_missing = sorted(stream_ops - doc_ops)
     if stream_missing:
-        reporter.gap("stream route missing from document",
-                     ", ".join("%s %s" % op for op in stream_missing))
+        reporter.fail("stream route missing from document",
+                      ", ".join("%s %s" % op for op in stream_missing))
     else:
         reporter.ok("stream route missing from document", "none")
 

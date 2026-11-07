@@ -50,7 +50,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | R-11 | Multipart uploads | P0 | ? | P | G,FF | smoke 415/caps |
 | R-12 | Cookie parse/set | P0 | P | P | G,FF | tests |
 | R-13 | Content negotiation (`Accept`) | P2 | M | M | FF,G | not implemented |
-| R-14 | Schema validation of input | P1 | M | A | FF,FA | manual; OpenAPI only |
+| R-14 | Schema validation of input | P1 | M | A | FF,FA | enum + UTF-8 length APIs, extra-field policy; no product route applies enum/UTF-8 (probe 18/18) |
 | R-15 | Dependency injection | P2 | N/A | M | FA,FF | not implemented |
 | R-16 | Typed response models | P2 | M | A | FA,FF | envelope only |
 
@@ -62,7 +62,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-02 | Structured error envelope | P0 | P | P | FF,G | envelope tests |
 | W-03 | Request IDs | P0 | P | P | FF | rid in logs/404 |
 | W-04 | Static files + ETag/304 | P0 | ? | P | G,FF | smoke 304 |
-| W-05 | Traversal guard | P0 | A | A | G,FF | encoded/dot-dot/backslash/NUL blocked; symlink/junction canonical escape (`REL-20261107-1032-pulse-2`) |
+| W-05 | Traversal guard | P0 | A | A | G,FF | encoded/dot-dot/backslash/NUL blocked; symlink/junction escape; PULSE guard blocked on stdlib realpath (`REL-20261107-1427-pulse`, packages `-2`) |
 | W-06 | Range requests | P1 | M | A | G,FF | static_serve Range; probe_pkg_static 206; live route test missing |
 | W-07 | Efficient file streaming (sendfile) | P1 | M | A | G,FF | 50 MB works, copied |
 | W-08 | SSE | P0 | A | P | FF,G | Station SSE with `id:`/`retry:`/`Last-Event-ID` resume (strict probe 11/11); Beacon A |
@@ -71,7 +71,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-11 | WS subprotocol negotiation | P2 | M | M | FF | not implemented |
 | W-12 | SSE event IDs + reconnect semantics | P1 | M | P | FF | Station id/retry/Last-Event-ID continuation (strict 11/11); Beacon M; non-derivable replay needs a ring (design) |
 | W-13 | Templating / server-side rendering | P1 | N/A | A | G,FA | `xiom.template` 0.2.0 + `examples/site`; docs/SITE-SERVER.md |
-| W-14 | OpenAPI generation | P1 | M | A | FA,FF | document only, not schema-driven |
+| W-14 | OpenAPI generation | P1 | M | P | FA,FF | assets/SSE/WS documented + bidirectional `--check` (drift 9/9); assets special-case via openapi extras |
 | W-15 | CORS responses + preflight | P0 | ? | P | G,FF | smoke preflight |
 
 ## Security and auth

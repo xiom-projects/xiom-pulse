@@ -33,11 +33,12 @@ Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
 
 **Post-security-corpus re-run (2026-11-07):** the framing/static findings
 downgraded P-03/W-05 to `A`; the upload fix restored S-12 Station to `P`.
-Re-run **Beacon 58.9% (94.4% assessed), Station 69.5% (100%)** after the
-WS/SSE findings (W-08 -> A, W-12 -> M; W-09 Station -> P after the guard).
+Re-run **Beacon 58.9% (94.4% assessed), Station 71.3% (100%)** after the
+SSE IDs (W-08/W-12 Station P) and OpenAPI reverse paths (W-14 Station P).
 Framing/WS are fixed upstream (`30bacfa`/`e8ab289`) and the PULSE WS guard is
-fixed, awaiting the next verified pin; the static finding remains open. The
-memory floor is **13.9 KB/req** after the Date/send cuts. See
+fixed, awaiting the next verified pin; the static escape remains open and the
+PULSE guard is blocked on the missing stdlib realpath (`REL-20261107-1427-pulse`).
+The memory floor is **13.9 KB/req** after the Date/send cuts. See
 `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 The score is capability parity, not evidence quality. A row can be `P` and
@@ -95,7 +96,7 @@ open.
 | `scripts/ws_negative_corpus.py` | 14 frames | manual / CI known-gap | RFC 6455 negative frames; **critical MSB-length crash** |
 | `scripts/sse_reconnect_probe.py` | 9 checks | manual / CI | SSE id/retry/Last-Event-ID/disconnect |
 | `scripts/openapi_drift_probe.py` | 9 checks | manual / CI | bidirectional route/doc drift |
-| `scripts/schema_matrix_probe.py` | 17 checks | manual / CI | R-14 input schema matrix |
+| `scripts/schema_matrix_probe.py` | 18 checks | manual / CI | R-14 input schema matrix |
 | `scripts/gap_probe_lib.py` | shared | support | scrubbed server harness |
 | `scripts/repro_check.{sh,ps1}` | 1 hash compare | CI Linux x64 | same-host payload only |
 | `scripts/sbom.py` | schema/count assertions | CI Linux + release | CycloneDX SBOM |
@@ -152,7 +153,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | R-11 | Multipart uploads | B=? / S=P | `test_app`: upload happy/traversal/boundary/cap; `http_smoke`: upload; `fuzz_parsers` multipart (CI) | Beacon unassessed; no duplicate field/part-header abuse | wire a package multipart probe; add duplicate field + header caps |
 | R-12 | Cookie parse/set | B=P / S=P | `test_app`: cookie parse/absent; `http_smoke`: login/logout cookies (CI) | no malformed-cookie/large-cookie test | add cookie injection (semicolon/comma/NUL) matrix |
 | R-13 | Content negotiation (`Accept`) | B=M / S=M | NONE | not implemented | negative: absent `Accept` defaults; unsupported -> documented |
-| R-14 | Schema validation of input | B=M / S=A | `test_app` + `schema_matrix_probe`: missing/wrong-type/nested/array/length/malformed -> 400 | extra fields accepted by design; Unicode length byte-based; no enum; number/bool/object/array rules unexercised | add enum/UTF-8 length policy/extra-field mode + route coverage |
+| R-14 | Schema validation of input | B=M / S=A | `test_app` + `schema_matrix_probe` **18/18**; enum + UTF-8 length APIs; extra-field policy documented | enum/UTF-8 APIs are not route-wired; Beacon M | add route coverage if a product route needs enum/codepoint limits |
 | R-15 | Dependency injection | B=N/A / S=M | NONE | not implemented | document as non-goal for 1.0 |
 | R-16 | Typed response models | B=M / S=A | `test_app`: envelope/status; `openapi` (CI) | no response-schema validation | validate each route response against the OpenAPI schema |
 
@@ -164,7 +165,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | W-02 | Structured error envelope | B=P / S=P | `test_app`: envelope code/message; `http_smoke`: 404 status (CI) | no schema assertion for every error code | error-code envelope contract test |
 | W-03 | Request IDs | B=P / S=P | `test_app`: rid present/omitted; `http_smoke`: 404 rid (CI) | no uniqueness/collision test | rid uniqueness + propagation into log/audit |
 | W-04 | Static files + ETag/304 | B=? / S=P | `test_app`: site assets/304; `http_smoke`: assets 304; `site_smoke`; `probe_pkg_static` (MAN) | Beacon unassessed; no package-level CI | wire `probe_pkg_static` (200/304/206/404) into CI |
-| W-05 | Traversal guard | B=A / S=A | `test_app`/`site_smoke`/`http_smoke`/`fuzz_parsers`: encoded/dot-dot/backslash/NUL blocked; `security_smoke static` | **junction/symlink inside the root escapes** (2026-11-07; `REL-20261107-1032-pulse-2`) | canonical/realpath check + symlink/junction tests |
+| W-05 | Traversal guard | B=A / S=A | encoded/dot-dot/backslash/NUL blocked; `security_smoke static` pass=54/gap=1 | **junction/symlink escape remains; PULSE guard blocked on missing stdlib canonicalization** (`REL-20261107-1427-pulse`, packages `-2`) | stdlib realpath/reparse + `xiom.static` canonical check |
 | W-06 | Range requests | B=M / S=M | Station `src/server.xi:136` passes `Range` to `static_serve`; `probe_pkg_static` (the `xiom.static` package): 206/range parse (MAN) | **matrix says M but Station code and the package probe support it**; no route-level live test | live Range test: single, open-ended, unsatisfiable, malformed; update Station to A |
 | W-07 | Efficient file streaming (sendfile) | B=M / S=A | `http_smoke` 50 MB write-stall only (CI) | no sendfile/throughput/RSS assertion; file is copied | 50 MB static transfer: RSS ceiling + time; prove no full-file buffer |
 | W-08 | SSE | B=A / S=P | `test_stream`/`stream_smoke` + `sse_reconnect_probe` strict 11/11: ids, retry, resume, 8 disconnects, fds 61->61, exactly-once log | Beacon A; the general non-derivable replay needs a ring | keep the strict SSE probe; add the ring if a payload feed needs replay |
@@ -173,7 +174,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | W-11 | WS subprotocol negotiation | B=M / S=M | NONE | not implemented | negative: requested subprotocol not echoed |
 | W-12 | SSE event IDs + reconnect semantics | B=M / S=P | `sse_reconnect_probe` strict 11/11: `id:` monotonic, `retry: 3000`, `Last-Event-ID: 2` -> resume at 3 | Beacon M; non-derivable payload replay needs a bounded ring | add the ring only if a persisted/opaque feed needs true replay |
 | W-13 | Templating / SSR | B=N/A / S=A | `test_app`: site mode; `site_smoke` (CI); `examples/site` | no template caching/compression/i18n | template escaping matrix + custom 404 (escaping partly covered) |
-| W-14 | OpenAPI generation | B=M / S=A | `test_app`/`http_smoke`; `openapi_drift_probe`: all 25 router routes present, `--check` failure path works | `GET /assets/{path}` documented but special-cased; `GET /api/sse`/`ws` in `routes` but not the doc | add the missing paths + bidirectional gate |
+| W-14 | OpenAPI generation | B=M / S=P | `openapi_drift_probe` **9/9**: assets/SSE/WS documented via extras; `--check` both ways; failure path works | assets remains a served special-case (via `openapi_extra_routes`); Beacon M | keep the strict drift probe |
 | W-15 | CORS responses + preflight | B=? / S=P | `test_app`: cors list/star/off; `http_smoke`: preflight 204 (CI) | Beacon unassessed; no wildcard+credentials negative | package CORS probe + credentials/wildcard rejection |
 
 ## 5. Evidence map — security and auth

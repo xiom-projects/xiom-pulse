@@ -40,6 +40,12 @@ toolchain; the PULSE framing corpus stays known-red on v0.65.6.
   host (privilege); Unix CI exercises the same class.
 - Encoded/dot-dot/backslash/NUL traversal is rejected (37/37); upload
   filenames stay inside the upload root.
+- **PULSE guard blocked (2026-11-07):** the pinned stdlib has no real
+  canonicalization (`Path.canonicalize`/`io.normalize_path` are lexical;
+  `is_symlink`/`readlink` are stubs), so a lexical PULSE check would be a fake
+  pass. Filed `REL-20261107-1427-pulse` (stdlib realpath + reparse
+  detection); `xiom.static` `1032-2` must canonicalize root+candidate after.
+  The static smoke remains `GAP:HIGH`.
 
 ## 3. Uploads -- HIGH/MEDIUM (PULSE-side fix)
 
@@ -116,21 +122,21 @@ derivable from the id, true replay needs a bounded `(id, event, data)` ring
 with an eviction/gap policy (design note); the demo feed is a pure function
 of `seq`, so continuation is exact.
 
-### 6.3 OpenAPI reverse drift (W-14) -- gaps
+### 6.3 OpenAPI reverse drift (W-14) -- fixed 2026-11-07
 
-25 router routes + 2 stream routes; the document has 26 operations. All 25
-router routes are present; no duplicates; `--check` is green and its failure
-path works. `GET /assets/{path}` is documented but served by the
-`dispatch_one` special case; `GET /api/sse` and `GET /api/ws` are in `routes`
-but absent from the document.
+`openapi_extra_routes()` documents `GET /assets/:path`, `GET /api/sse` and
+`GET /api/ws`; `--check` walks `route_defs()` plus the extras. The document
+has 27 paths/28 operations; `openapi_drift_probe` is **9/9** (both ways,
+failure path). `/assets/{path}` remains a `dispatch_one` special-case, not a
+router route; the extras bridge it.
 
-### 6.4 Schema matrix (R-14) -- gaps
+### 6.4 Schema matrix (R-14) -- improved 2026-11-07
 
-Missing/extra/wrong-type/nested/array/empty/65-char/malformed/top-level-array
-behave with 400 `invalid_request`; extra scalar/nested fields are accepted by
-design; Unicode length is byte-based (33 two-byte chars = 66 bytes rejected);
-no enum; the number/bool/object/array rules exist but no product route
-exercises them.
+`schema_enum()` and `schema_string_utf8()`/`schema_string_units()` are added;
+`schema_string` stays byte-based by default. The extra-field policy is
+documented (`additionalProperties: true` on login/token request bodies). The
+probe is **18/18**; the enum/UTF-8 APIs are not route-wired, so R-14 remains
+A (the product routes exercise string/byte-length only).
 
 ### 6.5 Harness
 

@@ -104,11 +104,12 @@ Targets:
 | **Top-tier readiness** (40% capability + 60% maturity) | **~34-38%** | the honest "comparable to the best" number |
 | **Production-capable with documented limits** | **~60-65%** | features + operability, excluding top-tier perf/audit/adoption |
 
-**Current matrix re-run (2026-11-07, after SSE IDs):** Beacon **58.9%**
-(94.4% assessed), Station **70.9%** (100%). The seeded baseline above is
-retained as the historical lower bound. WS is fixed+verified/closed; framing
-fixed `30bacfa` awaiting the pin; SSE IDs/retry/resume are Station P; the
-static finding remains open; uploads are fixed.
+**Current matrix re-run (2026-11-07, after OpenAPI reverse paths):** Beacon
+**58.9%** (94.4% assessed), Station **71.3%** (100%). The seeded baseline
+above is retained as the historical lower bound. WS is fixed+verified/closed;
+framing fixed `30bacfa` awaiting the pin; SSE IDs and OpenAPI reverse paths
+are Station P; the static finding is blocked on the stdlib realpath; uploads
+are fixed.
 
 The maturity gates are deliberately separate from feature rows, because a
 project can tick every feature and still not be top tier:
