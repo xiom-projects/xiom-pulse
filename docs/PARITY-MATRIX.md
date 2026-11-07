@@ -17,7 +17,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 |---|---|---|---|---|---|---|
 | P-01 | HTTP/1.1 request line, headers, methods | P0 | P | P | F,H11 | http parser; smoke |
 | P-02 | Chunked transfer decoding | P0 | P | P | F,H11 | smoke chunked |
-| P-03 | TE/CL smuggling rejection | P0 | A | A | F,H11 | basic TE+CL 400; duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE accepted (framing corpus 2026-11-07; `REL-20261107-1032-pulse`) |
+| P-03 | TE/CL smuggling rejection | P0 | A | A | F,H11 | basic TE+CL 400; stdlib `30bacfa` fixes duplicate/conflicting CL, overflow, whitespace-colon, TE.TE (pending pin); framing corpus known-red on v0.65.6 |
 | P-04 | `Expect: 100-continue` | P0 | P | P | F,H11 | smoke |
 | P-05 | Keep-alive + pipelining | P0 | P | P | F,H11 | smoke |
 | P-06 | Read/write/idle deadlines (slowloris) | P0 | P | P | F | smoke |
@@ -66,7 +66,7 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-06 | Range requests | P1 | M | A | G,FF | static_serve Range; probe_pkg_static 206; live route test missing |
 | W-07 | Efficient file streaming (sendfile) | P1 | M | A | G,FF | 50 MB works, copied |
 | W-08 | SSE | P0 | A | A | FF,G | basic SSE + disconnect/reconnect; no id/retry/Last-Event-ID (2026-11-07) |
-| W-09 | WebSocket handshake/frames/fragmentation | P0 | A | A | FF,G | handshake/echo; **critical MSB-length crash/hang**, RSV/UTF-8/close-code/non-minimal gaps (`REL-20261107-1349-pulse`) |
+| W-09 | WebSocket handshake/frames/fragmentation | P0 | A | P | FF,G | PULSE guard rejects MSB/RSV/unmasked/non-minimal/oversize/UTF-8/close; strict corpus 14/14; stdlib `e8ab289` pending pin (Beacon A) |
 | W-10 | WS permessage-deflate | P1 | M | M | FF | not implemented |
 | W-11 | WS subprotocol negotiation | P2 | M | M | FF | not implemented |
 | W-12 | SSE event IDs + reconnect semantics | P1 | M | M | FF | no `id:`/`retry:`/`Last-Event-ID`; basic disconnect/reconnect only |

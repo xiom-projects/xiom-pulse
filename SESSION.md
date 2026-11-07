@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 48 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 49 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,12 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **WS guard + upstream fixes** (2026-11-07): PULSE `src/stream.xi` rejects
+  MSB/non-minimal/oversize, RSV, unmasked, control, invalid UTF-8/close;
+  consumed bounded; strict corpus 14/14; `test_stream`/`test_app`/
+  `stream_smoke` GREEN. Stdlib fixed framing **30bacfa** and WS **e8ab289**;
+  both fixed on the relay, awaiting the next verified pin. W-09 Station P;
+  parity 58.9/69.5. Static/password/ops open.
 - **WS/SSE/OpenAPI/schema probes** (2026-11-07): **critical** WS frame with
   MSB-set 64-bit length crashes (`0xC0000005`) or hangs `GET /api/ws`;
   `REL-20261107-1349-pulse` (stdlib); PULSE guard in progress. SSE lacks
@@ -452,6 +458,17 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - **Critical:** MSB-set 64-bit WS length crashes/hangs `GET /api/ws`; filed
   `REL-20261107-1349-pulse`; PULSE consumed guard fix in progress.
 - W-08/W-09 -> A, W-12 -> M; parity 58.9/68.9; release held.
+
+## WRAP 2026-11-07 (session 49) -- WS guard + upstream fixes
+
+- PULSE `src/stream.xi` guard: MSB/non-minimal/oversize, RSV, unmasked,
+  control, UTF-8 and close-code validation; consumed bounded. Strict WS
+  corpus **14/14**; `test_stream`/`test_app`/`stream_smoke` GREEN.
+- Stdlib fixed framing **30bacfa** and WS **e8ab289** (relay items 1032/1349
+  fixed); awaiting the next verified toolchain pin. Static 1032-2, password
+  1337 and ops 1348 remain open.
+- W-09 Station P; parity **58.9 / 69.5**; release held until the pin + static.
+  CI WS corpus is blocking from now on.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

@@ -105,15 +105,14 @@ this policy.
   empty method/target shape as defense in depth; the Beacon package needs
   the upstream parser fix. Do not rely on NUL-containing requests being
   rejected until that fix lands.
-- **Open high/critical findings (2026-11-07):** duplicate/conflicting
-  Content-Length, CL overflow, whitespace-before-colon and TE.TE are accepted
-  (`REL-20261107-1032-pulse`, stdlib); a symlink/junction inside the site root
-  escapes it (`REL-20261107-1032-pulse-2`, `xiom.static`); a WebSocket frame
-  with an MSB-set 64-bit length crashes or hangs `GET /api/ws`
-  (`REL-20261107-1349-pulse`, stdlib). The upload policy is fixed (default-safe
-  ext/MIME allowlist, 8 KiB part-header cap, duplicate disposition; strict
-  corpus 29/29). 0.3.0/1.0 are held until the framing, static and WS findings
-  are fixed; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
+- **Findings status (2026-11-07):** the framing and WebSocket defects are
+  fixed upstream (stdlib `30bacfa` / `e8ab289`) and the PULSE WS guard is
+  fixed (strict corpus 14/14); both await the next published toolchain pin for
+  verification. The static symlink/junction escape
+  (`REL-20261107-1032-pulse-2`, `xiom.static`) remains open. Uploads are fixed
+  (default-safe ext/MIME allowlist, 8 KiB part-header cap, duplicate
+  disposition; strict corpus 29/29). 0.3.0/1.0 are held until the toolchain
+  pin and the static fix; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
 - Release artifacts are SHA-256 pinned with build provenance. A CycloneDX
   SBOM generator (`scripts/sbom.py`, `docs/SBOM.md`) runs in CI with exact
   registry package hashes/signatures and the resolved dependency graph; the

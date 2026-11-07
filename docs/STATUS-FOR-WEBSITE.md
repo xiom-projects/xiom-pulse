@@ -105,12 +105,12 @@ all five are packaged in the release dry-run.
    not publish 1M numbers.
 7. **SQL serving** is a proposal (`docs/DESIGN-SQL-SERVING.md`), pending
    owner approval; the stock app is SQL-free.
-8. **Open security findings (2026-11-07):** duplicate/conflicting
-   Content-Length, CL overflow, whitespace-colon and TE.TE are accepted; a
-   static symlink/junction inside the root escapes it; a WebSocket frame with
-   an MSB-set 64-bit length crashes/hangs `GET /api/ws`. The upload policy is
-   fixed (default-safe ext/MIME allowlist, strict corpus 29/29). 0.3.0/1.0
-   are held; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
+8. **Security findings (2026-11-07):** framing and WebSocket are fixed
+   upstream (stdlib `30bacfa`/`e8ab289`) and the PULSE WS guard is fixed
+   (strict 14/14), awaiting the next verified toolchain pin; a static
+   symlink/junction inside the root remains open. Uploads are fixed
+   (default-safe allowlist, strict 29/29). 0.3.0/1.0 are held until the pin
+   and the static fix; see `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 ## What's next (public roadmap wording)
 

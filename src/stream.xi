@@ -353,9 +353,137 @@ fn ws_close(fd: Int, code: Int, reason: Str) -> Bool {
   return ws_send(fd, 8, &payload);
 }
 
+fn utf8_cont(b: Int) -> Bool {
+  return b >= 0x80 && b <= 0xBF;
+}
+
+fn ws_utf8_valid_range(b: &Vec[UInt8], start: Int, end: Int) -> Bool {
+  var i: Int = start;
+  while i < end {
+    let c = b[i] as Int;
+    if c <= 0x7F {
+      i = i + 1;
+    } elif c >= 0xC2 && c <= 0xDF {
+      if i + 1 >= end { return false; }
+      if !utf8_cont(b[i + 1] as Int) { return false; }
+      i = i + 2;
+    } elif c == 0xE0 {
+      if i + 2 >= end { return false; }
+      let c1 = b[i + 1] as Int;
+      let c2 = b[i + 2] as Int;
+      if c1 < 0xA0 || c1 > 0xBF { return false; }
+      if !utf8_cont(c2) { return false; }
+      i = i + 3;
+    } elif c >= 0xE1 && c <= 0xEF {
+      if i + 2 >= end { return false; }
+      let c1 = b[i + 1] as Int;
+      let c2 = b[i + 2] as Int;
+      if c == 0xED && (c1 < 0x80 || c1 > 0x9F) { return false; }
+      if !utf8_cont(c1) { return false; }
+      if !utf8_cont(c2) { return false; }
+      i = i + 3;
+    } elif c == 0xF0 {
+      if i + 3 >= end { return false; }
+      let c1 = b[i + 1] as Int;
+      if c1 < 0x90 || c1 > 0xBF { return false; }
+      if !utf8_cont(b[i + 2] as Int) { return false; }
+      if !utf8_cont(b[i + 3] as Int) { return false; }
+      i = i + 4;
+    } elif c >= 0xF1 && c <= 0xF3 {
+      if i + 3 >= end { return false; }
+      if !utf8_cont(b[i + 1] as Int) { return false; }
+      if !utf8_cont(b[i + 2] as Int) { return false; }
+      if !utf8_cont(b[i + 3] as Int) { return false; }
+      i = i + 4;
+    } elif c == 0xF4 {
+      if i + 3 >= end { return false; }
+      let c1 = b[i + 1] as Int;
+      if c1 < 0x80 || c1 > 0x8F { return false; }
+      if !utf8_cont(b[i + 2] as Int) { return false; }
+      if !utf8_cont(b[i + 3] as Int) { return false; }
+      i = i + 4;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// ws_text_valid reports whether payload is well-formed UTF-8 (RFC 3629):
+/// no overlong forms, surrogates, or truncation. Complexity: O(n). Pure.
+pub fn ws_text_valid(payload: &Vec[UInt8]) -> Bool {
+  return ws_utf8_valid_range(payload, 0, payload.len());
+}
+
+fn ws_close_code_valid(code: Int) -> Bool {
+  if code >= 3000 && code <= 4999 { return true; }
+  if code < 1000 || code > 1014 { return false; }
+  if code == 1004 || code == 1005 || code == 1006 { return false; }
+  return true;
+}
+
+/// ws_close_payload_valid validates a client close payload: an empty body
+/// is allowed, a 1-byte body is not, the code must be a permitted RFC 6455
+/// value, and the reason must be UTF-8. Complexity: O(n). Pure.
+pub fn ws_close_payload_valid(payload: &Vec[UInt8]) -> Bool {
+  if payload.len() == 0 { return true; }
+  if payload.len() == 1 { return false; }
+  let code = ((payload[0] as Int) << 8) | (payload[1] as Int);
+  if !ws_close_code_valid(code) { return false; }
+  return ws_utf8_valid_range(payload, 2, payload.len());
+}
+
+/// ws_frame_violation inspects the frame header before the stdlib parser
+/// runs and returns the close code for a rule PULSE can reject up front,
+/// or 0 when the header is incomplete or acceptable. It rejects non-zero
+/// RSV bits, unmasked client frames, non-minimal 16/64-bit lengths, a
+/// 64-bit length with the MSB set (the negative-consumed crash), control
+/// frames that are fragmented or longer than 125, and lengths above the
+/// pending-frame cap (1009). Complexity: O(1). Pure.
+pub fn ws_frame_violation(buf: &Vec[UInt8]) -> Int {
+  let n = buf.len();
+  if n < 2 { return 0; }
+  let b0 = buf[0] as Int;
+  let b1 = buf[1] as Int;
+  if (b0 & 0x70) != 0 { return 1002; }
+  let op = b0 & 0x0F;
+  let fin = (b0 & 0x80) != 0;
+  if (b1 & 0x80) == 0 { return 1002; }
+  let len7 = b1 & 0x7F;
+  var declared: Int = len7;
+  var offset: Int = 2;
+  if len7 == 126 {
+    if n < 4 { return 0; }
+    declared = ((buf[2] as Int) << 8) | (buf[3] as Int);
+    if declared < 126 { return 1002; }
+    offset = 4;
+  } elif len7 == 127 {
+    if n < 10 { return 0; }
+    if (buf[2] as Int) >= 128 { return 1002; }
+    declared = 0;
+    var k: Int = 2;
+    while k < 10 {
+      declared = declared * 256 + (buf[k] as Int);
+      k = k + 1;
+    }
+    if declared < 65536 { return 1002; }
+    offset = 10;
+  }
+  if op >= 8 {
+    if !fin { return 1002; }
+    if declared > 125 { return 1002; }
+  }
+  if n < offset + 4 { return 0; }
+  if declared > MAX_WS_PENDING { return 1009; }
+  return 0;
+}
+
 fn drop_prefix(buf: &Vec[UInt8], consumed: Int) -> Vec[UInt8] {
+  var start: Int = consumed;
+  if start < 0 { start = 0; }
+  if start > buf.len() { start = buf.len(); }
   var out: Vec[UInt8] = Vec[UInt8].new();
-  var i: Int = consumed;
+  var i: Int = start;
   while i < buf.len() {
     out.push(buf[i]);
     i = i + 1;
@@ -391,85 +519,107 @@ pub fn ws_stream(fd: Int, raw: &Vec[UInt8], _req: &PulseRequest) -> (Int, Int) {
   var frag: Vec[UInt8] = Vec[UInt8].new();
   var open: Bool = true;
   while open {
-    let parsed = websocket.ws_frame_take(&buf);
-    if parsed.is_ok {
-      let frame = parsed.value.0;
-      let consumed = parsed.value.1;
-      buf = drop_prefix(&buf, consumed);
-      let op = frame.opcode;
-      if op >= 8 {
-        if !frame.fin || frame.payload.len() > 125 {
-          let _ = ws_close(fd, 1002, "bad control frame");
-          open = false;
-        } elif op == 8 {
-          let _ = ws_send(fd, 8, &frame.payload);
-          open = false;
-        } elif op == 9 {
-          if !ws_send(fd, 10, &frame.payload) { open = false; }
-        } elif op == 10 {
-          // pong: no response
-        } else {
-          let _ = ws_close(fd, 1003, "unsupported opcode");
-          open = false;
-        }
-      } elif !frame.masked {
-        let _ = ws_close(fd, 1002, "client frames must be masked");
-        open = false;
-      } elif op == 0 {
-        // Continuation: only valid while a fragmented data message is open.
-        if frag_op == 0 {
-          let _ = ws_close(fd, 1002, "unexpected continuation");
-          open = false;
-        } elif frag.len() + frame.payload.len() > MAX_WS_PENDING {
-          let _ = ws_close(fd, 1009, "message too large");
+    let violation = ws_frame_violation(&buf);
+    if violation > 0 {
+      let _ = ws_close(fd, violation, "invalid frame");
+      open = false;
+    } else {
+      let parsed = websocket.ws_frame_take(&buf);
+      if parsed.is_ok {
+        let frame = parsed.value.0;
+        let consumed = parsed.value.1;
+        if consumed <= 0 || consumed > buf.len() {
+          let _ = ws_close(fd, 1002, "invalid frame length");
           open = false;
         } else {
-          push_bytes(&mut frag, &frame.payload);
-          if frame.fin {
-            if !ws_send(fd, frag_op, &frag) {
+          buf = drop_prefix(&buf, consumed);
+          let op = frame.opcode;
+          if op >= 8 {
+            if !frame.fin || frame.payload.len() > 125 {
+              let _ = ws_close(fd, 1002, "bad control frame");
+              open = false;
+            } elif op == 8 {
+              if !ws_close_payload_valid(&frame.payload) {
+                let _ = ws_close(fd, 1002, "invalid close frame");
+                open = false;
+              } else {
+                let _ = ws_send(fd, 8, &frame.payload);
+                open = false;
+              }
+            } elif op == 9 {
+              if !ws_send(fd, 10, &frame.payload) { open = false; }
+            } elif op == 10 {
+              // pong: no response
+            } else {
+              let _ = ws_close(fd, 1003, "unsupported opcode");
+              open = false;
+            }
+          } elif !frame.masked {
+            let _ = ws_close(fd, 1002, "client frames must be masked");
+            open = false;
+          } elif op == 0 {
+            // Continuation: only valid while a fragmented data message is open.
+            if frag_op == 0 {
+              let _ = ws_close(fd, 1002, "unexpected continuation");
+              open = false;
+            } elif frag.len() + frame.payload.len() > MAX_WS_PENDING {
+              let _ = ws_close(fd, 1009, "message too large");
               open = false;
             } else {
-              echoed = echoed + frag.len();
+              push_bytes(&mut frag, &frame.payload);
+              if frame.fin {
+                if frag_op == 1 && !ws_text_valid(&frag) {
+                  let _ = ws_close(fd, 1007, "invalid utf-8");
+                  open = false;
+                } elif !ws_send(fd, frag_op, &frag) {
+                  open = false;
+                } else {
+                  echoed = echoed + frag.len();
+                }
+                frag_op = 0;
+                frag = Vec[UInt8].new();
+              }
             }
-            frag_op = 0;
-            frag = Vec[UInt8].new();
+          } elif op == 1 || op == 2 {
+            if frag_op != 0 {
+              let _ = ws_close(fd, 1002, "new data frame during fragmentation");
+              open = false;
+            } elif frame.fin {
+              if op == 1 && !ws_text_valid(&frame.payload) {
+                let _ = ws_close(fd, 1007, "invalid utf-8");
+                open = false;
+              } elif !ws_send(fd, op, &frame.payload) {
+                open = false;
+              } else {
+                echoed = echoed + frame.payload.len();
+              }
+            } elif frame.payload.len() > MAX_WS_PENDING {
+              let _ = ws_close(fd, 1009, "message too large");
+              open = false;
+            } else {
+              frag_op = op;
+              frag = Vec[UInt8].new();
+              push_bytes(&mut frag, &frame.payload);
+            }
+          } else {
+            let _ = ws_close(fd, 1003, "unsupported opcode");
+            open = false;
           }
         }
-      } elif op == 1 || op == 2 {
-        if frag_op != 0 {
-          let _ = ws_close(fd, 1002, "new data frame during fragmentation");
+      } else {
+        if buf.len() >= MAX_WS_PENDING {
+          let _ = ws_close(fd, 1009, "frame too large");
           open = false;
-        } elif frame.fin {
-          if !ws_send(fd, op, &frame.payload) {
+        } else {
+          let rr = socket.socket_recv_timeout(fd, 65536, config.cfg_read_timeout());
+          if !rr.is_ok {
+            let _ = ws_close(fd, 1001, "idle timeout");
+            open = false;
+          } elif rr.value.len() == 0 {
             open = false;
           } else {
-            echoed = echoed + frame.payload.len();
+            push_bytes(&mut buf, &rr.value);
           }
-        } elif frame.payload.len() > MAX_WS_PENDING {
-          let _ = ws_close(fd, 1009, "message too large");
-          open = false;
-        } else {
-          frag_op = op;
-          frag = Vec[UInt8].new();
-          push_bytes(&mut frag, &frame.payload);
-        }
-      } else {
-        let _ = ws_close(fd, 1003, "unsupported opcode");
-        open = false;
-      }
-    } else {
-      if buf.len() >= MAX_WS_PENDING {
-        let _ = ws_close(fd, 1009, "frame too large");
-        open = false;
-      } else {
-        let rr = socket.socket_recv_timeout(fd, 65536, config.cfg_read_timeout());
-        if !rr.is_ok {
-          let _ = ws_close(fd, 1001, "idle timeout");
-          open = false;
-        } elif rr.value.len() == 0 {
-          open = false;
-        } else {
-          push_bytes(&mut buf, &rr.value);
         }
       }
     }

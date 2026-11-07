@@ -16,10 +16,11 @@
 #   * malformed/non-minimal length encodings    -> close 1002
 #   * 64-bit length with the MSB set            -> close/error, never crash
 #
-# The last case currently reaches a negative consumed count in the stdlib
-# frame parser and crashes the Windows server with 0xC0000005. The probe
-# reports that as FAIL and restarts the private server so every case is
-# independently observed.
+# PULSE rejects malformed headers before the stdlib parser runs, so the last
+# case must close (1002) instead of reaching a negative consumed count and
+# crashing the Windows server with 0xC0000005. The probe still verifies the
+# process stays healthy and restarts a private server if a case ever
+# terminates or hangs it.
 #
 # Usage:
 #   python scripts/ws_negative_corpus.py --exe out/pulse_gap_18700.exe \
@@ -216,7 +217,7 @@ def build_cases():
              note="declared oversize but no payload; 1001 idle is a gap"),
         Case("length_127_msb_crash",
              build_frame(1, b"", length_form=64, declared_len=(1 << 63)),
-             expect_closed=True, read_timeout=2.0,
+             [1002], read_timeout=2.0,
              note="64-bit length with the MSB set"),
     ]
 

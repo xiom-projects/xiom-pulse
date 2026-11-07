@@ -33,10 +33,11 @@ Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
 
 **Post-security-corpus re-run (2026-11-07):** the framing/static findings
 downgraded P-03/W-05 to `A`; the upload fix restored S-12 Station to `P`.
-Re-run **Beacon 58.9% (94.4% assessed), Station 68.9% (100%)** after the
-WS/SSE findings (W-09/W-08 -> A, W-12 -> M). The framing/static/WS findings
-remain open and release-blocking. The memory floor is **13.9 KB/req** after
-the Date/send cuts. See
+Re-run **Beacon 58.9% (94.4% assessed), Station 69.5% (100%)** after the
+WS/SSE findings (W-08 -> A, W-12 -> M; W-09 Station -> P after the guard).
+Framing/WS are fixed upstream (`30bacfa`/`e8ab289`) and the PULSE WS guard is
+fixed, awaiting the next verified pin; the static finding remains open. The
+memory floor is **13.9 KB/req** after the Date/send cuts. See
 `docs/SECURITY-FINDINGS-2026-11-07.md`.
 
 The score is capability parity, not evidence quality. A row can be `P` and
@@ -118,7 +119,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 |---|---|---|---|---|---|
 | P-01 | Request line, headers, methods | B=P / S=P | `test_http`: parse ok, method, target, version, header count, header_get; `http_smoke`: health/echo (CI) | none material | port a raw-socket method-matrix (all methods + lowercase/reject) into `http_smoke` |
 | P-02 | Chunked decoding | B=P / S=P | `test_http`: chunked parse/multi-chunk/trailer/ext; `test_app`: te chunked accepted; `http_smoke`: chunked (CI) | no chunked extension/trailer abuse assertion at the live layer | add chunk-size overflow + trailer-injection negatives |
-| P-03 | TE/CL smuggling rejection | B=A / S=A | `test_app`/`http_smoke`: te+cl 400, te gzip 501; `test_framing` + `security_smoke framing` (known-gap) | **duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE accepted** (2026-11-07; `REL-20261107-1032-pulse`) | strict framing corpus: deterministic 400/close for every smuggling shape |
+| P-03 | TE/CL smuggling rejection | B=A / S=A | `test_app`/`http_smoke`: te+cl 400, te gzip 501; `test_framing` + `security_smoke framing` (known-gap) | stdlib **30bacfa** fixes the framing shapes (pending pin); the v0.65.6 corpus is known-red | verify the strict corpus on the next pin |
 | P-04 | `Expect: 100-continue` | B=P / S=P | `test_http`: expects_continue; `http_smoke`: expect 100 (CI) | no test for `Expect` with oversized/invalid body | add 100-continue + cap/malformed tail cases |
 | P-05 | Keep-alive + pipelining | B=P / S=P | `http_smoke`: ka first/second, pipelined, HTTP/1.0, idle, garbage (CI) | no half-close/unread-body/early-response case from the design test plan | port the remaining `DESIGN-KEEPALIVE-DEADLINES` Phase B cases to a raw-socket smoke |
 | P-06 | Read/write/idle deadlines (slowloris) | B=P / S=P | `http_smoke`: slowloris 408, write-stall dropped, loop alive, idle silent close (CI) | no unit-level timeout test; platform behavior only exercised live | add a deadline matrix (read/write/idle, 0 = disabled warning) |
@@ -167,7 +168,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | W-06 | Range requests | B=M / S=M | Station `src/server.xi:136` passes `Range` to `static_serve`; `probe_pkg_static` (the `xiom.static` package): 206/range parse (MAN) | **matrix says M but Station code and the package probe support it**; no route-level live test | live Range test: single, open-ended, unsatisfiable, malformed; update Station to A |
 | W-07 | Efficient file streaming (sendfile) | B=M / S=A | `http_smoke` 50 MB write-stall only (CI) | no sendfile/throughput/RSS assertion; file is copied | 50 MB static transfer: RSS ceiling + time; prove no full-file buffer |
 | W-08 | SSE | B=A / S=A | `test_stream`/`stream_smoke` + `sse_reconnect_probe`: 3 ticks/done, 8 disconnects, fds 61->61, exactly-once log | **no `id:`, `retry:`, `Last-Event-ID` resume** | wire `id:`/`Last-Event-ID` + a strict SSE probe |
-| W-09 | WebSocket handshake/frames/fragmentation | B=A / S=A | `test_stream`/`stream_smoke`; `ws_negative_corpus`: 3 PASS, 10 GAP, **1 CRITICAL FAIL** | **MSB-set 64-bit length crashes/hangs `GET /api/ws`**; RSV/UTF-8/close/non-minimal gaps (`REL-20261107-1349-pulse`) | PULSE consumed guard + stdlib parser fix; then strict corpus |
+| W-09 | WebSocket handshake/frames/fragmentation | B=A / S=P | `test_stream` + `ws_negative_corpus` strict **14/14**; PULSE guard in `src/stream.xi` | Beacon still depends on the stdlib parser; `e8ab289` pending the next pin; reserved opcodes 3-7/11-15 close 1003 not 1002 | Beacon pin verification; opcode cleanup |
 | W-10 | WS permessage-deflate | B=M / S=M | NONE | not implemented | negative: no extension negotiated |
 | W-11 | WS subprotocol negotiation | B=M / S=M | NONE | not implemented | negative: requested subprotocol not echoed |
 | W-12 | SSE event IDs + reconnect semantics | B=M / S=M | `sse_reconnect_probe`: no `id:`/`retry:`; `Last-Event-ID: 2` ignored; basic reconnect works | event IDs and replay are missing | add `id:`/`Last-Event-ID` replay (+ `retry:`) |
@@ -354,7 +355,7 @@ assembly + Date/send cuts. The matrix
 |---:|---|---|---|---|
 | 1 | **Memory / sustained load** | The 13.9 KB/req (/health) and 14.0 KiB/req (bttger mix) floors are the production blocker; the 24 h projection is ~124 GB and the 256 MB cap trips in ~3 min. A 25 KiB/req PR gate and the bttger-mix harness exist. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
-| 3 | **Parser / framing** | **Confirmed critical:** duplicate/conflicting CL, CL overflow, whitespace-colon and TE.TE are accepted; the raw corpus exists and is a known-gap gate. | Fix stdlib (`REL-20261107-1032-pulse`); then make the corpus strict and run `FRAMING_STRICT_NUL=1`. | P-03, P-07, P-08 |
+| 3 | **Parser / framing** | Stdlib **30bacfa** fixes duplicate/conflicting CL, overflow, whitespace-colon and TE.TE; awaiting the next verified pin. The v0.65.6 corpus is still known-gap. | Verify the strict corpus on the next pin and run `FRAMING_STRICT_NUL=1`. | P-03, P-07, P-08 |
 | 4 | **Static / traversal** | **Confirmed high:** a Windows junction/symlink inside the root escapes (`REL-20261107-1032-pulse-2`); encoded/dot-dot/backslash/NUL cases are blocked. | Fix `xiom.static` canonical/realpath; keep the corpus strict on Windows junctions and Unix symlinks. | W-05 |
 | 5 | ~~**Uploads**~~ **Fixed 2026-11-07** | Strict corpus 29/29; default-safe extension/MIME allowlist, 8 KiB part-header cap and duplicate-disposition reject; `.txt` still 200. | Keep the strict upload corpus in the release gate. | S-12, R-11 |
 | 6 | **Streaming / SSE / WS** | SSE reconnect is untested; WS negative frames can desynchronise or crash. | SSE `id:` + `Last-Event-ID` replay; WS unmasked/invalid-UTF-8/oversize/bad-close-code corpus; run ws-auth on Unix. | W-08, W-09, W-12, S-11 |

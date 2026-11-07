@@ -2,8 +2,11 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Security findings -- 2026-11-07 (framing, static, uploads)
 
-**Status: OPEN for the framing/static items; the upload policy is fixed
-(2026-11-07). The framing/static highs are release-blocking for 0.3.0/1.0.**
+**Status (2026-11-07):** framing and WebSocket are **fixed upstream**
+(stdlib `30bacfa` / `e8ab289`) and the PULSE WS guard is fixed; both await the
+next published toolchain pin for verification. The **static** item remains
+open; uploads are fixed. The static high is release-blocking until the
+toolchain pin + static fix.
 Evidence: `tests/test_framing.xi` (fast parser/Station gate) and
 `scripts/security_smoke.py` (live raw TCP, subcommands `framing`, `static`,
 `upload`), plus the wrappers. Toolchain v0.65.6 + stdlib `6fdde4ee`.
@@ -22,6 +25,12 @@ This is a proxy-differential/request-smuggling class (RFC 9112). The NUL
 truncation finding `REL-20261106-1716-pulse` is the same class; `FRAMING_STRICT_NUL=1`
 turns its five cases into hard failures. Live run: pass=22 fail=0 gap=10
 known=5; `tests/test_framing.xi` is RED with 9 (12 strict).
+
+**Upstream status:** stdlib **30bacfa** rejects duplicate/conflicting/
+overflow/non-digit Content-Length, BWS before the colon, duplicate/non-chunked
+TE, TE+CL, NUL/CTL/DEL in the head, extra request-line tokens/non-HTTP1.x and
+obs-fold; new `smoke_net_framing_strict.xi`. Awaiting the next published
+toolchain; the PULSE framing corpus stays known-red on v0.65.6.
 
 ## 2. Static canonical escape -- HIGH (packages; `REL-20261107-1032-pulse-2`)
 
@@ -87,7 +96,14 @@ payload) sent to `GET /api/ws` crashes the server on Windows
 RFC 6455 gaps: RSV1 accepted/echoed; invalid UTF-8 echoed (no 1007); close
 codes 1005/999/1-byte echoed; non-minimal 16/64-bit lengths accepted; a
 declared `1<<40` length ends in a 1001 idle timeout instead of 1009/1002.
-The PULSE guard fix is in progress; the stdlib item is release-blocking.
+**PULSE guard fixed (2026-11-07):** `src/stream.xi` rejects MSB-set and
+non-minimal lengths, oversize declarations, RSV, unmasked frames, control
+violations, invalid UTF-8 and invalid close codes; the consumed count is
+bounded. Strict `ws_negative_corpus` is **14/14**, `test_stream`/`test_app`/
+`stream_smoke` are green. Upstream stdlib **e8ab289** fixes `ws_frame_take`
+(relay 1349 fixed); awaiting the pin. The stdlib client `ws_recv` remains
+exposed until the pin. Reserved opcodes 3-7/11-15 still close 1003 instead of
+1002 (minor).
 
 ### 6.2 SSE (W-08/W-12) -- gaps
 

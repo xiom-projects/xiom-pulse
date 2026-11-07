@@ -31,6 +31,25 @@ fn bytes_text(b: &Vec[UInt8]) -> Str {
   return http.bytes_to_str(b, 0, b.len());
 }
 
+fn hex_nibble(c: Int) -> Int {
+  if c >= 48 && c <= 57 { return c - 48; }
+  if c >= 65 && c <= 70 { return c - 55; }
+  if c >= 97 && c <= 102 { return c - 87; }
+  return 0;
+}
+
+fn hex_bytes(h: Str) -> Vec[UInt8] {
+  var out: Vec[UInt8] = Vec[UInt8].new();
+  var i: Int = 0;
+  while i + 1 < h.len() {
+    let hi = hex_nibble(h.byte_at(i) as Int);
+    let lo = hex_nibble(h.byte_at(i + 1) as Int);
+    out.push(((hi * 16 + lo) & 0xFF) as UInt8);
+    i = i + 2;
+  }
+  return out;
+}
+
 fn test_handler(_fd: Int, _raw: &Vec<UInt8>, _req: &PulseRequest) -> (Int, Int) {
   return (9, 3);
 }
@@ -220,6 +239,70 @@ pub fn main() -> Int {
   env.set_var("PULSE_WS_AUTH", "jwtt");
   f = f + check("auth unknown mode fails closed", wsauth.denied_reason(&req_c) == "invalid auth mode");
   env.remove_var("PULSE_WS_AUTH");
+
+  // --- WebSocket frame guard (crash regression) ------------------------------
+  // The stdlib ws_frame_take returns a negative consumed count for a 64-bit
+  // length with the MSB set; the PULSE gate must reject the header before
+  // drop_prefix can index the buffer with it.
+  let g_msb = hex_bytes("81FF800000000000000011223344");
+  f = f + check("ws guard msb length", stream.ws_frame_violation(&g_msb) == 1002);
+  let g_rsv = hex_bytes("C1811122334470");
+  f = f + check("ws guard rsv1", stream.ws_frame_violation(&g_rsv) == 1002);
+  let g_rsvc = hex_bytes("C98011223344");
+  f = f + check("ws guard rsv control", stream.ws_frame_violation(&g_rsvc) == 1002);
+  let g_unmasked = hex_bytes("810161");
+  f = f + check("ws guard unmasked", stream.ws_frame_violation(&g_unmasked) == 1002);
+  let g_ctrl = hex_bytes("89FE007E11223344");
+  f = f + check("ws guard control long", stream.ws_frame_violation(&g_ctrl) == 1002);
+  let g_fragctrl = hex_bytes("098011223344");
+  f = f + check("ws guard control fragmented", stream.ws_frame_violation(&g_fragctrl) == 1002);
+  let g_len16 = hex_bytes("81FE00011122334470");
+  f = f + check("ws guard nonminimal 16", stream.ws_frame_violation(&g_len16) == 1002);
+  let g_len64 = hex_bytes("81FF000000000000000111223344");
+  f = f + check("ws guard nonminimal 64", stream.ws_frame_violation(&g_len64) == 1002);
+  let g_lenzero = hex_bytes("81FF000000000000000011223344");
+  f = f + check("ws guard zero 64", stream.ws_frame_violation(&g_lenzero) == 1002);
+  let g_huge = hex_bytes("81FF000001000000000011223344");
+  f = f + check("ws guard oversize 1009", stream.ws_frame_violation(&g_huge) == 1009);
+  let g_ok = hex_bytes("81811122334470");
+  f = f + check("ws guard valid masked", stream.ws_frame_violation(&g_ok) == 0);
+
+  // --- WebSocket UTF-8 and close-payload validation --------------------------
+  let u_ascii = hex_bytes("68656c6c6f");
+  f = f + check("ws utf8 ascii", stream.ws_text_valid(&u_ascii));
+  let u_2 = hex_bytes("C3A9");
+  f = f + check("ws utf8 2-byte", stream.ws_text_valid(&u_2));
+  let u_3 = hex_bytes("E282AC");
+  f = f + check("ws utf8 3-byte", stream.ws_text_valid(&u_3));
+  let u_4 = hex_bytes("F09F9880");
+  f = f + check("ws utf8 4-byte", stream.ws_text_valid(&u_4));
+  let u_bad = hex_bytes("FFFE");
+  f = f + check("ws utf8 invalid", !stream.ws_text_valid(&u_bad));
+  let u_over = hex_bytes("C0AF");
+  f = f + check("ws utf8 overlong", !stream.ws_text_valid(&u_over));
+  let u_sur = hex_bytes("EDA080");
+  f = f + check("ws utf8 surrogate", !stream.ws_text_valid(&u_sur));
+  let u_trunc = hex_bytes("E282");
+  f = f + check("ws utf8 truncated", !stream.ws_text_valid(&u_trunc));
+  let u_cont = hex_bytes("80");
+  f = f + check("ws utf8 stray continuation", !stream.ws_text_valid(&u_cont));
+
+  let c_1005 = hex_bytes("03ED");
+  f = f + check("ws close 1005 rejected", !stream.ws_close_payload_valid(&c_1005));
+  let c_999 = hex_bytes("03E7");
+  f = f + check("ws close 999 rejected", !stream.ws_close_payload_valid(&c_999));
+  let c_1 = hex_bytes("03");
+  f = f + check("ws close 1-byte rejected", !stream.ws_close_payload_valid(&c_1));
+  let c_1000 = hex_bytes("03E8");
+  f = f + check("ws close 1000 ok", stream.ws_close_payload_valid(&c_1000));
+  let c_3000 = hex_bytes("0BB8");
+  f = f + check("ws close 3000 ok", stream.ws_close_payload_valid(&c_3000));
+  let c_empty = hex_bytes("");
+  f = f + check("ws close empty ok", stream.ws_close_payload_valid(&c_empty));
+  let c_reason = hex_bytes("03E868");
+  f = f + check("ws close reason ok", stream.ws_close_payload_valid(&c_reason));
+  let c_badreason = hex_bytes("03E8FF");
+  f = f + check("ws close bad reason", !stream.ws_close_payload_valid(&c_badreason));
 
   if f == 0 {
     io.println("pulse-stream: GREEN");

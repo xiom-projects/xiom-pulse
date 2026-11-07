@@ -252,11 +252,10 @@ jobs:
           python3 scripts/openapi_drift_probe.py --exe ./out/pulse_app
           python3 scripts/schema_matrix_probe.py --exe ./out/pulse_app --port 18722
 
-      - name: WS negative corpus (Unix, known-gap)
+      - name: WS negative corpus (Unix)
         if: runner.os != 'Windows'
-        continue-on-error: true
         shell: bash
-        run: python3 scripts/ws_negative_corpus.py --exe ./out/pulse_app --port 18720
+        run: python3 scripts/ws_negative_corpus.py --exe ./out/pulse_app --port 18720 --strict
 
       - name: SBOM (generate + validate)
         if: runner.os == 'Linux'
@@ -321,7 +320,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "OpenAPI probe failed with exit $LASTEXITCODE" }
           python scripts\schema_matrix_probe.py --exe .\out\pulse_app.exe --port 18722
           if ($LASTEXITCODE -ne 0) { throw "schema probe failed with exit $LASTEXITCODE" }
-          python scripts\ws_negative_corpus.py --exe .\out\pulse_app.exe --port 18720
-          if ($LASTEXITCODE -ne 0) { Write-Host "WS corpus known-gap exit $LASTEXITCODE (non-blocking)" }
+          python scripts\ws_negative_corpus.py --exe .\out\pulse_app.exe --port 18720 --strict
+          if ($LASTEXITCODE -ne 0) { throw "WS corpus failed with exit $LASTEXITCODE" }
           & scripts\repro_check.ps1 -TimeoutSec 300
           if ($LASTEXITCODE -ne 0) { throw "repro check failed with exit $LASTEXITCODE" }
