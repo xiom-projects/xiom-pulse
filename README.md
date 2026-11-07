@@ -90,6 +90,7 @@ Start a new app: `python scripts/new_app.py my-app` (see `docs/SCAFFOLD.md`).
 - `docs/PROGRESS.md` -- **weighted production-grade tracker** (what works, what is pending, % done).
 - `docs/SCAFFOLD.md` -- one-command Beacon app scaffold (`python scripts/new_app.py my-app`).
 - `docs/DESIGN-WORKERS.md` -- WP4 supervisor/workers/drain design (not implemented yet).
+- `docs/DESIGN-PASSWORD-AUTH.md` -- S-08 password-auth design (PBKDF2/Argon2 decision, test matrix).
 - `docs/ROADMAP-TOP-TIER.md` -- the top-tier goal map: acceptance criteria T1-T9, the two editions (Beacon/Station), workstreams.
 - `docs/DEPLOYMENT.md` -- proxy-first TLS deployment (Caddy/nginx, env, supervision).
 - `SECURITY.md` -- reporting, scope, disclosure/CVE and the honest assurance status.

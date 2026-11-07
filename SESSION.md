@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-06, session 38 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 39 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,10 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **Password-auth design ready** (2026-11-07): `docs/DESIGN-PASSWORD-AUTH.md`.
+  Login and `/api/token` are user-only; recommend PBKDF2-HMAC-SHA256 600k
+  with a 16-byte CSPRNG salt and constant-time compare; Argon2id needs a
+  vetted package (ask documented). S-08 remains M; implementation pending.
 - **Parity (2026-11-06, after FEATURE-TESTS corrections):** **Beacon 60.3%**
   (assessed 91.1%), **Station 71.7%** (assessed 100%). W-06/O-09 Station
   M->A; S-08 ?->M (no password auth); O-13 evidence 16.1 KB/req with no CI
@@ -301,6 +305,19 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - `test_app` GREEN; live `http_smoke` 135 checks GREEN (route-rate gate
   order). Cut #1 (HandlerOut/response assembly) is next; the metrics Map is
   compiler-blocked; 24h/1M remain open.
+
+## WRAP 2026-11-07 (session 39) -- password-auth design
+
+- Added `docs/DESIGN-PASSWORD-AUTH.md` (S-08, design only).
+- Verified login and `/api/token` are user-only; sessions are in-memory; no
+  password field/hash. Recommended PBKDF2-HMAC-SHA256 600k, 16-byte CSPRNG
+  salt, 32-byte key, constant-time compare; Argon2id is not available (stdlib
+  approximations rejected). Design covers the store, timing, 401s, Origin/
+  CSRF, Secure cookie, JWT parity, lockout, rate policy, atomic store,
+  fail-closed and A-01..A-20 tests.
+- S-08 remains M; no implementation and no release claim.
+- Three agents are still running (memory cut #1, CI retention/quick gates,
+  security test corpora).
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 
