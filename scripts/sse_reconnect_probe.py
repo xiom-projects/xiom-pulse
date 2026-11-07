@@ -12,8 +12,9 @@
 #   * client disconnect mid-stream: server stays up, releases the socket,
 #     records the connection exactly once, and accepts a reconnect
 #
-# Known current gaps (2026-11-07): the demo formatter has no id/retry field
-# and sse_stream ignores Last-Event-ID, so the stream restarts at seq 1.
+# Fixed 2026-11-07: every event carries a monotonic `id:` equal to its seq,
+# the first tick carries `retry: 3000`, and Last-Event-ID: N resumes at N+1
+# (a store-less generator, so a reconnect emits the next `events` ticks).
 #
 # Usage:
 #   python scripts/sse_reconnect_probe.py --exe out/pulse_gap_18700.exe \
@@ -191,6 +192,18 @@ def main(argv=None):
                 reporter.gap("id field on every event",
                              "done/other events missing id; ids=%r"
                              % (all_ids,))
+            try:
+                tick_id_ints = [int(i) for i in tick_ids]
+            except (TypeError, ValueError):
+                tick_id_ints = []
+            if (len(tick_id_ints) == len(tick_ids) and
+                    all(b > a for a, b in zip(tick_id_ints,
+                                              tick_id_ints[1:]))):
+                reporter.ok("id monotonic", "ids=%r" % (tick_ids,))
+            else:
+                reporter.gap("id monotonic",
+                             "tick ids not strictly increasing: ids=%r"
+                             % (tick_ids,))
         else:
             reporter.gap("id field",
                          "no id: line on any tick event (ids=%r)"
@@ -217,18 +230,16 @@ def main(argv=None):
                 resumed_after_id.append(int(value))
             except (TypeError, ValueError):
                 pass
-        if resumed_ids and all(i not in (None, "") for i in resumed_ids):
-            effective = resumed_after_id
-            label = "ids=%r" % (resumed_ids,)
-        else:
-            effective = resumed_seqs
-            label = "seqs=%r (no ids)" % (resumed_seqs,)
-        if (effective and all(v > 2 for v in effective) and
-                len(resumed_seqs) == 3):
+        expected_ids = [3, 4, 5]
+        expected_seqs = [3, 4, 5]
+        label = "ids=%r seqs=%r" % (resumed_ids, resumed_seqs)
+        if (resumed_after_id == expected_ids and
+                resumed_seqs == expected_seqs):
             reporter.ok("Last-Event-ID resume", label)
         else:
             reporter.gap("Last-Event-ID resume",
-                         "expected events after id 2; got %s" % label)
+                         "expected ids/seqs %r after id 2; got %s"
+                         % (expected_ids, label))
 
         # 5. Reconnect after a completed stream.
         again = collect_stream(server, "events=3&interval_ms=5&probe=again")

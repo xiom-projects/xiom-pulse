@@ -102,15 +102,19 @@ violations, invalid UTF-8 and invalid close codes; the consumed count is
 bounded. Strict `ws_negative_corpus` is **14/14**, `test_stream`/`test_app`/
 `stream_smoke` are green. Upstream stdlib **e8ab289** fixes `ws_frame_take`
 (relay 1349 fixed); awaiting the pin. The stdlib client `ws_recv` remains
-exposed until the pin. Reserved opcodes 3-7/11-15 still close 1003 instead of
-1002 (minor).
+exposed until the pin. Reserved opcodes 3-7/11-15 now close 1002 (fixed
+2026-11-07).
 
-### 6.2 SSE (W-08/W-12) -- gaps
+### 6.2 SSE (W-08/W-12) -- fixed 2026-11-07
 
 Basic SSE and disconnect/reconnect work (3 ticks/done/zero chunk; 8
 mid-stream disconnects keep the server alive; exactly one access-log line per
-connection; fds 61 -> 61). No `id:` on events, no `retry:`, and
-`Last-Event-ID: 2` is ignored (the stream restarts at 1,2,3).
+connection; fds 61 -> 61). Every event now carries a monotonic `id:`, the
+first tick emits `retry: 3000`, and `Last-Event-ID: N` resumes at `N+1`;
+`sse_reconnect_probe` is strict **11/11**. For a feed whose payloads are not
+derivable from the id, true replay needs a bounded `(id, event, data)` ring
+with an eviction/gap policy (design note); the demo feed is a pure function
+of `seq`, so continuation is exact.
 
 ### 6.3 OpenAPI reverse drift (W-14) -- gaps
 

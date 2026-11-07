@@ -107,14 +107,36 @@ pub fn main() -> Int {
   f = f + check("interval zero", stream.sse_interval("/api/sse?interval_ms=0") == 0);
   f = f + check("interval high clamp", stream.sse_interval("/api/sse?interval_ms=99999") == 5000);
 
-  // SSE framing.
+  // SSE framing: a monotonic id on every event and retry on the first tick.
   let tick = stream.sse_tick(2);
+  f = f + check("tick id line", string.str_contains(tick, "id: 2\n"));
   f = f + check("tick event line", string.str_contains(tick, "event: tick\n"));
   f = f + check("tick data line", string.str_contains(tick, "data: {\"seq\":2}\n"));
   f = f + check("tick terminates", string.str_ends_with(tick, "\n\n"));
-  let done = stream.sse_done(3);
+  f = f + check("tick no retry", !string.str_contains(tick, "retry:"));
+  let first = stream.sse_tick_retry(1, 3000);
+  f = f + check("first tick id", string.str_contains(first, "id: 1\n"));
+  f = f + check("retry directive", string.str_contains(first, "retry: 3000\n"));
+  let done = stream.sse_done(4, 3);
+  f = f + check("done id line", string.str_contains(done, "id: 4\n"));
   f = f + check("done event line", string.str_contains(done, "event: done\n"));
   f = f + check("done data line", string.str_contains(done, "data: {\"events\":3}\n"));
+
+  // Last-Event-ID resume cursor (W-08/W-12): resume at N+1, fail closed to 1.
+  let raw_last = http.str_to_bytes("GET /api/sse HTTP/1.1\r\nHost: bench\r\nLast-Event-ID: 2\r\n\r\n");
+  let req_last = http.parse_request(&raw_last);
+  f = f + check("last event id parsed", stream.sse_last_id(&req_last) == 2);
+  f = f + check("resume starts after id", stream.sse_start_seq(&req_last) == 3);
+  let raw_none = http.str_to_bytes("GET /api/sse HTTP/1.1\r\nHost: bench\r\n\r\n");
+  let req_none = http.parse_request(&raw_none);
+  f = f + check("last event id absent", stream.sse_last_id(&req_none) == 0);
+  f = f + check("fresh stream starts at 1", stream.sse_start_seq(&req_none) == 1);
+  let raw_bad_last = http.str_to_bytes("GET /api/sse HTTP/1.1\r\nHost: bench\r\nLast-Event-ID: nope\r\n\r\n");
+  let req_bad_last = http.parse_request(&raw_bad_last);
+  f = f + check("last event id malformed", stream.sse_last_id(&req_bad_last) == 0);
+  let raw_neg_last = http.str_to_bytes("GET /api/sse HTTP/1.1\r\nHost: bench\r\nLast-Event-ID: -4\r\n\r\n");
+  let req_neg_last = http.parse_request(&raw_neg_last);
+  f = f + check("last event id negative", stream.sse_last_id(&req_neg_last) == 0);
 
   // SSE head: chunked, no Content-Length, cache/stream headers.
   let h0 = stream.sse_head("");
@@ -266,6 +288,22 @@ pub fn main() -> Int {
   f = f + check("ws guard oversize 1009", stream.ws_frame_violation(&g_huge) == 1009);
   let g_ok = hex_bytes("81811122334470");
   f = f + check("ws guard valid masked", stream.ws_frame_violation(&g_ok) == 0);
+  let g_bin = hex_bytes("82811122334470");
+  f = f + check("ws guard binary allowed", stream.ws_frame_violation(&g_bin) == 0);
+  let g_close = hex_bytes("88811122334470");
+  f = f + check("ws guard close allowed", stream.ws_frame_violation(&g_close) == 0);
+  let g_ping = hex_bytes("89811122334470");
+  f = f + check("ws guard ping allowed", stream.ws_frame_violation(&g_ping) == 0);
+  let g_pong = hex_bytes("8A811122334470");
+  f = f + check("ws guard pong allowed", stream.ws_frame_violation(&g_pong) == 0);
+  let g_op3 = hex_bytes("83811122334470");
+  f = f + check("ws guard reserved opcode 3", stream.ws_frame_violation(&g_op3) == 1002);
+  let g_op7 = hex_bytes("87811122334470");
+  f = f + check("ws guard reserved opcode 7", stream.ws_frame_violation(&g_op7) == 1002);
+  let g_op11 = hex_bytes("8B811122334470");
+  f = f + check("ws guard reserved opcode 11", stream.ws_frame_violation(&g_op11) == 1002);
+  let g_op15 = hex_bytes("8F811122334470");
+  f = f + check("ws guard reserved opcode 15", stream.ws_frame_violation(&g_op15) == 1002);
 
   // --- WebSocket UTF-8 and close-payload validation --------------------------
   let u_ascii = hex_bytes("68656c6c6f");

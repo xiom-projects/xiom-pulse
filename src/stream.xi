@@ -20,6 +20,7 @@ use xiom.string;
 use xiom.convert.parse;
 use xiom.time;
 use xiom.net.proto;
+use xiom.net.sse;
 use xiom.net.socket;
 use xiom.net.websocket;
 use xiom.pulse.cors;
@@ -34,6 +35,13 @@ const STREAM_WS: Int = 2;
 const MAX_SSE_EVENTS: Int = 100;
 const MAX_SSE_INTERVAL_MS: Int = 5000;
 const MAX_WS_PENDING: Int = 1048576;
+
+// SSE reconnect contract: every event carries a monotonic `id:` (the demo
+// sequence number), the first event of a connection carries a `retry:`
+// directive, and `Last-Event-ID: N` resumes at N+1. The id is the seq the
+// tick payload reports, so a store-less generator can resume deterministically.
+const SSE_RETRY_MS: Int = 3000;
+const MAX_SSE_RESUME_ID: Int = 1000000000;
 
 /// StreamHandler owns the connection for one registered route. It returns
 /// (status, payload bytes); the loop records the result and closes the fd.
@@ -195,14 +203,47 @@ pub fn sse_interval(target: Str) -> Int {
   return query_int(target, "interval_ms", 50, 0, MAX_SSE_INTERVAL_MS);
 }
 
-/// sse_tick formats one demo event.
-pub fn sse_tick(seq: Int) -> Str {
-  return proto.sse_format_event("tick", "{\"seq\":" + seq.to_str() + "}");
+fn sse_event_text(id: Int, event: Str, data: Str, retry: Int) -> Str {
+  let e = sse.SseEvent{ id: id.to_str(); event: event; data: data; retry: retry; };
+  let encoded = sse.sse_encode_event(e);
+  if encoded.is_ok { return encoded.value; }
+  return proto.sse_format_event(event, data);
 }
 
-/// sse_done formats the closing event.
-pub fn sse_done(events: Int) -> Str {
-  return proto.sse_format_event("done", "{\"events\":" + events.to_str() + "}");
+/// sse_tick formats one demo event with its monotonic `id:`.
+pub fn sse_tick(seq: Int) -> Str {
+  return sse_event_text(seq, "tick", "{\"seq\":" + seq.to_str() + "}", 0);
+}
+
+/// sse_tick_retry formats the first demo event of a connection: the same
+/// tick plus the stream's `retry:` reconnect directive.
+pub fn sse_tick_retry(seq: Int, retry_ms: Int) -> Str {
+  return sse_event_text(seq, "tick", "{\"seq\":" + seq.to_str() + "}", retry_ms);
+}
+
+/// sse_done formats the closing event (id stays monotonic after the ticks).
+pub fn sse_done(id: Int, events: Int) -> Str {
+  return sse_event_text(id, "done", "{\"events\":" + events.to_str() + "}", 0);
+}
+
+/// sse_last_id returns the last delivered event id from `Last-Event-ID`.
+/// Absent, malformed, negative, and out-of-range values fall back to 0 (a
+/// fresh stream); the cap keeps seq arithmetic bounded. Complexity: O(1).
+pub fn sse_last_id(req: &PulseRequest) -> Int {
+  let raw = string.str_trim(http.header_get(req, "last-event-id"));
+  if raw.len() == 0 { return 0; }
+  let parsed = parse.parse_int(raw);
+  if !parsed.is_ok { return 0; }
+  let value = parsed.value;
+  if value < 0 { return 0; }
+  if value > MAX_SSE_RESUME_ID { return MAX_SSE_RESUME_ID; }
+  return value;
+}
+
+/// sse_start_seq returns the first tick sequence for this connection:
+/// Last-Event-ID + 1, or 1 for a fresh stream. Complexity: O(1).
+pub fn sse_start_seq(req: &PulseRequest) -> Int {
+  return sse_last_id(req) + 1;
 }
 
 /// sse_head builds the chunked event-stream response head. It starts from
@@ -238,18 +279,21 @@ pub fn sse_stream(fd: Int, req: &PulseRequest) -> (Int, Int) {
   if !wr.is_ok { return (500, 0); }
   let events = sse_events(req.target);
   let interval = sse_interval(req.target);
+  let start = sse_start_seq(req);
   var sent: Int = 0;
-  var n: Int = 1;
-  while n <= events {
-    let payload = sse_tick(n);
+  var i: Int = 0;
+  while i < events {
+    let seq = start + i;
+    var payload = sse_tick(seq);
+    if i == 0 { payload = sse_tick_retry(seq, SSE_RETRY_MS); }
     let pb = http.str_to_bytes(payload);
     let r = socket.socket_stream_chunk(fd, &pb);
     if !r.is_ok { return (200, sent); }
     sent = sent + pb.len();
     if interval > 0 { time.sleep_ms(interval); }
-    n = n + 1;
+    i = i + 1;
   }
-  let done = sse_done(events);
+  let done = sse_done(start + events, events);
   let db = http.str_to_bytes(done);
   let dr = socket.socket_stream_chunk(fd, &db);
   if dr.is_ok { sent = sent + db.len(); }
@@ -436,10 +480,11 @@ pub fn ws_close_payload_valid(payload: &Vec[UInt8]) -> Bool {
 /// ws_frame_violation inspects the frame header before the stdlib parser
 /// runs and returns the close code for a rule PULSE can reject up front,
 /// or 0 when the header is incomplete or acceptable. It rejects non-zero
-/// RSV bits, unmasked client frames, non-minimal 16/64-bit lengths, a
-/// 64-bit length with the MSB set (the negative-consumed crash), control
-/// frames that are fragmented or longer than 125, and lengths above the
-/// pending-frame cap (1009). Complexity: O(1). Pure.
+/// RSV bits, reserved opcodes 3-7/11-15 (1002), unmasked client frames,
+/// non-minimal 16/64-bit lengths, a 64-bit length with the MSB set (the
+/// negative-consumed crash), control frames that are fragmented or longer
+/// than 125, and lengths above the pending-frame cap (1009).
+/// Complexity: O(1). Pure.
 pub fn ws_frame_violation(buf: &Vec[UInt8]) -> Int {
   let n = buf.len();
   if n < 2 { return 0; }
@@ -447,6 +492,7 @@ pub fn ws_frame_violation(buf: &Vec[UInt8]) -> Int {
   let b1 = buf[1] as Int;
   if (b0 & 0x70) != 0 { return 1002; }
   let op = b0 & 0x0F;
+  if (op >= 3 && op <= 7) || (op >= 11 && op <= 15) { return 1002; }
   let fin = (b0 & 0x80) != 0;
   if (b1 & 0x80) == 0 { return 1002; }
   let len7 = b1 & 0x7F;
@@ -551,7 +597,7 @@ pub fn ws_stream(fd: Int, raw: &Vec[UInt8], _req: &PulseRequest) -> (Int, Int) {
             } elif op == 10 {
               // pong: no response
             } else {
-              let _ = ws_close(fd, 1003, "unsupported opcode");
+              let _ = ws_close(fd, 1002, "unsupported opcode");
               open = false;
             }
           } elif !frame.masked {
@@ -602,7 +648,7 @@ pub fn ws_stream(fd: Int, raw: &Vec[UInt8], _req: &PulseRequest) -> (Int, Int) {
               push_bytes(&mut frag, &frame.payload);
             }
           } else {
-            let _ = ws_close(fd, 1003, "unsupported opcode");
+            let _ = ws_close(fd, 1002, "unsupported opcode");
             open = false;
           }
         }

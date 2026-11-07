@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 50 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 51 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,10 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **SSE IDs/retry + reserved opcodes** (2026-11-07): `id:` per event,
+  `retry: 3000`, `Last-Event-ID: N` -> N+1 continuation; reserved WS opcodes
+  3-7/11-15 close 1002. Strict SSE probe 11/11; `test_stream`/`stream_smoke`
+  GREEN. W-08/W-12 Station P; parity 58.9/70.9. Opaque-feed replay needs a ring.
 - **CI green + WS closed** (2026-11-07): five-leg **42379791041** green at
   `c26266b` (WS blocking, memory 13.9, password, soak, upload/probes). WS
   `REL-20261107-1349-pulse` verified/**closed** (PULSE guard 14/14 + stdlib
@@ -484,6 +488,14 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
   awaiting the pin; static `1032-2`, password `1337`, ops `1348` open.
 - Next PULSE-side: static canonical guard, SSE IDs/replay + reserved opcode,
   OpenAPI reverse paths + schema enum/length policy.
+
+## WRAP 2026-11-07 (session 51) -- SSE IDs + reserved opcodes
+
+- SSE: `id:` on every event, `retry: 3000`, `Last-Event-ID: N` resumes at
+  N+1; strict probe 11/11; `test_stream`/`stream_smoke` GREEN. Reserved WS
+  opcodes 3-7/11-15 close 1002. W-08/W-12 Station P; parity 58.9/70.9.
+- Opaque-feed true replay needs a bounded ring (design note). Static and
+  OpenAPI/schema agents are still running; release hold unchanged.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

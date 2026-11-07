@@ -65,11 +65,11 @@ Status: `M` missing, `A` partial, `P` parity, `E` exceeds, `?` unassessed,
 | W-05 | Traversal guard | P0 | A | A | G,FF | encoded/dot-dot/backslash/NUL blocked; symlink/junction canonical escape (`REL-20261107-1032-pulse-2`) |
 | W-06 | Range requests | P1 | M | A | G,FF | static_serve Range; probe_pkg_static 206; live route test missing |
 | W-07 | Efficient file streaming (sendfile) | P1 | M | A | G,FF | 50 MB works, copied |
-| W-08 | SSE | P0 | A | A | FF,G | basic SSE + disconnect/reconnect; no id/retry/Last-Event-ID (2026-11-07) |
+| W-08 | SSE | P0 | A | P | FF,G | Station SSE with `id:`/`retry:`/`Last-Event-ID` resume (strict probe 11/11); Beacon A |
 | W-09 | WebSocket handshake/frames/fragmentation | P0 | A | P | FF,G | PULSE guard rejects MSB/RSV/unmasked/non-minimal/oversize/UTF-8/close; strict corpus 14/14; stdlib `e8ab289` pending pin (Beacon A) |
 | W-10 | WS permessage-deflate | P1 | M | M | FF | not implemented |
 | W-11 | WS subprotocol negotiation | P2 | M | M | FF | not implemented |
-| W-12 | SSE event IDs + reconnect semantics | P1 | M | M | FF | no `id:`/`retry:`/`Last-Event-ID`; basic disconnect/reconnect only |
+| W-12 | SSE event IDs + reconnect semantics | P1 | M | P | FF | Station id/retry/Last-Event-ID continuation (strict 11/11); Beacon M; non-derivable replay needs a ring (design) |
 | W-13 | Templating / server-side rendering | P1 | N/A | A | G,FA | `xiom.template` 0.2.0 + `examples/site`; docs/SITE-SERVER.md |
 | W-14 | OpenAPI generation | P1 | M | A | FA,FF | document only, not schema-driven |
 | W-15 | CORS responses + preflight | P0 | ? | P | G,FF | smoke preflight |
