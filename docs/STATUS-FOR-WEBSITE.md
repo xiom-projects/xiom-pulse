@@ -85,8 +85,7 @@ all five are packaged in the release dry-run.
    the per-request router rebuild, redundant gate route match and response
    assembly copies are **fixed** (2026-11-06/07); the residual is the
    header/Date path and Map values, plus the deferred ~0.9 KB
-   Option[ServerRequest] aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. Short demos and
-   bounded runs are fine; **do not describe the current build as suitable
+   Option[ServerRequest] aggregate. The parser is ~1.1 KB and the builder ~1.5 KB per cycle. A 25 KiB/req PR retention gate runs in CI; the 24 h/1M gate is still open. Short demos and bounded runs are fine; **do not describe the current build as suitable
    for long-lived high-rate production without an RSS cap/restart**. Tracked
    as `REL-20261010-1549-pulse-4`.
 2. **No independent external security audit yet.** A deterministic fuzz

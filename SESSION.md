@@ -3,7 +3,7 @@
 <!-- Copyright (c) 2026 Eleftherios Notas and The XIOM Authors -->
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 40 close)
+## HANDOFF PROMPT (CURRENT -- 2026-11-07, session 41 close)
 
 You are the PULSE lane for E:\xiom-projects\xiom-pulse (the official XIOM web
 backend / multipurpose framework). This session is closing near the context
@@ -63,6 +63,12 @@ STATE AT 2026-11-06:
   `-AllowKnownCrlf`; healthy request/Set-Cookie/session/CSRF invariants. The
   cookie package's CRLF-preserving parse->serialize is a documented contract
   caveat (unframed input only), tracked as `known_crlf`; no PULSE exploit.
+- **PR retention/quick gates** (2026-11-07): `scripts/rss_gate.py` (25 KiB/req,
+  OLS+Theil-Sen, fail-closed) on Linux x64 + Windows; `ws_auth_smoke.py` on
+  Unix; `openapi --check`, rate/crash, package probes and the KV 60 s soak in
+  PR CI. Local gate GREEN 15.32 KiB/req (375/375); negative control RED at
+  5 KiB; ws_auth 11/11. `proxy_e2e` stays manual; strict NUL and 24h/1M stay
+  heavy.
 - **Password-auth design ready** (2026-11-07): `docs/DESIGN-PASSWORD-AUTH.md`.
   Login and `/api/token` are user-only; recommend PBKDF2-HMAC-SHA256 600k
   with a 16-byte CSPRNG salt and constant-time compare; Argon2id needs a
@@ -330,6 +336,16 @@ registry hashes + transitive closure, a double-build gate, broader fuzzing
 - Remaining: cuts #3/#4 (header/Date caching, read/send buffers), the
   compiler-blocked metrics Map, the socket/Option residual; 24h/1M open.
 - CI retention/security agents are still landing their results separately.
+
+## WRAP 2026-11-07 (session 41) -- PR retention + quick gates
+
+- `scripts/rss_gate.py`: 75 s / 200 ms steady slope, OLS+Theil-Sen,
+  25 KiB/req budget, fail-closed; wired on Linux x64 + Windows.
+  `scripts/ws_auth_smoke.py` covers Unix stream auth.
+- PR CI now also runs `openapi --check`, `rate_smoke`, `crash_test`,
+  `ws_auth`, the static/kv/outbound/audit-rotate probes and the KV 60 s soak.
+- Local: gate GREEN 15.32 KiB/req (375/375); a 5 KiB negative control is RED;
+  ws_auth 11/11. `proxy_e2e` stays manual; strict NUL and 24h/1M stay heavy.
 
 ## HANDOFF PROMPT (ARCHIVED -- 2026-10-22, session 24 close)
 

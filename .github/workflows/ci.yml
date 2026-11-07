@@ -6,8 +6,8 @@ name: PULSE CI
 # Tier 1: every pull request + manual dispatch (the org model: heavy soaks
 # live in heavy.yml, releases in release.yml). Consumes the pinned,
 # SHA256-verified XIOM toolchain and the stdlib checkout at STDLIB_VERSION
-# via .github/actions/setup-xiom; the fleet is suites x2 + the 78-check
-# HTTP smoke on both platforms.
+# via .github/actions/setup-xiom; the fleet is suites x2 + the HTTP smoke
+# on both platforms.
 
 on:
   pull_request:
@@ -59,6 +59,28 @@ jobs:
         shell: pwsh
         run: '& scripts\build.ps1 src\server.xi -Name pulse_app -TimeoutSec 600'
 
+      # PR memory-retention gate (see the Linux x64 block for the budget).
+      - name: Build memory-gate server (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & scripts\build.ps1 src\server.xi -Name ci_gate_server -TimeoutSec 600
+          if ($LASTEXITCODE -ne 0) { throw "memory-gate build failed with exit $LASTEXITCODE" }
+
+      - name: Memory retention gate (Windows, <= 25 KiB/req)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python scripts\rss_gate.py --exe .\out\ci_gate_server.exe --port 18310 --seconds 75
+          if ($LASTEXITCODE -ne 0) { throw "rss gate failed with exit $LASTEXITCODE" }
+
+      - name: OpenAPI contract drift (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & .\out\pulse_app.exe openapi --check
+          if ($LASTEXITCODE -ne 0) { throw "openapi --check failed with exit $LASTEXITCODE" }
+
       - name: Verify arm64 binary (Linux arm64)
         if: runner.os == 'Linux' && runner.arch == 'ARM64'
         shell: bash
@@ -66,6 +88,24 @@ jobs:
           set -euo pipefail
           file out/pulse_app | tee /tmp/pulse-arm64-file.txt
           grep -q "ARM aarch64" /tmp/pulse-arm64-file.txt
+
+      # PR memory-retention gate (docs/FEATURE-TESTS.md section 11 risk 1 /
+      # ROADMAP WP1). Unique build name + port so it cannot collide with other
+      # steps or the out/pulse_app the fleet uses. Budget: 25 KiB/request
+      # steady state on GET /health (current baseline ~14.5-15.5; this catches the
+      # 1704-class per-request regressions, not the final flat gate). The
+      # steady slope is Theil-Sen over the 2nd sample onward; OLS is reported
+      # too, and the gate fails only when both exceed the budget, so one
+      # noisy sample cannot turn a green run red.
+      - name: Build memory-gate server (Linux x64)
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        shell: bash
+        run: bash scripts/build.sh src/server.xi --name ci_gate_server --timeout-sec 300
+
+      - name: Memory retention gate (Linux x64, <= 25 KiB/req)
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        shell: bash
+        run: python3 scripts/rss_gate.py --exe ./out/ci_gate_server --port 18310 --seconds 75
 
       - name: SQLite linkage probe (Unix)
         if: runner.os != 'Windows'
@@ -141,6 +181,58 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: python3 scripts/scaffold_smoke.py
+
+      # Quick wins from docs/FEATURE-TESTS.md section 12: convert existing
+      # release/manual evidence into PR gates. Ports are unique (18301..18304)
+      # so these steps can run back-to-back on one runner. rate/crash/KV and
+      # the package probes run on the Linux legs; openapi + ws-auth cover all
+      # Unix legs; macOS keeps its existing fleet.
+      # Deliberately not wired here: proxy_e2e (needs an external HTTP/HTTPS
+      # proxy fixture PR CI does not provision; stays manual/release), and the
+      # strict-NUL fuzz corpus + session/OpenAPI fuzz targets (new tests, not
+      # existing evidence). The 1M-request/24h soaks stay in heavy.yml.
+      - name: OpenAPI contract drift (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./out/pulse_app openapi --check
+
+      - name: Rate limiter smoke (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/rate_smoke.sh --port 18301
+
+      - name: Crash/reopen test (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/crash_test.sh --port 18302
+
+      - name: Stream auth smoke (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY=python3
+          command -v python3 >/dev/null 2>&1 || PY=python
+          "$PY" scripts/ws_auth_smoke.py --exe ./out/pulse_app --port 18303
+
+      - name: Package probes (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in probe_pkg_static probe_pkg_kv probe_outbound_guard probe_audit_rotate; do
+            bash scripts/build.sh "tests/probes/$p.xi" --name "$p" --timeout-sec 300
+            "./out/$p"
+          done
+
+      - name: KV store suite (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf probe-logs/ci-kv-store
+          PULSE_STORE_BACKEND=kv PULSE_KV_DIR="$PWD/probe-logs/ci-kv-store" \
+            bash scripts/store_soak.sh --seconds 60 --port 18304
 
       - name: SBOM (generate + validate)
         if: runner.os == 'Linux'

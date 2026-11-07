@@ -16,13 +16,20 @@ rows: 107 (Beacon applicable 73, Station applicable 107)
 Beacon  (package):    60.3%   assessed coverage  89.4%  (66/73)
 Station (standalone): 70.9%   assessed coverage  98.8%  (106/107)
 ```
-
 **Post-audit matrix corrections (2026-11-06):** W-06 Station M->A (Range
 reaches `static_serve`; `probe_pkg_static` proves 206), O-09 Station M->A
 (N-port workers + reuseport config/smoke), S-08 ?->M (login is user-only; no
 password field/hash), O-13 evidence refreshed to 14.5 KB/req (after the
-gate cut + HandlerOut assembly) with no CI retention gate. Re-run: **Beacon 60.3% (91.1% assessed), Station 71.7%
-(100%)**. The snapshot above is the pre-correction read.
+gate cut + HandlerOut assembly). Re-run: **Beacon 60.3% (91.1% assessed),
+Station 71.7% (100%)**. The snapshot above is the pre-correction read.
+
+**Post-audit CI wiring (2026-11-07):** `scripts/rss_gate.py` is the 25 KiB
+PR retention gate (Linux x64 + Windows); `openapi --check` runs on
+Unix+Windows; `rate_smoke`, `crash_test`, `probe_pkg_static`, `probe_pkg_kv`,
+`probe_outbound_guard`, `probe_audit_rotate` and the KV 60 s soak run on
+Linux; `ws_auth_smoke.py` runs on Unix (the Windows `.ps1` remains);
+`scaffold_smoke.py` is in CI. `proxy_e2e` stays manual; strict NUL and the
+24 h/1M stay heavy. The rows below are the pre-wiring audit.
 
 The score is capability parity, not evidence quality. A row can be `P` and
 still have no per-PR test; those rows are flagged in section 9.
@@ -68,12 +75,13 @@ open.
 | `scripts/http_smoke.{sh,ps1}` | 139 `pulse_check` calls | CI every leg | live server, framing, deadlines, keep-alive, sessions, store, static, gate order |
 | `scripts/gate_order.py` | 11 executed (12 call sites) | via `http_smoke` on every leg | CSRF/rate/OPTIONS/quit ordering |
 | `scripts/stream_smoke.py` | 20 | CI every leg | live SSE + WS handshake/frames/fragmentation |
-| `scripts/ws_auth_smoke.ps1` | 11 | CI **Windows only** | stream auth + log redaction |
+| `scripts/ws_auth_smoke.ps1` / `.py` | 11 | CI Windows + Unix | stream auth + log redaction |
 | `scripts/site_smoke.{sh,ps1}` | 15 | CI every leg | dynamic site scaffold, form, 404, traversal |
-| `scripts/rate_smoke.{sh,ps1}` | pass/fail legs | **release only** (Linux) | global + per-route rate policy |
-| `scripts/crash_test.{sh,ps1}` | 6 | **release only** (Linux) | JSONL crash/torn-tail recovery |
-| `scripts/store_soak.{sh,ps1}` | pass/fail legs | **release only** (Linux), HVY weekly | JSONL and KV write soak/reopen |
-| `scripts/rss_probe.{sh,ps1}` | informational | **HVY weekly only** | reports KB/request; not a pass/fail gate |
+| `scripts/rate_smoke.{sh,ps1}` | pass/fail legs | release + PR CI (Linux) | global + per-route rate policy |
+| `scripts/crash_test.{sh,ps1}` | 6 | release + PR CI (Linux) | JSONL crash/torn-tail recovery |
+| `scripts/store_soak.{sh,ps1}` | pass/fail legs | release + PR CI KV 60 s (Linux), HVY | JSONL and KV write soak/reopen |
+| `scripts/rss_probe.{sh,ps1}` | informational | HVY weekly | reports KB/request; not a pass/fail gate |
+| `scripts/rss_gate.py` | 75 s / 200 ms slope | CI Linux x64 + Windows | 25 KiB/req PR retention tripwire (OLS+Theil-Sen) |
 | `scripts/repro_check.{sh,ps1}` | 1 hash compare | CI Linux x64 | same-host payload only |
 | `scripts/sbom.py` | schema/count assertions | CI Linux + release | CycloneDX SBOM |
 | `tests/probes/*` | varies | `MAN` unless noted | `probe_sqlite` is built in CI; the rest are manual |
@@ -164,7 +172,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | S-05 | JWT asymmetric algs (RS/ES/EdDSA) | B=M / S=M | NONE | not implemented | negative: only HS256 accepted |
 | S-06 | JWE / JWK key sets | B=M / S=M | NONE | not implemented | negative: compact JWE rejected |
 | S-07 | OAuth/OIDC client | B=N/A / S=M | NONE | not implemented | document non-goal/post-1.0 |
-| S-08 | Password hashing | B=? / S=? | **NONE.** `src/server.xi` login creates a session from `user` only; no password field or hash function | **matrix says "verify app login"; there is no password auth at all** | implement + test: wrong password 401, hash-at-rest not plaintext, timing-safe compare |
+| S-08 | Password hashing | B=M / S=M | **NONE.** `src/server.xi` login creates a session from `user` only; no password field or hash function. Design: `docs/DESIGN-PASSWORD-AUTH.md` (2026-11-07). | no password auth; the design recommends PBKDF2 600k and an Argon2 package ask | implement + test: wrong password 401, hash-at-rest not plaintext, timing-safe compare |
 | S-09 | Rate limiting (global + route) | B=P / S=P | `test_http`: bucket/route rates; `test_app`: rate; `rate_smoke` (REL) | `rate_smoke` is not a PR gate; no distributed/multi-worker test | move `rate_smoke` to PR CI; add per-IP vs global semantics |
 | S-10 | CORS allowlist | B=P / S=P | `test_app`: cors; `http_smoke`: allow origin/preflight (CI) | no credentials/wildcard interaction | add `Access-Control-Allow-Credentials` matrix |
 | S-11 | Stream Origin/auth policy | B=P / S=P | `test_stream`: origin/auth; `stream_smoke`: Origin; `ws_auth_smoke`: 11 checks (CI **Windows only**) | Unix CI never runs `ws_auth_smoke` | run `ws_auth_smoke` on Unix too |
@@ -210,7 +218,7 @@ Legend for **Status**: `B` = Beacon, `S` = Station. `P` parity, `E` exceeds,
 | O-10 | Hot reload | B=M / S=M | NONE; Phase B blocked | not implemented | after WP4: zero-failed-request reload |
 | O-11 | Container/systemd guidance | B=N/A / S=A | docs only (DOC) | no container/systemd smoke | container smoke: build, run, health, shutdown |
 | O-12 | Reproducible release + attestations | B=N/A / S=E | `repro_check` (CI Linux x64), `sbom.py` (CI), provenance/checksums/tag guard (REL) | **same-host payload only; cross-host/zip open; release artifact not executed** | unzip artifact, run `--version`, verify tag/checksum; cross-host repro |
-| O-13 | Flat memory under soak | B=M / S=M | `rss_probe` (HVY, informational); `soak_http` (HVY) | **no CI retention gate**; ROADMAP WP1 says there is one | 60 s RSS-slope gate in PR CI with a published threshold |
+| O-13 | Flat memory under soak | B=M / S=M | `rss_gate` (CI, 25 KiB); `rss_probe` (HVY); `soak_http` (HVY) | PR regression tripwire is wired; the flat/24 h/1M gate is not run | 24 h @ 100 req/s on the bttger mix after the floor is flat |
 | O-14 | Published c1/c10 benchmark | B=N/A / S=A | `benchmarks/bttger/results/*.json` (MAN) | no harness rerun gate, no peer comparison | rerun harness in CI/nightly; publish methodology |
 | O-15 | Published 1M soak | B=N/A / S=M | NONE; blocked by O-13 | not run | after O-13: capped 1M soak |
 | O-16 | Fuzzing harness | B=A / S=A | `fuzz_parsers` + `fuzz_cookie` (CI) | OpenAPI/stream fuzz, strict NUL, cookie package fix | OpenAPI/stream fuzz + strict NUL + cookie package fix |
@@ -330,7 +338,7 @@ assembly. The matrix
 
 | # | Risk area | Why it matters | Missing test | Rows |
 |---:|---|---|---|---|
-| 1 | **Memory / sustained load** | The 14.5 KB/req floor is the stated production blocker; a regression can ship silently because `rss_probe` is informational and weekly. | PR CI retention gate: drive `/health` (and bttger mix) for 60 s, fail if steady-state RSS slope exceeds a published KB/req budget; keep the 1M/24h out of PR CI. | O-13, WP1 |
+| 1 | **Memory / sustained load** | The 14.5 KB/req floor is the stated production blocker. A 25 KiB/req PR retention gate now catches 1704-class regressions; the final flat/24 h/1M gate is still open. | Run the 24 h @ 100 req/s and 1M after the floor is flat; keep the PR gate as the tripwire. | O-13, WP1 |
 | 2 | **Auth / session** | Login is username-only; no password hash; sessions are in-process; JWT only checks `exp`. | Password-auth test (wrong password, hash-at-rest, timing-safe compare) + session expiry/fixation/restart + JWT `nbf`/`iss`/`aud`/alg matrix. | S-08, S-03, S-04 |
 | 3 | **Parser / framing** | Smuggling is the highest-severity server bug class; fuzz only asserts "no crash/empty method", not the required status. | Raw-socket framing corpus: duplicate CL, obfuscated TE, comma TE, bare LF, NUL in head, chunk-size overflow, trailer injection -> deterministic 400/close. Run with `FUZZ_STRICT_NUL=1`. | P-03, P-07, P-08 |
 | 4 | **Static / traversal** | Lexical guard is tested, but symlink/canonical escapes are not; `%2e%2e`/backslash/NUL matter across platforms. | Create a symlink inside the static root pointing outside; assert 404/403. Add encoded/backslash/NUL traversal table for API, site, and uploads. | W-05 |
