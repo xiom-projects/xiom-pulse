@@ -150,7 +150,7 @@ jobs:
         run: |
           set -euo pipefail
           for r in 1 2; do
-            for s in test_http test_app test_smoke; do
+            for s in test_http test_app test_smoke test_stream test_users; do
               bash scripts/run.sh "tests/$s.xi" --quiet --timeout-sec 300
             done
           done
@@ -283,7 +283,7 @@ jobs:
         shell: pwsh
         run: |
           foreach ($r in 1, 2) {
-            foreach ($s in @("test_http", "test_app", "test_smoke")) {
+            foreach ($s in @("test_http", "test_app", "test_smoke", "test_users")) {
               & scripts\run.ps1 "tests\$s.xi" -Quiet
               if ($LASTEXITCODE -ne 0) { throw "suite $s (round $r) failed with exit $LASTEXITCODE" }
             }
