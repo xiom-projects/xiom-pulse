@@ -53,12 +53,20 @@ use xiom.encoding.percent;
 use xiom.pulse.audit;
 use xiom.os.proc;
 use xiom.os.proc_ffi;
-use xiom.process;
 use xiom.thread;
 use xiom.crypto;
 use xiom.encoding.hex;
 use xiom.pulse.openapi;
 use xiom.pulse.multipart;
+
+// WP4: call the runtime kill intrinsic directly. `xiom.process.kill(pid)`
+// emits an invalid arm64 call on v0.65.6 (two args, `pid, 9`, against a
+// one-arg declaration); this is the same runtime entry point with a clean
+// signature. Filed to the compiler lane; replace with process.kill when it
+// is fixed.
+extern "C" {
+  fn xiom_process_kill(pid: Int64) -> Int32;
+}
 
 const MAX_BODY: Int = 1048576;
 const CONTENT_JSON: Str = "application/json; charset=utf-8";
@@ -1469,7 +1477,14 @@ fn supervisor_drain(pids: &Vec[Int], control_base: Int, token: Str, drain_ms: In
   var k: Int = 0;
   while k < pids.len() {
     if pids[k] > 0 && proc.proc_is_running(pids[k]) {
-      let _k = process.kill(pids[k]);
+      var rc: Int32 = 0;
+      unsafe {
+        rc = xiom_process_kill(pids[k] as Int64);
+      }
+      if rc != 0 {
+        io.println("pulse: supervisor: could not kill worker " + k.to_str());
+        io.flush_stdout();
+      }
       let _w = proc_ffi.wait_status(pids[k]);
     }
     k = k + 1;
